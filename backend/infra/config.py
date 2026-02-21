@@ -1,9 +1,16 @@
+# Zentrale Konfiguration für das StudyAI Backend
+# Enthält Pfade, Datenbank-URL und AI-Provider Einstellungen
+
 from pathlib import Path
 
 # Pfade
+# BASE_DIR zeigt auf das Hauptverzeichnis des Projekts (studyAI/)
+# .parent.parent.parent weil: config.py → infra/ → backend/ → studyAI/
 BASE_DIR = Path(__file__).parent.parent.parent
 STORAGE_DIR = BASE_DIR / "backend_storage"
-STORAGE_DIR.mkdir(exist_ok=True)
+
+# Hinweis: backend_storage ist ein Symlink zur SSD
+# Der Symlink wurde manuell erstellt und muss nicht automatisch erzeugt werden
 
 # Datenbank
 DATABASE_URL = f"sqlite:///{BASE_DIR}/studyai.db"

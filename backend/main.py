@@ -4,6 +4,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.models.database import engine, Base
 
+# WICHTIG: Alle Models importieren, damit SQLAlchemy sie kennt
+# Auch wenn sie hier nicht direkt benutzt werden
+from backend.models.module import Module
+from backend.models.document import Document
+from backend.models.summary import Summary
+from backend.models.mindmap_node import MindmapNode
+
 # Erstellt alle Tabellen in der SQLite-Datenbank beim Server-Start
 # (nur wenn sie noch nicht existieren)
 Base.metadata.create_all(bind=engine)
@@ -32,3 +39,8 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+# API-Routen registrieren (am Ende, nachdem app erstellt wurde)
+from backend.api.modules import router as modules_router
+app.include_router(modules_router)
