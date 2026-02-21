@@ -1,7 +1,7 @@
 from pathlib import Path
 
 # Pfade
-BASE_DIR = Path(__file__).parent.parent
+BASE_DIR = Path(__file__).parent.parent.parent
 STORAGE_DIR = BASE_DIR / "backend_storage"
 STORAGE_DIR.mkdir(exist_ok=True)
 
