@@ -7,7 +7,6 @@ from pptx import Presentation  # python-pptx — Library zum PowerPoint-Lesen
 from openpyxl import load_workbook  # openpyxl — Library zum Excel-Lesen
 import pytesseract  # OCR — Text aus Bildern extrahieren
 from PIL import Image  # Pillow — Bildverarbeitung
-import markdown  # Markdown-Parser
 from pathlib import Path
 
 

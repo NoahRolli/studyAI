@@ -3,13 +3,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.models.database import engine, Base
+from backend.api.modules import router as modules_router
+from backend.api.documents import router as documents_router
 
 # WICHTIG: Alle Models importieren, damit SQLAlchemy sie kennt
 # Auch wenn sie hier nicht direkt benutzt werden
-from backend.models.module import Module
-from backend.models.document import Document
-from backend.models.summary import Summary
-from backend.models.mindmap_node import MindmapNode
+from backend.models.module import Module  # noqa: F401
+from backend.models.document import Document  # noqa: F401
+from backend.models.summary import Summary  # noqa: F401
+from backend.models.mindmap_node import MindmapNode  # noqa: F401
 
 # Erstellt alle Tabellen in der SQLite-Datenbank beim Server-Start
 # (nur wenn sie noch nicht existieren)
@@ -41,6 +43,6 @@ def health():
     return {"status": "ok"}
 
 
-# API-Routen registrieren (am Ende, nachdem app erstellt wurde)
-from backend.api.modules import router as modules_router
+# API-Routen registrieren
 app.include_router(modules_router)
+app.include_router(documents_router)
