@@ -1,6 +1,6 @@
-# StudyAI
+# pallas
 
-AI-powered study companion that parses lecture notes (PDF, Word, PowerPoint, Excel, images via OCR, Markdown), generates smart summaries, explains key terms, and visualizes knowledge as interactive, zoomable mindmaps.
+AI-powered study companion and encrypted journal. Parses lecture notes (PDF, Word, PowerPoint, Excel, images via OCR, Markdown), generates smart summaries, explains key terms, and visualizes knowledge as interactive, zoomable mindmaps. Includes a fully encrypted, local-only AI journal for personal reflection.
 
 **Work in Progress**
 
@@ -63,8 +63,8 @@ studyAI/
 ### Backend Setup
 ```bash
 # Clone the repository
-git clone https://github.com/NoahRolli/studyAI.git
-cd studyAI
+git clone https://github.com/NoahRolli/pallas.git
+cd pallas
 
 # Create and activate virtual environment
 python3 -m venv .venv

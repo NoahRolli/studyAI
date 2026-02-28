@@ -18,7 +18,7 @@ from backend.models.mindmap_node import MindmapNode  # noqa: F401
 Base.metadata.create_all(bind=engine)
 
 # FastAPI App initialisieren
-app = FastAPI(title="StudyAI", version="0.1.0")
+app = FastAPI(title="pallas", version="0.1.0")
 
 # CORS-Middleware: Erlaubt dem React-Frontend (Port 5173) auf die API zuzugreifen
 # Ohne CORS würde der Browser die Requests blockieren
@@ -34,7 +34,7 @@ app.add_middleware(
 # Einfacher Test-Endpunkt — zeigt ob die API läuft
 @app.get("/")
 def root():
-    return {"message": "StudyAI API läuft!", "version": "0.1.0"}
+    return {"message": "pallas API läuft!", "version": "0.1.0"}
 
 
 # Health-Check Endpunkt — nützlich für späteres Monitoring
