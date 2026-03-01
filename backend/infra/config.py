@@ -1,4 +1,4 @@
-# Zentrale Konfiguration für das StudyAI Backend
+# Zentrale Konfiguration für das pallas Backend
 # Enthält Pfade, Datenbank-URL und AI-Provider Einstellungen
 
 from pathlib import Path
@@ -13,7 +13,7 @@ STORAGE_DIR = BASE_DIR / "backend_storage"
 # Der Symlink wurde manuell erstellt und muss nicht automatisch erzeugt werden
 
 # Datenbank
-DATABASE_URL = f"sqlite:///{BASE_DIR}/studyai.db"
+DATABASE_URL = f"sqlite:///{BASE_DIR}/pallas.db"
 
 # AI Provider: "claude" oder "ollama"
 AI_PROVIDER = "ollama"
