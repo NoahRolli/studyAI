@@ -1,11 +1,11 @@
 # Konfiguration für das Journal-Modul
-# Komplett getrennt von der StudyAI-Hauptkonfiguration
+# Komplett getrennt von der pallas-Hauptkonfiguration
 # Sicherheitsprinzip: Alle sensiblen Daten bleiben lokal
 
 from pathlib import Path
 
 # Pfade
-# Journal-DB liegt NICHT in der StudyAI-DB — komplett separate Datenbank
+# Journal-DB liegt NICHT in der pallas-DB — komplett separate Datenbank
 BASE_DIR = Path(__file__).parent.parent.parent.parent
 JOURNAL_DB_PATH = BASE_DIR / "journal.db"
 JOURNAL_DATABASE_URL = f"sqlite:///{JOURNAL_DB_PATH}"
