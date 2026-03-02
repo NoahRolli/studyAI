@@ -6,6 +6,7 @@ from backend.models.database import engine, Base
 from backend.api.modules import router as modules_router
 from backend.api.documents import router as documents_router
 from backend.api.summaries import router as summaries_router
+from backend.api.mindmap import router as mindmap_router
 
 # WICHTIG: Alle Models importieren, damit SQLAlchemy sie kennt
 from backend.models.module import Module  # noqa: F401
@@ -45,3 +46,4 @@ def health():
 app.include_router(modules_router)
 app.include_router(documents_router)
 app.include_router(summaries_router)
+app.include_router(mindmap_router)
