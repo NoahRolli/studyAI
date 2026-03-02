@@ -2,7 +2,7 @@
 # Alle sensiblen Felder (Titel, Inhalt, Datum) werden AES-256-GCM verschlüsselt
 # Ohne korrektes Passwort sind die Daten vollständig unlesbar
 
-from sqlalchemy import Column, Integer, LargeBinary, DateTime, String
+from sqlalchemy import Column, Integer, LargeBinary, DateTime
 from datetime import datetime, timezone
 from backend.journal.models.journal_database import JournalBase
 
