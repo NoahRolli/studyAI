@@ -1,9 +1,10 @@
 # API-Endpunkte für verschlüsselte Tagebucheinträge
 # Alle Daten werden vor dem Speichern verschlüsselt und beim Lesen entschlüsselt
+# Jedes Feld (Titel, Inhalt, Datum) wird unabhängig verschlüsselt
+# mit eigenem IV und Auth-Tag — sicher und einzeln entschlüsselbar
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
 from backend.journal.models.journal_database import get_journal_db
 from backend.journal.models.journal_entry import JournalEntry
 from backend.journal.services.session_service import session_manager
@@ -28,13 +29,14 @@ def get_entries(db: Session = Depends(get_journal_db)):
         try:
             decrypted.append({
                 "id": entry.id,
-                "title": decrypt_text(entry.encrypted_title, aes_key, entry.iv),
-                "content": decrypt_text(entry.encrypted_content, aes_key, entry.iv),
-                "date": decrypt_text(entry.encrypted_date, aes_key, entry.iv),
+                "title": decrypt_text(entry.encrypted_title, aes_key),
+                "content": decrypt_text(entry.encrypted_content, aes_key),
+                "date": decrypt_text(entry.encrypted_date, aes_key),
                 "created_at": entry.created_at.isoformat(),
                 "updated_at": entry.updated_at.isoformat(),
             })
         except Exception:
+            # Eintrag kann nicht entschlüsselt werden — überspringen
             continue
 
     return decrypted
@@ -46,16 +48,13 @@ def create_entry(data: EntryCreate, db: Session = Depends(get_journal_db)):
     require_unlocked()
     aes_key = session_manager.get_key()
 
-    encrypted_title, iv, auth_tag = encrypt_text(data.title, aes_key)
-    encrypted_content, _, _ = encrypt_text(data.content, aes_key, iv=iv)
-    encrypted_date, _, _ = encrypt_text(data.date, aes_key, iv=iv)
-
+    # Jedes Feld unabhängig verschlüsseln (eigener IV + Tag pro Feld)
     entry = JournalEntry(
-        encrypted_title=encrypted_title,
-        encrypted_content=encrypted_content,
-        encrypted_date=encrypted_date,
-        iv=iv,
-        auth_tag=auth_tag,
+        encrypted_title=encrypt_text(data.title, aes_key),
+        encrypted_content=encrypt_text(data.content, aes_key),
+        encrypted_date=encrypt_text(data.date, aes_key),
+        iv=b'',          # Nicht mehr benötigt (IV ist im Feld enthalten)
+        auth_tag=b'',    # Nicht mehr benötigt (Tag ist im Feld enthalten)
     )
     db.add(entry)
     db.commit()
@@ -76,11 +75,12 @@ def get_entry(entry_id: int, db: Session = Depends(get_journal_db)):
         raise HTTPException(status_code=404, detail="Eintrag nicht gefunden.")
 
     aes_key = session_manager.get_key()
+
     return {
         "id": entry.id,
-        "title": decrypt_text(entry.encrypted_title, aes_key, entry.iv),
-        "content": decrypt_text(entry.encrypted_content, aes_key, entry.iv),
-        "date": decrypt_text(entry.encrypted_date, aes_key, entry.iv),
+        "title": decrypt_text(entry.encrypted_title, aes_key),
+        "content": decrypt_text(entry.encrypted_content, aes_key),
+        "date": decrypt_text(entry.encrypted_date, aes_key),
         "created_at": entry.created_at.isoformat(),
         "updated_at": entry.updated_at.isoformat(),
     }
@@ -100,19 +100,19 @@ def update_entry(entry_id: int, data: EntryUpdate, db: Session = Depends(get_jou
     aes_key = session_manager.get_key()
 
     # Aktuelle Werte entschlüsseln als Fallback
-    current_title = decrypt_text(entry.encrypted_title, aes_key, entry.iv)
-    current_content = decrypt_text(entry.encrypted_content, aes_key, entry.iv)
-    current_date = decrypt_text(entry.encrypted_date, aes_key, entry.iv)
+    current_title = decrypt_text(entry.encrypted_title, aes_key)
+    current_content = decrypt_text(entry.encrypted_content, aes_key)
+    current_date = decrypt_text(entry.encrypted_date, aes_key)
 
     # Neue Werte übernehmen oder alte behalten
     new_title = data.title if data.title is not None else current_title
     new_content = data.content if data.content is not None else current_content
     new_date = data.date if data.date is not None else current_date
 
-    # Komplett neu verschlüsseln mit neuem IV
-    entry.encrypted_title, entry.iv, entry.auth_tag = encrypt_text(new_title, aes_key)
-    entry.encrypted_content, _, _ = encrypt_text(new_content, aes_key, iv=entry.iv)
-    entry.encrypted_date, _, _ = encrypt_text(new_date, aes_key, iv=entry.iv)
+    # Komplett neu verschlüsseln (neuer IV pro Feld)
+    entry.encrypted_title = encrypt_text(new_title, aes_key)
+    entry.encrypted_content = encrypt_text(new_content, aes_key)
+    entry.encrypted_date = encrypt_text(new_date, aes_key)
 
     db.commit()
     db.refresh(entry)

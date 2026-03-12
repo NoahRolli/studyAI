@@ -5,7 +5,6 @@
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-
 from backend.journal.infra.journal_config import JOURNAL_DATABASE_URL
 
 # SQLAlchemy Engine für die Journal-DB
@@ -20,13 +19,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Basis-Klasse für alle Journal-Models
 # Alle Journal-Models erben von DIESEM Base, nicht vom Pallas-Base
-Base = declarative_base()
+JournalBase = declarative_base()
 
 
-def get_db():
+def get_journal_db():
     """
     FastAPI Dependency — gibt eine DB-Session pro Request.
-    Wird in den Journal-API-Routen als Depends(get_db) verwendet.
+    Wird in den Journal-API-Routen als Depends(get_journal_db) verwendet.
     Session wird nach dem Request automatisch geschlossen.
     """
     db = SessionLocal()
