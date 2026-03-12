@@ -80,7 +80,21 @@ pallas/
 │           ├── journal_cluster.py     # Topic clusters
 │           └── journal_storyline.py   # Detected storylines
 │
-├── frontend/                      # React app (coming soon)
+├── frontend/                      # React app
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Layout.tsx         # App wrapper with sidebar
+│   │   │   └── Sidebar.tsx        # Navigation sidebar
+│   │   ├── pages/
+│   │   │   ├── Dashboard.tsx      # Module overview with CRUD
+│   │   │   └── Journal.tsx        # Encrypted journal UI
+│   │   ├── hooks/
+│   │   │   └── useApi.ts          # API client for backend
+│   │   ├── types/
+│   │   │   └── models.ts          # TypeScript type definitions
+│   │   ├── App.tsx                # Router configuration
+│   │   └── main.tsx               # Entry point
+│   └── vite.config.ts
 ├── .github/workflows/ci.yml      # CI pipeline (ruff + pytest)
 └── README.md
 ```
@@ -116,12 +130,14 @@ uvicorn backend.main:app --reload
 
 API documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-### Frontend Setup (coming soon)
+### Frontend Setup
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+
+Frontend runs at [http://localhost:5173](http://localhost:5173)
 
 ---
 
@@ -131,25 +147,37 @@ npm run dev
 - [x] Create, edit, and delete study modules
 - [x] File upload with automatic text extraction
 - [x] Supported formats: PDF, Word, PowerPoint, Excel, Images (OCR), Markdown, TXT
-- [ ] AI-powered summaries (Claude & Ollama, switchable)
+- [x] AI-powered summaries (Claude & Ollama, switchable)
+- [x] Mindmap generation with deep dive
 - [ ] Key term explanations
-- [ ] Interactive mindmap with zoom levels
-- [ ] Frontend dashboard
+- [ ] Interactive mindmap frontend (React Flow)
 
 ### Encrypted Journal
 - [x] AES-256-GCM encryption with Argon2id password hashing
 - [x] Separate encrypted database (isolated from main app)
-- [x] Session management with auto-lock (timeout, screen lock, navigate away)
-- [ ] Encrypted CRUD for journal entries
+- [x] Session management with auto-lock timeout
+- [x] Encrypted CRUD for journal entries
+- [x] Password setup, unlock, lock via API
+- [x] Frontend with setup, unlock and entry management
 - [ ] Mood tracking via sentiment analysis (Ollama-only)
 - [ ] Topic clustering via local embeddings (nomic-embed-text)
 - [ ] Storyline detection across entries
 - [ ] Timeline visualization
 
+### Frontend
+- [x] React + TypeScript + Vite + Tailwind CSS
+- [x] Dashboard with module CRUD
+- [x] Journal with encryption flow (setup/unlock/entries)
+- [x] Sidebar navigation with routing
+- [ ] Module detail page (documents + summaries)
+- [ ] Mindmap visualization page
+
 ### General
 - [x] CI pipeline with GitHub Actions (ruff linting)
+- [x] Sphinx documentation on GitHub Pages
 - [ ] User authentication
 - [ ] Deployment
+```
 
 ---
 
@@ -191,6 +219,13 @@ graph TD
 Automated pipeline runs on every push to `main` and on pull requests:
 - **Linting** with [ruff](https://github.com/astral-sh/ruff)
 - **Tests** with pytest (coming soon)
+
+---
+
+## Documentation
+
+Full documentation is auto-generated from docstrings and deployed to GitHub Pages:
+[https://noahrolli.github.io/pallas/](https://noahrolli.github.io/pallas/)
 
 ---
 
