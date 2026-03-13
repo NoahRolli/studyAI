@@ -177,7 +177,6 @@ Frontend runs at [http://localhost:5173](http://localhost:5173)
 - [x] Sphinx documentation on GitHub Pages
 - [ ] User authentication
 - [ ] Deployment
-```
 
 ---
 
