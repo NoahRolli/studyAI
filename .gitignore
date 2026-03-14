@@ -21,3 +21,4 @@ backend_storage
 .DS_Storebackup.sh
 journal_password.hash
 journal_key.salt
+local_storage/

@@ -4,13 +4,19 @@
 from pathlib import Path
 
 # Pfade
-# BASE_DIR zeigt auf das Hauptverzeichnis des Projekts (studyAI/)
-# .parent.parent.parent weil: config.py → infra/ → backend/ → studyAI/
+# BASE_DIR zeigt auf das Hauptverzeichnis des Projekts (pallas/)
+# .parent.parent.parent weil: config.py → infra/ → backend/ → pallas/
 BASE_DIR = Path(__file__).parent.parent.parent
-STORAGE_DIR = BASE_DIR / "backend_storage"
 
-# Hinweis: backend_storage ist ein Symlink zur SSD
-# Der Symlink wurde manuell erstellt und muss nicht automatisch erzeugt werden
+# Storage: SSD-Symlink bevorzugt, lokaler Fallback wenn SSD nicht angeschlossen
+STORAGE_DIR = BASE_DIR / "backend_storage"
+if not STORAGE_DIR.exists():
+    # Fallback auf lokalen Ordner (z.B. wenn SSD nicht verbunden)
+    STORAGE_DIR = BASE_DIR / "local_storage"
+
+# Ordner erstellen falls er noch nicht existiert
+import os
+os.makedirs(STORAGE_DIR, exist_ok=True)
 
 # Datenbank
 DATABASE_URL = f"sqlite:///{BASE_DIR}/pallas.db"
