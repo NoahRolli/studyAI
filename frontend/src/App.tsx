@@ -2,6 +2,7 @@
 // Dies ist der Einstiegspunkt der React-App
 // Hier werden alle Routen (URLs) definiert:
 // - "/" → Dashboard (Startseite)
+// - "/modules/:id" → Modul-Detailseite (Dokumente + Zusammenfassungen)
 // - "/journal" → Verschlüsseltes Tagebuch
 //
 // BrowserRouter aktiviert Client-Side Routing:
@@ -12,6 +13,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
+import ModuleDetail from './pages/ModuleDetail'
 import Journal from './pages/Journal'
 
 function App() {
@@ -23,13 +25,14 @@ function App() {
         {/* Layout als Eltern-Route — Sidebar ist immer sichtbar
             Alle Kind-Routen werden im <Outlet /> von Layout gerendert */}
         <Route path="/" element={<Layout />}>
-
           {/* index = Standard-Route wenn URL genau "/" ist */}
           <Route index element={<Dashboard />} />
 
+          {/* /modules/:id → Modul-Detailseite mit Dokumenten */}
+          <Route path="modules/:id" element={<ModuleDetail />} />
+
           {/* /journal → Journal-Seite */}
           <Route path="journal" element={<Journal />} />
-
         </Route>
       </Routes>
     </BrowserRouter>
