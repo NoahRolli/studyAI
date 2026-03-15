@@ -9,9 +9,11 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent.parent.parent
 
 # Storage: SSD-Symlink bevorzugt, lokaler Fallback wenn SSD nicht angeschlossen
+# resolve() folgt dem Symlink — wenn das Ziel nicht existiert, nehmen wir den Fallback
 STORAGE_DIR = BASE_DIR / "backend_storage"
-if not STORAGE_DIR.exists():
-    # Fallback auf lokalen Ordner (z.B. wenn SSD nicht verbunden)
+try:
+    STORAGE_DIR.resolve(strict=True)
+except (OSError, FileNotFoundError):
     STORAGE_DIR = BASE_DIR / "local_storage"
 
 # Ordner erstellen falls er noch nicht existiert
