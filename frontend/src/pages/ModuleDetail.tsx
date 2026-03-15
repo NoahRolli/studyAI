@@ -1,6 +1,6 @@
 // ModuleDetail — Detailseite für ein einzelnes Studienmodul
 // Zeigt alle Dokumente des Moduls an
-// Ermöglicht Datei-Upload und Zusammenfassung generieren
+// Ermöglicht Datei-Upload, Zusammenfassung generieren und Mindmap öffnen
 //
 // Route: /modules/:id (id kommt aus der URL)
 // Nutzt useParams() um die Modul-ID aus der URL zu lesen
@@ -27,6 +27,9 @@ function ModuleDetail() {
   // Zusammenfassung-State (pro Dokument)
   const [summaries, setSummaries] = useState<Record<number, Summary>>({})
   const [generating, setGenerating] = useState<number | null>(null)
+
+  // Mindmap-Generierung State
+  const [generatingMindmap, setGeneratingMindmap] = useState<number | null>(null)
 
   // --- Daten laden ---
 
@@ -113,6 +116,30 @@ function ModuleDetail() {
       setError(err instanceof Error ? err.message : 'Zusammenfassung fehlgeschlagen')
     } finally {
       setGenerating(null)
+    }
+  }
+
+  // --- Mindmap generieren und öffnen ---
+
+  async function openMindmap(summaryId: number) {
+    try {
+      setGeneratingMindmap(summaryId)
+      setError(null)
+
+      // Prüfen ob schon eine Mindmap existiert
+      try {
+        await get(`/api/summaries/${summaryId}/mindmap`)
+      } catch {
+        // Falls nicht: generieren (POST)
+        await post(`/api/summaries/${summaryId}/mindmap`)
+      }
+
+      // Zur Fullscreen Mindmap navigieren
+      window.location.href = `/mindmap/${summaryId}`
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Mindmap konnte nicht erstellt werden')
+    } finally {
+      setGeneratingMindmap(null)
     }
   }
 
@@ -258,12 +285,26 @@ function ModuleDetail() {
             {/* Zusammenfassung anzeigen (falls vorhanden) */}
             {summaries[doc.id] && (
               <div className="mt-4 pt-4 border-t border-gray-800">
-                <h4 className="text-sm font-semibold text-gray-300 mb-2">
-                  Zusammenfassung
-                  <span className="text-xs text-gray-600 ml-2">
-                    via {summaries[doc.id].ai_provider}
-                  </span>
-                </h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-gray-300">
+                    Zusammenfassung
+                    <span className="text-xs text-gray-600 ml-2">
+                      via {summaries[doc.id].ai_provider}
+                    </span>
+                  </h4>
+
+                  {/* Mindmap-Button — nur sichtbar wenn Zusammenfassung existiert */}
+                  <button
+                    onClick={() => openMindmap(summaries[doc.id].id)}
+                    disabled={generatingMindmap === summaries[doc.id].id}
+                    className="text-sm bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    {generatingMindmap === summaries[doc.id].id
+                      ? 'Mindmap wird erstellt...'
+                      : 'Mindmap öffnen'}
+                  </button>
+                </div>
+
                 <p className="text-sm text-gray-400 leading-relaxed">
                   {summaries[doc.id].summary}
                 </p>
