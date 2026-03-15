@@ -53,13 +53,27 @@ class OllamaProvider:
     def _parse_json(self, text: str):
         """
         Extrahiert JSON aus Ollama-Antworten.
-        Ollama packt JSON oft in Markdown-Backticks, die wir entfernen.
+        Ollama packt JSON oft in Markdown-Backticks und fügt
+        Erklärtext davor/danach hinzu — beides muss entfernt werden.
+
+        Drei Strategien, von spezifisch zu allgemein:
+        1. JSON aus Markdown-Codeblock (```json ... ```)
+        2. Erstes JSON-Array oder -Objekt im Rohtext
+        3. Rohtext direkt parsen
         """
-        # Markdown-Backticks entfernen (```json ... ``` oder ``` ... ```)
-        cleaned = re.sub(r"```(?:json)?\s*", "", text)
-        cleaned = cleaned.strip("`").strip()
-        return json.loads(cleaned)
-    
+        # Strategie 1: JSON aus Markdown-Codeblock extrahieren
+        match = re.search(r"```(?:json)?\s*(\[.*?\]|\{.*?\})\s*```", text, re.DOTALL)
+        if match:
+            return json.loads(match.group(1))
+
+        # Strategie 2: Erstes [ ... ] oder { ... } im Text finden
+        match = re.search(r"(\[.*\]|\{.*\})", text, re.DOTALL)
+        if match:
+            return json.loads(match.group(1))
+
+        # Strategie 3: Rohtext direkt versuchen
+        return json.loads(text.strip())
+
     async def summarize(self, text: str) -> dict:
         """
         Generiert eine Zusammenfassung mit Schlüsselbegriffen.
