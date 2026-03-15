@@ -3,6 +3,7 @@
 // Hier werden alle Routen (URLs) definiert:
 // - "/" → Dashboard (Startseite)
 // - "/modules/:id" → Modul-Detailseite (Dokumente + Zusammenfassungen)
+// - "/mindmap/:summaryId" → Fullscreen Mindmap
 // - "/journal" → Verschlüsseltes Tagebuch
 //
 // BrowserRouter aktiviert Client-Side Routing:
@@ -14,30 +15,24 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import ModuleDetail from './pages/ModuleDetail'
+import MindmapPage from './pages/MindmapPage'
 import Journal from './pages/Journal'
 
 function App() {
   return (
-    // BrowserRouter = aktiviert URL-basiertes Routing
     <BrowserRouter>
-      {/* Routes = Container für alle Route-Definitionen */}
       <Routes>
-        {/* Layout als Eltern-Route — Sidebar ist immer sichtbar
-            Alle Kind-Routen werden im <Outlet /> von Layout gerendert */}
         <Route path="/" element={<Layout />}>
-          {/* index = Standard-Route wenn URL genau "/" ist */}
           <Route index element={<Dashboard />} />
-
-          {/* /modules/:id → Modul-Detailseite mit Dokumenten */}
           <Route path="modules/:id" element={<ModuleDetail />} />
-
-          {/* /journal → Journal-Seite */}
           <Route path="journal" element={<Journal />} />
         </Route>
+
+        {/* Mindmap ausserhalb von Layout — Fullscreen ohne Sidebar */}
+        <Route path="mindmap/:summaryId" element={<MindmapPage />} />
       </Routes>
     </BrowserRouter>
   )
 }
 
-// Default Export — wird in main.tsx importiert und gerendert
 export default App
