@@ -88,3 +88,29 @@ export interface JournalStatus {
   is_setup: boolean          // Wurde ein Passwort gesetzt?
   is_unlocked: boolean       // Ist die Session aktiv?
 }
+// --- Journal Analytics ---
+
+// Stimmungsanalyse eines Eintrags (von POST /api/journal/analytics/mood)
+export interface MoodResult {
+  entry_id: number
+  score: number             // -1.0 (negativ) bis 1.0 (positiv)
+  label: string             // z.B. "freudig", "nachdenklich"
+  keywords: string[]
+  error?: string            // Falls Ollama nicht verfügbar
+}
+
+// Themen-Cluster (von POST /api/journal/analytics/clusters)
+export interface ClusterResult {
+  cluster_id: number
+  entry_ids: number[]
+  titles: string[]
+  label: string             // AI-generiertes Cluster-Label
+}
+
+// Narrative Storyline (von POST /api/journal/analytics/storylines)
+export interface StorylineResult {
+  title: string
+  arc_type: 'rising' | 'falling' | 'resolved' | 'ongoing'
+  confidence: number        // 0.0 bis 1.0
+  entry_ids: number[]
+}
