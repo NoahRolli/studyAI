@@ -31,6 +31,33 @@ function ModuleDetail() {
   // Mindmap-Generierung State
   const [generatingMindmap, setGeneratingMindmap] = useState<number | null>(null)
 
+  // --- Summaries aus der DB laden ---
+  // Holt für jedes Dokument die neueste Zusammenfassung
+  // Wird nach dem Laden der Dokumente aufgerufen
+
+  async function loadSummaries(docs: Document[]) {
+    const loaded: Record<number, Summary> = {}
+
+    for (const doc of docs) {
+      try {
+        // GET /api/documents/{id}/summaries — alle Summaries des Dokuments
+        const docSummaries = await get<Summary[]>(
+          `/api/documents/${doc.id}/summaries`
+        )
+
+        // Neueste Zusammenfassung nehmen (letzte im Array)
+        if (docSummaries.length > 0) {
+          loaded[doc.id] = docSummaries[docSummaries.length - 1]
+        }
+      } catch {
+        // Wenn ein Dokument keine Summaries hat, einfach überspringen
+        console.warn(`Keine Summaries für Dokument ${doc.id}`)
+      }
+    }
+
+    setSummaries(loaded)
+  }
+
   // --- Daten laden ---
 
   async function loadModule() {
@@ -45,6 +72,9 @@ function ModuleDetail() {
       // Dokumente des Moduls laden
       const docsData = await get<Document[]>(`/api/modules/${id}/documents/`)
       setDocuments(docsData)
+
+      // Existierende Zusammenfassungen aus der DB laden
+      await loadSummaries(docsData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehler beim Laden')
     } finally {
@@ -87,7 +117,7 @@ function ModuleDetail() {
         throw new Error(err.detail || `Upload fehlgeschlagen: ${response.status}`)
       }
 
-      // Dokumente neu laden
+      // Dokumente neu laden (inkl. Summaries)
       await loadModule()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload fehlgeschlagen')
@@ -148,14 +178,8 @@ function ModuleDetail() {
   async function deleteDocument(documentId: number) {
     try {
       await del(`/api/documents/${documentId}`)
-      // Dokumente neu laden
+      // Dokumente neu laden (inkl. Summaries)
       await loadModule()
-      // Zusammenfassung entfernen falls vorhanden
-      setSummaries((prev) => {
-        const updated = { ...prev }
-        delete updated[documentId]
-        return updated
-      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Löschen fehlgeschlagen')
     }
