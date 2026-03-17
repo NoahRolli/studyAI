@@ -8,7 +8,7 @@
 // - Storylines: StorylineView (narrative Bögen)
 
 import { useState, useEffect } from 'react'
-import { get, post, del } from '../hooks/useAPI'
+import { get, post, del, put } from '../hooks/useAPI'
 import type { JournalStatus, JournalEntry, JournalEntryCreate } from '../types/models'
 import MoodChart from '../components/journal/MoodChart'
 import ClusterView from '../components/journal/ClusterView'
@@ -31,6 +31,14 @@ function Journal() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+
+  // Edit-State: welcher Eintrag wird bearbeitet?
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editEntry, setEditEntry] = useState<JournalEntryCreate>({
+    title: '',
+    content: '',
+    date: '',
+  })
 
   // Aktiver Tab (Standard: Einträge)
   const [activeTab, setActiveTab] = useState<Tab>('entries')
@@ -91,6 +99,7 @@ function Journal() {
       setEntries([])
       setMessage(null)
       setActiveTab('entries')
+      cancelEdit()
       await loadStatus()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehler beim Sperren')
@@ -119,6 +128,36 @@ function Journal() {
       await loadEntries()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehler beim Löschen')
+    }
+  }
+
+  // Eintrag zum Bearbeiten öffnen
+  function startEdit(entry: JournalEntry) {
+    setEditingId(entry.id)
+    setEditEntry({
+      title: entry.title,
+      content: entry.content,
+      date: entry.date,
+    })
+    setShowForm(false)
+  }
+
+  // Bearbeitung abbrechen
+  function cancelEdit() {
+    setEditingId(null)
+    setEditEntry({ title: '', content: '', date: '' })
+  }
+
+  // Eintrag speichern (PUT)
+  async function saveEdit() {
+    if (!editingId) return
+    try {
+      setError(null)
+      await put(`/api/journal/entries/${editingId}`, editEntry)
+      cancelEdit()
+      await loadEntries()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Fehler beim Speichern')
     }
   }
 
@@ -319,17 +358,76 @@ function Journal() {
                     key={entry.id}
                     className="bg-gray-900 border border-gray-800 rounded-lg p-5 hover:border-gray-700 transition-colors"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-gray-500">{entry.date}</span>
-                      <button
-                        onClick={() => deleteEntry(entry.id)}
-                        className="text-xs text-red-400/50 hover:text-red-400 transition-colors"
-                      >
-                        Löschen
-                      </button>
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2">{entry.title}</h3>
-                    <p className="text-gray-400 whitespace-pre-wrap">{entry.content}</p>
+                    {/* Bearbeitungsmodus */}
+                    {editingId === entry.id ? (
+                      <div>
+                        <div className="mb-4">
+                          <label className="block text-sm text-gray-400 mb-1">Datum</label>
+                          <input
+                            type="date"
+                            value={editEntry.date}
+                            onChange={(e) => setEditEntry({ ...editEntry, date: e.target.value })}
+                            className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                          />
+                        </div>
+                        <div className="mb-4">
+                          <label className="block text-sm text-gray-400 mb-1">Titel</label>
+                          <input
+                            type="text"
+                            value={editEntry.title}
+                            onChange={(e) => setEditEntry({ ...editEntry, title: e.target.value })}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                          />
+                        </div>
+                        <div className="mb-4">
+                          <label className="block text-sm text-gray-400 mb-1">Inhalt</label>
+                          <textarea
+                            value={editEntry.content}
+                            onChange={(e) => setEditEntry({ ...editEntry, content: e.target.value })}
+                            rows={6}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500 resize-y"
+                          />
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={saveEdit}
+                            disabled={!editEntry.title || !editEntry.content}
+                            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 rounded-lg transition-colors text-sm"
+                          >
+                            Speichern
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-colors text-sm"
+                          >
+                            Abbrechen
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Anzeigemodus */
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-500">{entry.date}</span>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => startEdit(entry)}
+                              className="text-xs text-gray-400/50 hover:text-gray-300 transition-colors"
+                            >
+                              Bearbeiten
+                            </button>
+                            <button
+                              onClick={() => deleteEntry(entry.id)}
+                              className="text-xs text-red-400/50 hover:text-red-400 transition-colors"
+                            >
+                              Löschen
+                            </button>
+                          </div>
+                        </div>
+                        <h3 className="text-lg font-semibold mb-2">{entry.title}</h3>
+                        <p className="text-gray-400 whitespace-pre-wrap">{entry.content}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
