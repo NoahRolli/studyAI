@@ -9,7 +9,7 @@
 
 import { useState, useEffect } from 'react'
 import { get, post, del, put } from '../hooks/useAPI'
-import type { JournalStatus, JournalEntry, JournalEntryCreate } from '../types/models'
+import type { JournalStatus, JournalEntry, JournalEntryCreate, MoodResult } from '../types/models'
 import MoodChart from '../components/journal/MoodChart'
 import ClusterView from '../components/journal/ClusterView'
 import StorylineView from '../components/journal/StorylineView'
@@ -39,6 +39,10 @@ function Journal() {
     content: '',
     date: '',
   })
+
+  // Mood-Daten (werden einmal geladen und im Parent gehalten)
+  const [moods, setMoods] = useState<MoodResult[]>([])
+  const [moodsLoaded, setMoodsLoaded] = useState(false)
 
   // Aktiver Tab (Standard: Einträge)
   const [activeTab, setActiveTab] = useState<Tab>('entries')
@@ -97,6 +101,8 @@ function Journal() {
     try {
       await post('/api/journal/lock')
       setEntries([])
+      setMoods([])
+      setMoodsLoaded(false)
       setMessage(null)
       setActiveTab('entries')
       cancelEdit()
@@ -116,6 +122,7 @@ function Journal() {
         date: new Date().toISOString().split('T')[0],
       })
       setShowForm(false)
+      setMoodsLoaded(false)
       await loadEntries()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehler beim Erstellen')
@@ -125,6 +132,7 @@ function Journal() {
   async function deleteEntry(id: number) {
     try {
       await del(`/api/journal/entries/${id}`)
+      setMoodsLoaded(false)
       await loadEntries()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehler beim Löschen')
@@ -155,9 +163,22 @@ function Journal() {
       setError(null)
       await put(`/api/journal/entries/${editingId}`, editEntry)
       cancelEdit()
+      setMoodsLoaded(false)
       await loadEntries()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehler beim Speichern')
+    }
+  }
+
+  // Mood-Daten laden (nur einmal pro Session)
+  async function loadMoods() {
+    if (moodsLoaded) return
+    try {
+      const data = await post<MoodResult[]>('/api/journal/analytics/mood')
+      setMoods(data)
+      setMoodsLoaded(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Mood-Analyse fehlgeschlagen')
     }
   }
 
@@ -278,7 +299,10 @@ function Journal() {
             {tabs.map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => {
+                  setActiveTab(tab.key)
+                  if (tab.key === 'mood') loadMoods()
+                }}
                 className={`px-4 py-2 rounded-md text-sm transition-colors ${
                   activeTab === tab.key
                     ? 'bg-white/10 text-white font-medium'
@@ -435,7 +459,9 @@ function Journal() {
           )}
 
           {/* Tab: Stimmung */}
-          {activeTab === 'mood' && <MoodChart entries={entries} />}
+          {activeTab === 'mood' && (
+            <MoodChart entries={entries} moods={moods} loading={!moodsLoaded && moods.length === 0} />
+          )}
 
           {/* Tab: Themen */}
           {activeTab === 'clusters' && <ClusterView />}
