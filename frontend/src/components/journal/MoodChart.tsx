@@ -1,11 +1,8 @@
 // MoodChart — Stimmungsverlauf als Linien-Chart
 // Zeigt Mood-Scores (-1.0 bis 1.0) über Zeit an
-// Nutzt recharts für die Visualisierung
-//
-// Props: entries (für Datum-Zuordnung)
-// Ruft POST /api/journal/analytics/mood auf um Daten zu laden
+// Daten kommen als Props vom Parent (Journal.tsx)
+// So bleiben sie beim Tab-Wechsel erhalten
 
-import { useState, useEffect } from 'react'
 import {
   LineChart,
   Line,
@@ -16,15 +13,16 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts'
-import { post } from '../../hooks/useAPI'
 import type { MoodResult, JournalEntry } from '../../types/models'
 
-// Props — braucht die Einträge für Datum-Zuordnung
+// Props — Daten kommen vom Parent
 interface MoodChartProps {
   entries: JournalEntry[]
+  moods: MoodResult[]
+  loading: boolean
 }
 
-// Datenformat für recharts (Datum + Score + Label)
+// Datenformat für recharts
 interface ChartPoint {
   date: string
   score: number
@@ -32,61 +30,28 @@ interface ChartPoint {
   title: string
 }
 
-function MoodChart({ entries }: MoodChartProps) {
-  const [data, setData] = useState<ChartPoint[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+function MoodChart({ entries, moods, loading }: MoodChartProps) {
+  // --- Daten aufbereiten ---
 
-  // Mood-Daten laden wenn Einträge vorhanden
-  useEffect(() => {
-    if (entries.length > 0) loadMoods()
-  }, [entries])
+  const entryMap = new Map(entries.map((e) => [e.id, e]))
 
-  async function loadMoods() {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // POST /api/journal/analytics/mood → alle Einträge analysieren
-      const moods = await post<MoodResult[]>('/api/journal/analytics/mood')
-
-      // Mood-Daten mit Datum aus den Einträgen zusammenführen
-      const entryMap = new Map(entries.map((e) => [e.id, e]))
-
-      const points: ChartPoint[] = moods
-        .filter((m) => !m.error)
-        .map((m) => {
-          const entry = entryMap.get(m.entry_id)
-          return {
-            date: entry?.date ?? 'unbekannt',
-            score: m.score,
-            label: m.label,
-            title: entry?.title ?? '',
-          }
-        })
-        // Chronologisch sortieren
-        .sort((a, b) => a.date.localeCompare(b.date))
-
-      setData(points)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Mood-Analyse fehlgeschlagen')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const data: ChartPoint[] = moods
+    .filter((m) => !m.error)
+    .map((m) => {
+      const entry = entryMap.get(m.entry_id)
+      return {
+        date: entry?.date ?? 'unbekannt',
+        score: m.score,
+        label: m.label,
+        title: entry?.title ?? '',
+      }
+    })
+    .sort((a, b) => a.date.localeCompare(b.date))
 
   // --- Render ---
 
   if (loading) {
     return <p className="text-gray-400 text-sm">Stimmung wird analysiert...</p>
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-900/30 border border-red-800 text-red-300 px-4 py-3 rounded-lg text-sm">
-        {error}
-      </div>
-    )
   }
 
   if (data.length === 0) {
@@ -101,34 +66,22 @@ function MoodChart({ entries }: MoodChartProps) {
     <div>
       <h3 className="text-lg font-semibold mb-4">Stimmungsverlauf</h3>
 
-      {/* Chart — responsive Breite, feste Höhe */}
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-          {/* Hintergrund-Raster */}
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-
-          {/* X-Achse: Datum */}
           <XAxis
             dataKey="date"
             stroke="#6b7280"
             tick={{ fill: '#9ca3af', fontSize: 12 }}
           />
-
-          {/* Y-Achse: Score von -1 bis 1 */}
           <YAxis
             domain={[-1, 1]}
             ticks={[-1, -0.5, 0, 0.5, 1]}
             stroke="#6b7280"
             tick={{ fill: '#9ca3af', fontSize: 12 }}
           />
-
-          {/* Nulllinie hervorheben */}
           <ReferenceLine y={0} stroke="#4b5563" strokeDasharray="4 4" />
-
-          {/* Tooltip beim Hovern über Datenpunkte */}
           <Tooltip content={<MoodTooltip />} />
-
-          {/* Die Mood-Linie */}
           <Line
             type="monotone"
             dataKey="score"
