@@ -4,6 +4,7 @@
 #
 # WICHTIG: Entschlüsselte Daten leben nur im RAM während der Analyse
 # Ergebnisse enthalten keine verschlüsselten Rohdaten
+# WICHTIG: Soft-gelöschte Einträge (is_deleted=1) werden überall gefiltert
 
 from fastapi import APIRouter, Depends, HTTPException
 from backend.journal.api.dependencies import require_unlocked
@@ -46,7 +47,9 @@ async def get_entry_mood(
     db: Session = Depends(get_journal_db),
 ):
     """Analysiert die Stimmung eines einzelnen Eintrags."""
-    entry = db.query(JournalEntry).filter(JournalEntry.id == entry_id).first()
+    entry = db.query(JournalEntry).filter(
+        JournalEntry.id == entry_id, JournalEntry.is_deleted == 0
+    ).first()
     if not entry:
         raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
 
@@ -65,7 +68,7 @@ async def get_all_moods(
     db: Session = Depends(get_journal_db),
 ):
     """Analysiert die Stimmung aller Einträge. Für Zeitraum-Übersichten."""
-    entries = db.query(JournalEntry).all()
+    entries = db.query(JournalEntry).filter(JournalEntry.is_deleted == 0).all()
     if not entries:
         return []
 
@@ -82,7 +85,7 @@ async def get_clusters(
     db: Session = Depends(get_journal_db),
 ):
     """Gruppiert alle Einträge nach thematischer Ähnlichkeit."""
-    entries = db.query(JournalEntry).all()
+    entries = db.query(JournalEntry).filter(JournalEntry.is_deleted == 0).all()
     if len(entries) < 2:
         raise HTTPException(
             status_code=400,
@@ -117,7 +120,9 @@ async def get_storylines(
     db: Session = Depends(get_journal_db),
 ):
     """Erkennt narrative Bögen über mehrere Einträge."""
-    entries = db.query(JournalEntry).order_by(JournalEntry.created_at).all()
+    entries = db.query(JournalEntry).filter(
+        JournalEntry.is_deleted == 0
+    ).order_by(JournalEntry.created_at).all()
     if len(entries) < 3:
         raise HTTPException(
             status_code=400,
