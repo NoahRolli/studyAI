@@ -10,18 +10,17 @@ from backend.api.mindmap import router as mindmap_router
 from backend.journal.api.auth import router as journal_auth_router
 from backend.journal.api.entries import router as journal_entries_router
 from backend.journal.api.analytics import router as journal_analytics_router
+from backend.journal.models.journal_database import engine as journal_engine, JournalBase
 
 # WICHTIG: Alle Models importieren, damit SQLAlchemy sie kennt
 from backend.models.module import Module  # noqa: F401
 from backend.models.document import Document  # noqa: F401
 from backend.models.summary import Summary  # noqa: F401
 from backend.models.mindmap_node import MindmapNode  # noqa: F401
-
-# Erstellt alle Tabellen in der SQLite-Datenbank beim Server-Start
-Base.metadata.create_all(bind=engine)
-
-from backend.journal.models.journal_database import engine as journal_engine, JournalBase
 from backend.journal.models.journal_entry import JournalEntry  # noqa: F401
+
+# Erstellt alle Tabellen in beiden Datenbanken beim Server-Start
+Base.metadata.create_all(bind=engine)
 JournalBase.metadata.create_all(bind=journal_engine)
 
 # FastAPI App initialisieren
