@@ -2,7 +2,7 @@
 # WICHTIG: Kein Claude, kein Fallback, kein gemeinsamer Code-Pfad
 # Alle Journal-Daten bleiben lokal auf dem Rechner
 #
-# Nutzt llama3.2 für Textanalyse (Mood, Storylines)
+# Nutzt llama3.2 für Textanalyse (Mood, Storylines, Titel-Generierung)
 # Nutzt nomic-embed-text für Embeddings (Clustering)
 
 import json
@@ -96,6 +96,34 @@ keywords: 3-5 stimmungsprägende Wörter aus dem Text"""
             return self._parse_json(response_text)
         except json.JSONDecodeError:
             return {"score": 0.0, "label": "unbekannt", "keywords": []}
+
+    async def generate_title(self, content: str) -> str:
+        """
+        Generiert einen kurzen Titel aus dem Inhalt eines Eintrags.
+        Wird aufgerufen wenn der User das Titel-Feld leer lässt.
+        Gibt einen Titel zurück (max 6 Wörter).
+        """
+        # Prüfen ob Ollama verfügbar ist
+        if not await self.is_available():
+            return "Ohne Titel"
+
+        prompt = f"""Generiere einen kurzen Titel für diesen Tagebucheintrag.
+Der Titel soll den Kern des Eintrags in maximal 6 Wörtern zusammenfassen.
+Antworte NUR mit dem Titel, kein anderer Text, keine Anführungszeichen.
+
+Eintrag:
+{content[:1000]}"""
+
+        try:
+            result = await self._chat(prompt, max_tokens=30)
+            # Bereinigen: Anführungszeichen, Zeilenumbrüche entfernen
+            title = result.strip().strip('"').strip("'").split("\n")[0]
+            # Fallback wenn Ollama leeren oder zu langen Titel liefert
+            if not title or len(title) > 100:
+                return "Ohne Titel"
+            return title
+        except Exception:
+            return "Ohne Titel"
 
 
 # Singleton-Instanz — wird von anderen Services importiert
