@@ -1,6 +1,5 @@
 # Pydantic Schemas für die Journal API
 # Definieren was rein und raus geht — zentral für alle Endpunkte
-
 from pydantic import BaseModel
 from typing import Optional
 
@@ -11,8 +10,9 @@ class PasswordInput(BaseModel):
 
 
 # Neuen Eintrag erstellen
+# title ist optional — wird via Ollama auto-generiert wenn leer
 class EntryCreate(BaseModel):
-    title: str
+    title: Optional[str] = None
     content: str
     date: str  # ISO-Format, z.B. "2026-03-01"
 
