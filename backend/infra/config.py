@@ -1,6 +1,6 @@
 # Zentrale Konfiguration für das pallas Backend
 # Enthält Pfade, Datenbank-URL und AI-Provider Einstellungen
-
+import os
 from pathlib import Path
 
 # Pfade
@@ -17,7 +17,6 @@ except (OSError, FileNotFoundError):
     STORAGE_DIR = BASE_DIR / "local_storage"
 
 # Ordner erstellen falls er noch nicht existiert
-import os
 os.makedirs(STORAGE_DIR, exist_ok=True)
 
 # Datenbank

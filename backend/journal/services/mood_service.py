@@ -5,9 +5,7 @@
 # Score-Skala: -1.0 (sehr negativ) bis 1.0 (sehr positiv)
 # Label: Freitext, z.B. "freudig", "nachdenklich", "traurig"
 
-from sqlalchemy.orm import Session
 from backend.journal.services.journal_ai_service import journal_ai
-from backend.journal.models.journal_database import get_journal_db
 
 
 # Mood-Daten werden als JSON-Feld im Entry gespeichert

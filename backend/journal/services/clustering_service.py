@@ -5,7 +5,6 @@
 # Flow: Embeddings laden → Ähnlichkeitsmatrix → Cluster bilden
 # Cluster-Labels werden via Ollama generiert
 
-import numpy as np
 from backend.journal.services.embedding_service import cosine_similarity
 from backend.journal.services.journal_ai_service import journal_ai
 

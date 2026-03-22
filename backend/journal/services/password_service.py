@@ -3,7 +3,6 @@
 # Das Passwort wird NIE gespeichert — nur der Hash.
 # Kein Passwort-Reset möglich: ohne Passwort sind die Daten verloren.
 
-import os
 from pathlib import Path
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
