@@ -44,6 +44,9 @@ function Journal() {
   const [moods, setMoods] = useState<MoodResult[]>([])
   const [moodsLoaded, setMoodsLoaded] = useState(false)
 
+  // Auto-Titel Toggle (Standard: aktiviert = Ollama generiert)
+  const [autoTitle, setAutoTitle] = useState(true)
+
   // Aktiver Tab (Standard: Einträge)
   const [activeTab, setActiveTab] = useState<Tab>('entries')
 
@@ -115,13 +118,19 @@ function Journal() {
   async function createEntry() {
     try {
       setError(null)
-      await post('/api/journal/entries/', newEntry)
+      // Wenn autoTitle aktiv, title als null senden → Backend generiert
+      const payload = {
+        ...newEntry,
+        title: autoTitle ? null : newEntry.title,
+      }
+      await post('/api/journal/entries/', payload)
       setNewEntry({
         title: '',
         content: '',
         date: new Date().toISOString().split('T')[0],
       })
       setShowForm(false)
+      setAutoTitle(true)
       setMoodsLoaded(false)
       await loadEntries()
     } catch (err) {
@@ -328,6 +337,8 @@ function Journal() {
               {showForm && (
                 <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
                   <h2 className="text-xl font-bold mb-4">Neuer Eintrag</h2>
+
+                  {/* Datum */}
                   <div className="mb-4">
                     <label className="block text-sm text-gray-400 mb-1">Datum</label>
                     <input
@@ -337,16 +348,38 @@ function Journal() {
                       className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
                     />
                   </div>
+
+                  {/* Titel mit Auto-Toggle */}
                   <div className="mb-4">
-                    <label className="block text-sm text-gray-400 mb-1">Titel</label>
-                    <input
-                      type="text"
-                      value={newEntry.title}
-                      onChange={(e) => setNewEntry({ ...newEntry, title: e.target.value })}
-                      placeholder="Was beschäftigt dich heute?"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
-                    />
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-sm text-gray-400">Titel</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAutoTitle(!autoTitle)
+                          if (!autoTitle) setNewEntry({ ...newEntry, title: '' })
+                        }}
+                        className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                      >
+                        {autoTitle ? '✎ Titel selbst eingeben' : '✕ Auto-Titel verwenden'}
+                      </button>
+                    </div>
+                    {autoTitle ? (
+                      <div className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 text-gray-500 text-sm">
+                        Wird automatisch aus dem Inhalt generiert
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        value={newEntry.title}
+                        onChange={(e) => setNewEntry({ ...newEntry, title: e.target.value })}
+                        placeholder="Eigenen Titel eingeben..."
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                      />
+                    )}
                   </div>
+
+                  {/* Inhalt */}
                   <div className="mb-6">
                     <label className="block text-sm text-gray-400 mb-1">Inhalt</label>
                     <textarea
@@ -357,9 +390,11 @@ function Journal() {
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500 resize-y"
                     />
                   </div>
+
+                  {/* Speichern */}
                   <button
                     onClick={createEntry}
-                    disabled={!newEntry.title || !newEntry.content}
+                    disabled={!newEntry.content || (!autoTitle && !newEntry.title)}
                     className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-2 rounded-lg transition-colors"
                   >
                     Eintrag speichern
