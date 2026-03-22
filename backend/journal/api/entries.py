@@ -2,6 +2,7 @@
 # Alle Daten werden vor dem Speichern verschlüsselt und beim Lesen entschlüsselt
 # Jedes Feld (Titel, Inhalt, Datum) wird unabhängig verschlüsselt
 # mit eigenem IV und Auth-Tag — sicher und einzeln entschlüsselbar
+# Auto-Titel: Wenn kein Titel angegeben, generiert Ollama einen
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -9,6 +10,7 @@ from backend.journal.models.journal_database import get_journal_db
 from backend.journal.models.journal_entry import JournalEntry
 from backend.journal.services.session_service import session_manager
 from backend.journal.services.crypto_service import encrypt_text, decrypt_text
+from backend.journal.services.journal_ai_service import journal_ai
 from backend.journal.api.dependencies import require_unlocked
 from backend.journal.api.schemas import EntryCreate, EntryUpdate
 
@@ -43,14 +45,20 @@ def get_entries(db: Session = Depends(get_journal_db)):
 
 
 # POST /api/journal/entries — Neuen Eintrag erstellen (wird verschlüsselt)
+# Wenn kein Titel angegeben, wird er via Ollama aus dem Inhalt generiert
 @router.post("/")
-def create_entry(data: EntryCreate, db: Session = Depends(get_journal_db)):
+async def create_entry(data: EntryCreate, db: Session = Depends(get_journal_db)):
     require_unlocked()
     aes_key = session_manager.get_key()
 
+    # Titel: User-Eingabe verwenden oder via Ollama generieren
+    title = data.title if data.title and data.title.strip() else None
+    if not title:
+        title = await journal_ai.generate_title(data.content)
+
     # Jedes Feld unabhängig verschlüsseln (eigener IV + Tag pro Feld)
     entry = JournalEntry(
-        encrypted_title=encrypt_text(data.title, aes_key),
+        encrypted_title=encrypt_text(title, aes_key),
         encrypted_content=encrypt_text(data.content, aes_key),
         encrypted_date=encrypt_text(data.date, aes_key),
         iv=b'',          # Nicht mehr benötigt (IV ist im Feld enthalten)
@@ -60,7 +68,7 @@ def create_entry(data: EntryCreate, db: Session = Depends(get_journal_db)):
     db.commit()
     db.refresh(entry)
 
-    return {"id": entry.id, "message": "Eintrag erstellt und verschlüsselt."}
+    return {"id": entry.id, "title": title, "message": "Eintrag erstellt und verschlüsselt."}
 
 
 # GET /api/journal/entries/{id} — Einzelnen Eintrag abrufen
