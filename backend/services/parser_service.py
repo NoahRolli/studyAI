@@ -1,13 +1,20 @@
 # Parser-Service: Liest Text aus verschiedenen Dateiformaten
 # Unterstützt PDF, Word, PowerPoint, Excel, Bilder (OCR), Markdown und Text
+# PyMuPDF ist optional — wenn nicht installiert, werden PDFs mit Fallback gelesen
 
-import fitz  # PyMuPDF — Library zum PDF-Lesen
 from docx import Document as DocxDocument  # python-docx — Library zum Word-Lesen
 from pptx import Presentation  # python-pptx — Library zum PowerPoint-Lesen
 from openpyxl import load_workbook  # openpyxl — Library zum Excel-Lesen
 import pytesseract  # OCR — Text aus Bildern extrahieren
 from PIL import Image  # Pillow — Bildverarbeitung
 from pathlib import Path
+
+# PyMuPDF optional importieren (Build-Probleme auf manchen Systemen)
+try:
+    import fitz
+    HAS_PYMUPDF = True
+except ImportError:
+    HAS_PYMUPDF = False
 
 
 # Unterstützte Dateiformate
@@ -48,17 +55,63 @@ def parse_file(file_path: str) -> str:
 def _parse_pdf(path: Path) -> str:
     """
     Extrahiert Text aus einer PDF-Datei.
-    Geht Seite für Seite durch und sammelt den Text.
+    Nutzt PyMuPDF wenn verfügbar, sonst einfachen Textextrakt-Fallback.
     """
-    text = ""
-    doc = fitz.open(str(path))
+    if HAS_PYMUPDF:
+        text = ""
+        doc = fitz.open(str(path))
+        for page in doc:
+            text += page.get_text()
+            text += "\n\n"
+        doc.close()
+        return text.strip()
 
-    for page in doc:
-        text += page.get_text()
-        text += "\n\n"  # Seitenumbruch als Trennung
-
-    doc.close()
-    return text.strip()
+    # Fallback: PDF als Binär lesen und Text extrahieren
+    # Einfacher Extrakt — funktioniert für Text-PDFs, nicht für gescannte
+    try:
+        raw = path.read_bytes()
+        text_parts = []
+        # Suche nach Text-Streams im PDF
+        i = 0
+        while i < len(raw):
+            # PDF Text-Objekte beginnen mit BT und enden mit ET
+            bt = raw.find(b'BT', i)
+            if bt == -1:
+                break
+            et = raw.find(b'ET', bt)
+            if et == -1:
+                break
+            # Text zwischen Klammern extrahieren
+            block = raw[bt:et]
+            for match_start in range(len(block)):
+                if block[match_start:match_start + 1] == b'(':
+                    depth = 1
+                    match_end = match_start + 1
+                    while match_end < len(block) and depth > 0:
+                        if block[match_end:match_end + 1] == b'(' and block[match_end - 1:match_end] != b'\\':
+                            depth += 1
+                        elif block[match_end:match_end + 1] == b')' and block[match_end - 1:match_end] != b'\\':
+                            depth -= 1
+                        match_end += 1
+                    try:
+                        text_parts.append(block[match_start + 1:match_end - 1].decode('latin-1'))
+                    except Exception:
+                        pass
+            i = et + 2
+        result = " ".join(text_parts)
+        if result.strip():
+            return result.strip()
+        raise ValueError(
+            "PDF-Text konnte nicht extrahiert werden. "
+            "Installiere PyMuPDF für bessere PDF-Unterstützung: pip3 install PyMuPDF"
+        )
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(
+            f"PDF-Parsing fehlgeschlagen: {e}. "
+            "Installiere PyMuPDF: pip3 install PyMuPDF"
+        )
 
 
 def _parse_docx(path: Path) -> str:
@@ -70,7 +123,7 @@ def _parse_docx(path: Path) -> str:
     paragraphs = []
 
     for paragraph in doc.paragraphs:
-        if paragraph.text.strip():  # Leere Absätze überspringen
+        if paragraph.text.strip():
             paragraphs.append(paragraph.text)
 
     return "\n\n".join(paragraphs)
@@ -88,7 +141,6 @@ def _parse_pptx(path: Path) -> str:
         slide_content = [f"--- Folie {slide_num} ---"]
 
         for shape in slide.shapes:
-            # Nur Shapes mit Text verarbeiten
             if shape.has_text_frame:
                 for paragraph in shape.text_frame.paragraphs:
                     if paragraph.text.strip():
@@ -112,7 +164,6 @@ def _parse_xlsx(path: Path) -> str:
         sheet_content = [f"--- Blatt: {sheet_name} ---"]
 
         for row in ws.iter_rows(values_only=True):
-            # Zellen zu Text umwandeln, leere Zellen überspringen
             cells = [str(cell) for cell in row if cell is not None]
             if cells:
                 sheet_content.append(" | ".join(cells))
@@ -139,12 +190,10 @@ def _parse_image(path: Path) -> str:
 
 def _parse_markdown(path: Path) -> str:
     """
-    Liest eine Markdown-Datei und entfernt die Formatierung.
-    Gibt den reinen Text zurück.
+    Liest eine Markdown-Datei und gibt den Rohtext zurück.
+    Struktur bleibt erhalten, da sie für AI nützlich ist.
     """
     raw = path.read_text(encoding="utf-8")
-    # Markdown-Tags entfernen für reinen Text
-    # Wir behalten den Rohtext, da die Struktur für AI nützlich ist
     return raw
 
 
