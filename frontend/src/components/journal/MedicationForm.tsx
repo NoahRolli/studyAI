@@ -1,5 +1,6 @@
 // MedicationForm — Formular zum Erstellen und Bearbeiten von Medikamenten
 // Wird von MedicationTracker für "Neu" und "Bearbeiten" verwendet
+// HUD-Design mit Glow-Effekten und Cyan-Akzenten
 //
 // Props:
 // - initialData: Vorbelegte Werte (beim Bearbeiten)
@@ -29,43 +30,52 @@ function MedicationForm({ initialData, onSave, onCancel }: MedicationFormProps) 
   )
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
-      <h2 className="text-xl font-bold mb-4">
+    <div className="hud-card p-6 mb-6 animate-fade-in">
+      <h2
+        className="hud-title text-sm mb-4"
+        style={{ color: 'var(--color-primary)' }}
+      >
         {initialData ? 'Medikament bearbeiten' : 'Neues Medikament'}
       </h2>
 
       {/* Name */}
       <div className="mb-4">
-        <label className="block text-sm text-gray-400 mb-1">Name</label>
+        <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
+          Name
+        </label>
         <input
           type="text"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           placeholder="z.B. Ibuprofen"
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+          className="hud-input"
         />
       </div>
 
       {/* Dosis + Frequenz nebeneinander */}
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Dosis</label>
+          <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
+            Dosis
+          </label>
           <input
             type="text"
             value={form.dosage}
             onChange={(e) => setForm({ ...form, dosage: e.target.value })}
             placeholder="z.B. 400mg"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+            className="hud-input"
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Frequenz</label>
+          <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
+            Frequenz
+          </label>
           <input
             type="text"
             value={form.frequency}
             onChange={(e) => setForm({ ...form, frequency: e.target.value })}
             placeholder="z.B. 2x täglich"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+            className="hud-input"
           />
         </div>
       </div>
@@ -73,28 +83,32 @@ function MedicationForm({ initialData, onSave, onCancel }: MedicationFormProps) 
       {/* Start + End-Datum nebeneinander */}
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Start-Datum</label>
+          <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
+            Start-Datum
+          </label>
           <input
             type="date"
             value={form.start_date}
             onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+            className="hud-input"
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">End-Datum (optional)</label>
+          <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
+            End-Datum (optional)
+          </label>
           <input
             type="date"
             value={form.end_date || ''}
             onChange={(e) => setForm({ ...form, end_date: e.target.value || null })}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+            className="hud-input"
           />
         </div>
       </div>
 
       {/* Notizen */}
       <div className="mb-6">
-        <label className="block text-sm text-gray-400 mb-1">
+        <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
           Notizen / Nebenwirkungen (optional)
         </label>
         <textarea
@@ -102,7 +116,7 @@ function MedicationForm({ initialData, onSave, onCancel }: MedicationFormProps) 
           onChange={(e) => setForm({ ...form, notes: e.target.value || null })}
           placeholder="z.B. Nicht auf leeren Magen nehmen..."
           rows={3}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500 resize-y"
+          className="hud-input resize-y"
         />
       </div>
 
@@ -111,14 +125,11 @@ function MedicationForm({ initialData, onSave, onCancel }: MedicationFormProps) 
         <button
           onClick={() => onSave(form)}
           disabled={!form.name || !form.dosage || !form.frequency}
-          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-2 rounded-lg transition-colors"
+          className="hud-btn hud-btn-primary"
         >
           Speichern
         </button>
-        <button
-          onClick={onCancel}
-          className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-colors"
-        >
+        <button onClick={onCancel} className="hud-btn">
           Abbrechen
         </button>
       </div>
