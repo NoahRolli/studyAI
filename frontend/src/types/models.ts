@@ -114,3 +114,58 @@ export interface StorylineResult {
   confidence: number        // 0.0 bis 1.0
   entry_ids: number[]
 }
+// --- Medikamenten-Tracker ---
+
+// Ein entschlüsseltes Medikament (wie es vom Backend kommt)
+export interface Medication {
+  id: number
+  name: string                 // z.B. "Ibuprofen"
+  dosage: string               // z.B. "400mg"
+  frequency: string            // z.B. "2x täglich"
+  start_date: string           // ISO-Datum
+  end_date: string | null      // null wenn noch aktiv
+  notes: string | null         // Notizen/Nebenwirkungen
+  created_at: string
+  updated_at: string
+}
+
+// Payload zum Erstellen eines neuen Medikaments
+export interface MedicationCreate {
+  name: string
+  dosage: string
+  frequency: string
+  start_date: string
+  end_date?: string | null
+  notes?: string | null
+}
+
+// Payload zum Aktualisieren (alle Felder optional)
+export interface MedicationUpdate {
+  name?: string
+  dosage?: string
+  frequency?: string
+  start_date?: string
+  end_date?: string | null
+  notes?: string | null
+}
+
+// Ein entschlüsselter Einnahme-Log Eintrag
+export interface IntakeLog {
+  id: number
+  medication_id: number
+  date: string                 // ISO-Datum
+  status: 'taken' | 'skipped'  // Genommen oder übersprungen
+  created_at: string
+}
+
+// Payload zum Erstellen eines Einnahme-Logs
+export interface IntakeLogCreate {
+  medication_id: number
+  date: string
+  status: 'taken' | 'skipped'
+}
+
+// Tracker-Settings (aktiviert/deaktiviert)
+export interface MedicationSettingsResponse {
+  is_enabled: boolean
+}
