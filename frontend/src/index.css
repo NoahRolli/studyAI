@@ -1,1 +1,248 @@
+/* Pallas — Globale Styles
+   Futuristisches HUD-Design mit Cyan-Akzenten
+   Verwendet CSS Custom Properties für konsistente Farben
+   Tailwind v4 wird über @import geladen */
 @import "tailwindcss";
+
+/* Google Font — Orbitron für futuristische Überschriften */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+/* ============================================
+   CSS Custom Properties — Farbpalette
+   Zentral definiert, überall wiederverwendbar
+   ============================================ */
+:root {
+  /* Primärfarben — Cyan/Teal Akzente */
+  --color-primary: #00d4ff;
+  --color-primary-dim: #00d4ff80;
+  --color-primary-glow: 0 0 20px rgba(0, 212, 255, 0.3);
+  --color-primary-glow-strong: 0 0 30px rgba(0, 212, 255, 0.5);
+
+  /* Hintergrund-Stufen — von dunkel nach etwas heller */
+  --color-bg-deep: #0a0e17;
+  --color-bg-base: #0d1117;
+  --color-bg-surface: #141b27;
+  --color-bg-elevated: #1a2332;
+
+  /* Border-Farben */
+  --color-border: #1e2d3d;
+  --color-border-glow: #00d4ff30;
+
+  /* Text-Farben */
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #8892a4;
+  --color-text-muted: #4a5568;
+
+  /* Status-Farben */
+  --color-success: #00ff88;
+  --color-danger: #ff3b5c;
+  --color-warning: #ffaa00;
+}
+
+/* ============================================
+   Basis-Styles — Body, Scrollbar, Auswahl
+   ============================================ */
+body {
+  background-color: var(--color-bg-deep);
+  color: var(--color-text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Scrollbar — dünn, mit Cyan-Akzent */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary-dim);
+}
+
+/* Text-Auswahl in Cyan */
+::selection {
+  background: rgba(0, 212, 255, 0.3);
+  color: white;
+}
+
+/* ============================================
+   HUD-Komponenten — Wiederverwendbare Klassen
+   ============================================ */
+
+/* Glassmorphism-Karte — halbtransparent mit Blur */
+.hud-card {
+  background: linear-gradient(
+    135deg,
+    rgba(20, 27, 39, 0.8),
+    rgba(26, 35, 50, 0.6)
+  );
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+}
+
+/* Hover-Effekt: Cyan-Glow am Rand */
+.hud-card:hover {
+  border-color: var(--color-border-glow);
+  box-shadow: var(--color-primary-glow);
+}
+
+/* HUD-Button — Standard (halbtransparent) */
+.hud-btn {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid var(--color-border-glow);
+  color: var(--color-primary);
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.hud-btn:hover {
+  background: rgba(0, 212, 255, 0.2);
+  box-shadow: var(--color-primary-glow);
+}
+
+.hud-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* HUD-Button Variante: Primär (ausgefüllt) */
+.hud-btn-primary {
+  background: rgba(0, 212, 255, 0.15);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+}
+
+.hud-btn-primary:hover {
+  background: rgba(0, 212, 255, 0.3);
+  box-shadow: var(--color-primary-glow-strong);
+}
+
+/* HUD-Button Variante: Danger (rot) */
+.hud-btn-danger {
+  background: rgba(255, 59, 92, 0.1);
+  border: 1px solid rgba(255, 59, 92, 0.3);
+  color: var(--color-danger);
+}
+
+.hud-btn-danger:hover {
+  background: rgba(255, 59, 92, 0.2);
+  box-shadow: 0 0 20px rgba(255, 59, 92, 0.3);
+}
+
+/* HUD-Input — Eingabefelder */
+.hud-input {
+  background: rgba(13, 17, 23, 0.8);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px 16px;
+  color: var(--color-text-primary);
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.hud-input:focus {
+  outline: none;
+  border-color: var(--color-primary-dim);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
+}
+
+.hud-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* HUD-Überschriften — Orbitron Font, Tracking */
+.hud-title {
+  font-family: 'Orbitron', monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Glühender Text — für Akzente und Highlights */
+.text-glow {
+  color: var(--color-primary);
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+/* ============================================
+   Animationen
+   ============================================ */
+
+/* Subtiler Glow-Puls — für aktive Elemente */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.4); }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+/* Fade-In von unten — für Karten und Inhalte */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in-up 0.4s ease-out;
+}
+
+/* Scan-Linie — horizontale Linie die sich bewegt (dekorativ) */
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* Grid-Hintergrund — subtiles Raster */
+.hud-grid-bg {
+  background-image:
+    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ============================================
+   Tab-Navigation
+   ============================================ */
+.hud-tab {
+  padding: 8px 16px;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+.hud-tab:hover {
+  color: var(--color-text-secondary);
+  background: rgba(0, 212, 255, 0.05);
+}
+
+.hud-tab-active {
+  color: var(--color-primary);
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid var(--color-border-glow);
+}
