@@ -1,5 +1,4 @@
 # FastAPI Entry Point — startet den Server und konfiguriert die App
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.models.database import engine, Base
@@ -10,22 +9,20 @@ from backend.api.mindmap import router as mindmap_router
 from backend.journal.api.auth import router as journal_auth_router
 from backend.journal.api.entries import router as journal_entries_router
 from backend.journal.api.analytics import router as journal_analytics_router
+from backend.journal.api.medications import router as journal_medications_router
 from backend.journal.models.journal_database import engine as journal_engine, JournalBase
-
 # WICHTIG: Alle Models importieren, damit SQLAlchemy sie kennt
 from backend.models.module import Module  # noqa: F401
 from backend.models.document import Document  # noqa: F401
 from backend.models.summary import Summary  # noqa: F401
 from backend.models.mindmap_node import MindmapNode  # noqa: F401
 from backend.journal.models.journal_entry import JournalEntry  # noqa: F401
-
+from backend.journal.models.medication import Medication, IntakeLog, MedicationSettings  # noqa: F401
 # Erstellt alle Tabellen in beiden Datenbanken beim Server-Start
 Base.metadata.create_all(bind=engine)
 JournalBase.metadata.create_all(bind=journal_engine)
-
 # FastAPI App initialisieren
 app = FastAPI(title="Pallas", version="0.1.0")
-
 # CORS-Middleware: Erlaubt dem React-Frontend (Port 5173) auf die API zuzugreifen
 app.add_middleware(
     CORSMiddleware,
@@ -34,20 +31,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
 # Einfacher Test-Endpunkt — zeigt ob die API läuft
 @app.get("/")
 def root():
     return {"message": "Pallas API läuft!", "version": "0.1.0"}
-
-
 # Health-Check Endpunkt
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
-
 # API-Routen registrieren
 app.include_router(modules_router)
 app.include_router(documents_router)
@@ -56,3 +47,4 @@ app.include_router(mindmap_router)
 app.include_router(journal_auth_router)
 app.include_router(journal_entries_router)
 app.include_router(journal_analytics_router)
+app.include_router(journal_medications_router)
