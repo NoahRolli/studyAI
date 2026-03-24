@@ -1,4 +1,4 @@
-// Journal — Verschlüsseltes Tagebuch mit Analytics
+// Journal — Verschlüsseltes Tagebuch mit Analytics + Medikamenten-Tracker
 // Drei Zustände: Setup → Unlock → Einträge + Analyse
 //
 // Analytics-Tabs (nur wenn entsperrt):
@@ -6,16 +6,24 @@
 // - Stimmung: MoodChart (Verlauf über Zeit)
 // - Themen: ClusterView (thematische Gruppen)
 // - Storylines: StorylineView (narrative Bögen)
-
+// - Medikamente: MedicationTracker (nur wenn aktiviert)
 import { useState, useEffect } from 'react'
 import { get, post, del, put } from '../hooks/useAPI'
-import type { JournalStatus, JournalEntry, JournalEntryCreate, MoodResult } from '../types/models'
+import type {
+  JournalStatus,
+  JournalEntry,
+  JournalEntryCreate,
+  MoodResult,
+  Medication,
+  MedicationSettingsResponse,
+} from '../types/models'
 import MoodChart from '../components/journal/MoodChart'
 import ClusterView from '../components/journal/ClusterView'
 import StorylineView from '../components/journal/StorylineView'
+import MedicationTracker from '../components/journal/MedicationTracker'
 
 // Verfügbare Tabs im entsperrten Zustand
-type Tab = 'entries' | 'mood' | 'clusters' | 'storylines'
+type Tab = 'entries' | 'mood' | 'clusters' | 'storylines' | 'medications'
 
 function Journal() {
   // --- State ---
@@ -32,7 +40,7 @@ function Journal() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
-  // Edit-State: welcher Eintrag wird bearbeitet?
+  // Edit-State
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editEntry, setEditEntry] = useState<JournalEntryCreate>({
     title: '',
@@ -40,18 +48,21 @@ function Journal() {
     date: '',
   })
 
-  // Mood-Daten (werden einmal geladen und im Parent gehalten)
+  // Mood-Daten
   const [moods, setMoods] = useState<MoodResult[]>([])
   const [moodsLoaded, setMoodsLoaded] = useState(false)
 
-  // Auto-Titel Toggle (Standard: aktiviert = Ollama generiert)
+  // Auto-Titel Toggle
   const [autoTitle, setAutoTitle] = useState(true)
 
-  // Aktiver Tab (Standard: Einträge)
+  // Medikamenten-Tracker State
+  const [medEnabled, setMedEnabled] = useState(false)
+  const [medications, setMedications] = useState<Medication[]>([])
+
+  // Aktiver Tab
   const [activeTab, setActiveTab] = useState<Tab>('entries')
 
   // --- API-Aufrufe ---
-
   async function loadStatus() {
     try {
       setLoading(true)
@@ -59,6 +70,7 @@ function Journal() {
       setStatus(data)
       if (data.is_unlocked) {
         await loadEntries()
+        await loadMedSettings()
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehler beim Laden')
@@ -73,6 +85,42 @@ function Journal() {
       setEntries(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehler beim Laden der Einträge')
+    }
+  }
+
+  async function loadMedSettings() {
+    try {
+      const data = await get<MedicationSettingsResponse>('/api/journal/medications/settings')
+      setMedEnabled(data.is_enabled)
+      if (data.is_enabled) await loadMedications()
+    } catch {
+      // Settings-Endpoint noch nicht verfügbar — ignorieren
+    }
+  }
+
+  async function loadMedications() {
+    try {
+      const data = await get<Medication[]>('/api/journal/medications/')
+      setMedications(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Fehler beim Laden der Medikamente')
+    }
+  }
+
+  async function toggleMedTracker() {
+    try {
+      const data = await post<MedicationSettingsResponse>(
+        '/api/journal/medications/settings/toggle'
+      )
+      setMedEnabled(data.is_enabled)
+      if (data.is_enabled) {
+        await loadMedications()
+      } else {
+        setMedications([])
+        if (activeTab === 'medications') setActiveTab('entries')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Fehler beim Umschalten')
     }
   }
 
@@ -106,6 +154,8 @@ function Journal() {
       setEntries([])
       setMoods([])
       setMoodsLoaded(false)
+      setMedications([])
+      setMedEnabled(false)
       setMessage(null)
       setActiveTab('entries')
       cancelEdit()
@@ -118,7 +168,6 @@ function Journal() {
   async function createEntry() {
     try {
       setError(null)
-      // Wenn autoTitle aktiv, title als null senden → Backend generiert
       const payload = {
         ...newEntry,
         title: autoTitle ? null : newEntry.title,
@@ -148,24 +197,17 @@ function Journal() {
     }
   }
 
-  // Eintrag zum Bearbeiten öffnen
   function startEdit(entry: JournalEntry) {
     setEditingId(entry.id)
-    setEditEntry({
-      title: entry.title,
-      content: entry.content,
-      date: entry.date,
-    })
+    setEditEntry({ title: entry.title, content: entry.content, date: entry.date })
     setShowForm(false)
   }
 
-  // Bearbeitung abbrechen
   function cancelEdit() {
     setEditingId(null)
     setEditEntry({ title: '', content: '', date: '' })
   }
 
-  // Eintrag speichern (PUT)
   async function saveEdit() {
     if (!editingId) return
     try {
@@ -179,7 +221,6 @@ function Journal() {
     }
   }
 
-  // Mood-Daten laden (nur einmal pro Session)
   async function loadMoods() {
     if (moodsLoaded) return
     try {
@@ -191,12 +232,9 @@ function Journal() {
     }
   }
 
-  useEffect(() => {
-    loadStatus()
-  }, [])
+  useEffect(() => { loadStatus() }, [])
 
   // --- Render ---
-
   if (loading) {
     return (
       <div>
@@ -206,12 +244,13 @@ function Journal() {
     )
   }
 
-  // Tab-Konfiguration
+  // Tab-Konfiguration (Medikamente nur wenn aktiviert)
   const tabs: { key: Tab; label: string }[] = [
     { key: 'entries', label: 'Einträge' },
     { key: 'mood', label: 'Stimmung' },
     { key: 'clusters', label: 'Themen' },
     { key: 'storylines', label: 'Storylines' },
+    ...(medEnabled ? [{ key: 'medications' as Tab, label: 'Medikamente' }] : []),
   ]
 
   return (
@@ -220,12 +259,24 @@ function Journal() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Journal</h1>
         {status?.is_unlocked && (
-          <button
-            onClick={lockJournal}
-            className="bg-red-900/30 hover:bg-red-900/50 text-red-300 px-4 py-2 rounded-lg transition-colors"
-          >
-            Sperren
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Medikamenten-Tracker Toggle */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={medEnabled}
+                onChange={toggleMedTracker}
+                className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-0 focus:ring-offset-0"
+              />
+              <span className="text-sm text-gray-400">Medikamenten-Tracking</span>
+            </label>
+            <button
+              onClick={lockJournal}
+              className="bg-red-900/30 hover:bg-red-900/50 text-red-300 px-4 py-2 rounded-lg transition-colors"
+            >
+              Sperren
+            </button>
+          </div>
         )}
       </div>
 
@@ -241,7 +292,7 @@ function Journal() {
         </div>
       )}
 
-      {/* --- ZUSTAND 1: Nicht eingerichtet → Setup --- */}
+      {/* --- ZUSTAND 1: Setup --- */}
       {status && !status.is_setup && (
         <div className="max-w-md">
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
@@ -271,7 +322,7 @@ function Journal() {
         </div>
       )}
 
-      {/* --- ZUSTAND 2: Gesperrt → Unlock --- */}
+      {/* --- ZUSTAND 2: Unlock --- */}
       {status && status.is_setup && !status.is_unlocked && (
         <div className="max-w-md">
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
@@ -333,12 +384,9 @@ function Journal() {
                 {showForm ? 'Abbrechen' : '+ Neuer Eintrag'}
               </button>
 
-              {/* Neuer Eintrag Formular */}
               {showForm && (
                 <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
                   <h2 className="text-xl font-bold mb-4">Neuer Eintrag</h2>
-
-                  {/* Datum */}
                   <div className="mb-4">
                     <label className="block text-sm text-gray-400 mb-1">Datum</label>
                     <input
@@ -348,8 +396,6 @@ function Journal() {
                       className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
                     />
                   </div>
-
-                  {/* Titel mit Auto-Toggle */}
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-sm text-gray-400">Titel</label>
@@ -378,8 +424,6 @@ function Journal() {
                       />
                     )}
                   </div>
-
-                  {/* Inhalt */}
                   <div className="mb-6">
                     <label className="block text-sm text-gray-400 mb-1">Inhalt</label>
                     <textarea
@@ -390,8 +434,6 @@ function Journal() {
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500 resize-y"
                     />
                   </div>
-
-                  {/* Speichern */}
                   <button
                     onClick={createEntry}
                     disabled={!newEntry.content || (!autoTitle && !newEntry.title)}
@@ -402,7 +444,6 @@ function Journal() {
                 </div>
               )}
 
-              {/* Leerer Zustand */}
               {entries.length === 0 && !showForm && (
                 <div className="text-center py-16">
                   <p className="text-gray-500 text-lg mb-2">Noch keine Einträge.</p>
@@ -410,14 +451,12 @@ function Journal() {
                 </div>
               )}
 
-              {/* Einträge-Liste */}
               <div className="space-y-4">
                 {entries.map((entry) => (
                   <div
                     key={entry.id}
                     className="bg-gray-900 border border-gray-800 rounded-lg p-5 hover:border-gray-700 transition-colors"
                   >
-                    {/* Bearbeitungsmodus */}
                     {editingId === entry.id ? (
                       <div>
                         <div className="mb-4">
@@ -464,7 +503,6 @@ function Journal() {
                         </div>
                       </div>
                     ) : (
-                      /* Anzeigemodus */
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm text-gray-500">{entry.date}</span>
@@ -503,6 +541,11 @@ function Journal() {
 
           {/* Tab: Storylines */}
           {activeTab === 'storylines' && <StorylineView />}
+
+          {/* Tab: Medikamente */}
+          {activeTab === 'medications' && medEnabled && (
+            <MedicationTracker medications={medications} onReload={loadMedications} />
+          )}
         </div>
       )}
     </div>
