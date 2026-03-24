@@ -33,47 +33,30 @@ function ModuleDetail() {
 
   // --- Summaries aus der DB laden ---
   // Holt für jedes Dokument die neueste Zusammenfassung
-  // Wird nach dem Laden der Dokumente aufgerufen
-
   async function loadSummaries(docs: Document[]) {
     const loaded: Record<number, Summary> = {}
-
     for (const doc of docs) {
       try {
-        // GET /api/documents/{id}/summaries — alle Summaries des Dokuments
-        const docSummaries = await get<Summary[]>(
-          `/api/documents/${doc.id}/summaries`
-        )
-
-        // Neueste Zusammenfassung nehmen (letzte im Array)
+        const docSummaries = await get<Summary[]>(`/api/documents/${doc.id}/summaries`)
         if (docSummaries.length > 0) {
           loaded[doc.id] = docSummaries[docSummaries.length - 1]
         }
       } catch {
-        // Wenn ein Dokument keine Summaries hat, einfach überspringen
         console.warn(`Keine Summaries für Dokument ${doc.id}`)
       }
     }
-
     setSummaries(loaded)
   }
 
   // --- Daten laden ---
-
   async function loadModule() {
     try {
       setLoading(true)
       setError(null)
-
-      // Modul-Details laden
       const moduleData = await get<Module>(`/api/modules/${id}`)
       setModule(moduleData)
-
-      // Dokumente des Moduls laden
       const docsData = await get<Document[]>(`/api/modules/${id}/documents/`)
       setDocuments(docsData)
-
-      // Existierende Zusammenfassungen aus der DB laden
       await loadSummaries(docsData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehler beim Laden')
@@ -88,59 +71,37 @@ function ModuleDetail() {
   }, [id])
 
   // --- Datei-Upload ---
-
   async function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
-
     try {
       setUploading(true)
       setError(null)
-
-      // FormData statt JSON — für Datei-Upload
       const formData = new FormData()
       formData.append('file', file)
-
-      // Direkter fetch() weil useApi JSON-Headers setzt,
-      // aber für FormData brauchen wir keinen Content-Type
-      // (Browser setzt ihn automatisch mit Boundary)
       const response = await fetch(
         `http://localhost:8000/api/modules/${id}/documents/`,
-        {
-          method: 'POST',
-          body: formData,
-        }
+        { method: 'POST', body: formData }
       )
-
       if (!response.ok) {
         const err = await response.json().catch(() => ({}))
         throw new Error(err.detail || `Upload fehlgeschlagen: ${response.status}`)
       }
-
-      // Dokumente neu laden (inkl. Summaries)
       await loadModule()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload fehlgeschlagen')
     } finally {
       setUploading(false)
-      // Input zurücksetzen damit dieselbe Datei nochmal gewählt werden kann
       event.target.value = ''
     }
   }
 
   // --- Zusammenfassung generieren ---
-
   async function generateSummary(documentId: number) {
     try {
       setGenerating(documentId)
       setError(null)
-
-      // POST /api/documents/{id}/summarize → AI-Zusammenfassung
-      const summary = await post<Summary>(
-        `/api/documents/${documentId}/summarize`
-      )
-
-      // Zusammenfassung im State speichern (nach Dokument-ID)
+      const summary = await post<Summary>(`/api/documents/${documentId}/summarize`)
       setSummaries((prev) => ({ ...prev, [documentId]: summary }))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Zusammenfassung fehlgeschlagen')
@@ -150,21 +111,15 @@ function ModuleDetail() {
   }
 
   // --- Mindmap generieren und öffnen ---
-
   async function openMindmap(summaryId: number) {
     try {
       setGeneratingMindmap(summaryId)
       setError(null)
-
-      // Prüfen ob schon eine Mindmap existiert
       try {
         await get(`/api/summaries/${summaryId}/mindmap`)
       } catch {
-        // Falls nicht: generieren (POST)
         await post(`/api/summaries/${summaryId}/mindmap`)
       }
-
-      // Zur Fullscreen Mindmap navigieren
       window.location.href = `/mindmap/${summaryId}`
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Mindmap konnte nicht erstellt werden')
@@ -174,11 +129,9 @@ function ModuleDetail() {
   }
 
   // --- Dokument löschen ---
-
   async function deleteDocument(documentId: number) {
     try {
       await del(`/api/documents/${documentId}`)
-      // Dokumente neu laden (inkl. Summaries)
       await loadModule()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Löschen fehlgeschlagen')
@@ -186,18 +139,21 @@ function ModuleDetail() {
   }
 
   // --- Render ---
-
-  // Ladezustand
   if (loading) {
-    return <p className="text-gray-400">Modul wird geladen...</p>
+    return (
+      <div className="animate-fade-in">
+        <p style={{ color: 'var(--color-text-muted)' }}>Modul wird geladen...</p>
+      </div>
+    )
   }
 
-  // Modul nicht gefunden
   if (!module) {
     return (
-      <div className="text-center py-16">
-        <p className="text-gray-500 text-lg mb-4">Modul nicht gefunden.</p>
-        <Link to="/" className="text-blue-400 hover:text-blue-300">
+      <div className="text-center py-16 animate-fade-in">
+        <p className="text-lg mb-4" style={{ color: 'var(--color-text-muted)' }}>
+          Modul nicht gefunden.
+        </p>
+        <Link to="/" className="text-sm" style={{ color: 'var(--color-primary)' }}>
           ← Zurück zum Dashboard
         </Link>
       </div>
@@ -205,44 +161,60 @@ function ModuleDetail() {
   }
 
   return (
-    <div>
+    <div className="animate-fade-in">
       {/* Navigation zurück */}
       <Link
         to="/"
-        className="text-sm text-gray-500 hover:text-gray-300 transition-colors mb-4 inline-block"
+        className="text-xs mb-4 inline-block transition-colors"
+        style={{ color: 'var(--color-text-muted)' }}
       >
         ← Zurück zum Dashboard
       </Link>
 
       {/* Modul-Header */}
       <div className="flex items-center gap-4 mb-8">
-        {/* Farbiger Punkt */}
+        {/* Farbiger Punkt mit Glow */}
         <div
           className="w-4 h-4 rounded-full"
-          style={{ backgroundColor: module.color }}
+          style={{
+            backgroundColor: module.color,
+            boxShadow: `0 0 12px ${module.color}60`,
+          }}
         />
         <div>
-          <h1 className="text-3xl font-bold">{module.name}</h1>
-          <p className="text-gray-400">{module.description}</p>
+          <h1 className="hud-title text-glow text-2xl">{module.name}</h1>
+          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+            {module.description}
+          </p>
         </div>
       </div>
 
       {/* Fehlermeldung */}
       {error && (
-        <div className="bg-red-900/30 border border-red-800 text-red-300 px-4 py-3 rounded-lg mb-6">
+        <div
+          className="px-4 py-3 rounded-lg mb-6 border"
+          style={{
+            background: 'rgba(255, 59, 92, 0.1)',
+            borderColor: 'rgba(255, 59, 92, 0.3)',
+            color: 'var(--color-danger)',
+          }}
+        >
           {error}
         </div>
       )}
 
       {/* Upload-Bereich */}
-      <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-8">
-        <h2 className="text-lg font-semibold mb-3">Dokument hochladen</h2>
-        <p className="text-sm text-gray-500 mb-4">
+      <div className="hud-card p-6 mb-8">
+        <h2
+          className="hud-title text-sm mb-3"
+          style={{ color: 'var(--color-primary)' }}
+        >
+          Dokument hochladen
+        </h2>
+        <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
           Unterstützte Formate: PDF, Word, PowerPoint, Excel, Markdown, TXT, Bilder (OCR)
         </p>
-
-        {/* File-Input mit Label als Button gestylt */}
-        <label className="inline-block cursor-pointer bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-colors">
+        <label className="hud-btn inline-block cursor-pointer">
           {uploading ? 'Wird hochgeladen...' : 'Datei auswählen'}
           <input
             type="file"
@@ -254,16 +226,21 @@ function ModuleDetail() {
         </label>
       </div>
 
-      {/* Dokument-Liste */}
-      <h2 className="text-lg font-semibold mb-4">
+      {/* Dokument-Liste Header */}
+      <h2
+        className="hud-title text-sm mb-4"
+        style={{ color: 'var(--color-primary)' }}
+      >
         Dokumente ({documents.length})
       </h2>
 
       {/* Leerer Zustand */}
       {documents.length === 0 && (
-        <div className="text-center py-12 bg-gray-900/50 border border-gray-800 rounded-lg">
-          <p className="text-gray-500 mb-1">Noch keine Dokumente.</p>
-          <p className="text-gray-600 text-sm">
+        <div className="hud-card text-center py-12">
+          <p className="mb-1" style={{ color: 'var(--color-text-muted)' }}>
+            Noch keine Dokumente.
+          </p>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
             Lade ein Dokument hoch um loszulegen.
           </p>
         </div>
@@ -272,34 +249,33 @@ function ModuleDetail() {
       {/* Dokument-Karten */}
       <div className="space-y-4">
         {documents.map((doc) => (
-          <div
-            key={doc.id}
-            className="bg-gray-900 border border-gray-800 rounded-lg p-5"
-          >
+          <div key={doc.id} className="hud-card p-5 animate-fade-in">
             {/* Dokument-Header */}
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="font-medium">{doc.filename}</h3>
-                <span className="text-xs text-gray-500">
+                <h3 className="font-medium text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                  {doc.filename}
+                </h3>
+                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                   {doc.file_type.toUpperCase()} · {new Date(doc.uploaded_at).toLocaleDateString('de-CH')}
                 </span>
               </div>
-
               {/* Aktionen */}
               <div className="flex items-center gap-3">
-                {/* Zusammenfassung generieren */}
                 <button
                   onClick={() => generateSummary(doc.id)}
                   disabled={generating === doc.id}
-                  className="text-sm bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors"
+                  className="hud-btn hud-btn-primary"
+                  style={{ fontSize: '0.65rem' }}
                 >
                   {generating === doc.id ? 'Generiert...' : 'Zusammenfassen'}
                 </button>
-
-                {/* Löschen */}
                 <button
                   onClick={() => deleteDocument(doc.id)}
-                  className="text-xs text-red-400/50 hover:text-red-400 transition-colors"
+                  className="text-xs transition-colors"
+                  style={{ color: 'rgba(255, 59, 92, 0.4)' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-danger)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')}
                 >
                   Löschen
                 </button>
@@ -308,38 +284,44 @@ function ModuleDetail() {
 
             {/* Zusammenfassung anzeigen (falls vorhanden) */}
             {summaries[doc.id] && (
-              <div className="mt-4 pt-4 border-t border-gray-800">
+              <div
+                className="mt-4 pt-4"
+                style={{ borderTop: '1px solid var(--color-border)' }}
+              >
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold text-gray-300">
+                  <h4 className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
                     Zusammenfassung
-                    <span className="text-xs text-gray-600 ml-2">
+                    <span className="ml-2" style={{ color: 'var(--color-text-muted)' }}>
                       via {summaries[doc.id].ai_provider}
                     </span>
                   </h4>
-
-                  {/* Mindmap-Button — nur sichtbar wenn Zusammenfassung existiert */}
+                  {/* Mindmap-Button */}
                   <button
                     onClick={() => openMindmap(summaries[doc.id].id)}
                     disabled={generatingMindmap === summaries[doc.id].id}
-                    className="text-sm bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors"
+                    className="hud-btn"
+                    style={{ fontSize: '0.65rem' }}
                   >
                     {generatingMindmap === summaries[doc.id].id
                       ? 'Mindmap wird erstellt...'
                       : 'Mindmap öffnen'}
                   </button>
                 </div>
-
-                <p className="text-sm text-gray-400 leading-relaxed">
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                   {summaries[doc.id].summary}
                 </p>
-
-                {/* Schlüsselbegriffe */}
+                {/* Schlüsselbegriffe als Tags */}
                 {summaries[doc.id].key_terms.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {summaries[doc.id].key_terms.map((term, i) => (
                       <span
                         key={i}
-                        className="text-xs bg-white/5 text-gray-400 px-2 py-1 rounded"
+                        className="text-xs px-2 py-1 rounded border"
+                        style={{
+                          backgroundColor: 'rgba(0, 212, 255, 0.05)',
+                          borderColor: 'var(--color-border-glow)',
+                          color: 'var(--color-text-secondary)',
+                        }}
                       >
                         {term}
                       </span>
@@ -355,5 +337,4 @@ function ModuleDetail() {
   )
 }
 
-// Default Export — wird in App.tsx vom Router importiert
 export default ModuleDetail
