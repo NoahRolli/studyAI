@@ -21,6 +21,7 @@ import MoodChart from '../components/journal/MoodChart'
 import ClusterView from '../components/journal/ClusterView'
 import StorylineView from '../components/journal/StorylineView'
 import MedicationTracker from '../components/journal/MedicationTracker'
+import useJournalLock from '../hooks/useJournalLock'
 
 // Verfügbare Tabs im entsperrten Zustand
 type Tab = 'entries' | 'mood' | 'clusters' | 'storylines' | 'medications'
@@ -61,6 +62,33 @@ function Journal() {
 
   // Aktiver Tab
   const [activeTab, setActiveTab] = useState<Tab>('entries')
+
+  // --- Auto-Lock: Sperrt Journal bei Navigation weg oder Laptop-Zuklappen ---
+  // Wird vom useJournalLock Hook aufgerufen wenn:
+  // - User zum Dashboard navigiert (Route-Change)
+  // - Laptop zugeklappt wird (visibilitychange → hidden)
+  // - Anderer Browser-Tab geöffnet wird (visibilitychange → hidden)
+  // Setzt den kompletten Frontend-State zurück (Einträge, Moods, Medikamente)
+  function handleAutoLocked() {
+    setEntries([])
+    setMoods([])
+    setMoodsLoaded(false)
+    setMedications([])
+    setMedEnabled(false)
+    setMessage(null)
+    setActiveTab('entries')
+    cancelEdit()
+    // Status auf "gesperrt" setzen ohne erneuten API-Call
+    setStatus((prev) => prev ? { ...prev, is_unlocked: false } : prev)
+  }
+
+  // Hook aktivieren — überwacht Route und Browser-Visibility
+  useJournalLock({
+    isUnlocked: status?.is_unlocked ?? false,
+    onLocked: handleAutoLocked,
+    lockOnNavigateAway: true,       // Sperren bei Navigation weg von /journal
+    lockOnVisibilityChange: true,   // Sperren bei Laptop-zu / Tab-Wechsel
+  })
 
   // --- API-Aufrufe ---
   async function loadStatus() {
