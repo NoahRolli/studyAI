@@ -7,6 +7,7 @@
 // - Themen: ClusterView (thematische Gruppen)
 // - Storylines: StorylineView (narrative Bögen)
 // - Medikamente: MedicationTracker (nur wenn aktiviert)
+
 import { useState, useEffect } from 'react'
 import { get, post, del, put } from '../hooks/useAPI'
 import type {
@@ -64,10 +65,6 @@ function Journal() {
   const [activeTab, setActiveTab] = useState<Tab>('entries')
 
   // --- Auto-Lock: Sperrt Journal bei Navigation weg oder Laptop-Zuklappen ---
-  // Wird vom useJournalLock Hook aufgerufen wenn:
-  // - User zum Dashboard navigiert (Route-Change)
-  // - Laptop zugeklappt wird (visibilitychange → hidden)
-  // - Anderer Browser-Tab geöffnet wird (visibilitychange → hidden)
   // Setzt den kompletten Frontend-State zurück (Einträge, Moods, Medikamente)
   function handleAutoLocked() {
     setEntries([])
@@ -78,16 +75,14 @@ function Journal() {
     setMessage(null)
     setActiveTab('entries')
     cancelEdit()
-    // Status auf "gesperrt" setzen ohne erneuten API-Call
     setStatus((prev) => prev ? { ...prev, is_unlocked: false } : prev)
   }
 
-  // Hook aktivieren — überwacht Route und Browser-Visibility
   useJournalLock({
     isUnlocked: status?.is_unlocked ?? false,
     onLocked: handleAutoLocked,
-    lockOnNavigateAway: true,       // Sperren bei Navigation weg von /journal
-    lockOnVisibilityChange: true,   // Sperren bei Laptop-zu / Tab-Wechsel
+    lockOnNavigateAway: true,
+    lockOnVisibilityChange: true,
   })
 
   // --- API-Aufrufe ---
@@ -179,14 +174,7 @@ function Journal() {
   async function lockJournal() {
     try {
       await post('/api/journal/lock')
-      setEntries([])
-      setMoods([])
-      setMoodsLoaded(false)
-      setMedications([])
-      setMedEnabled(false)
-      setMessage(null)
-      setActiveTab('entries')
-      cancelEdit()
+      handleAutoLocked()
       await loadStatus()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehler beim Sperren')
@@ -265,9 +253,9 @@ function Journal() {
   // --- Render ---
   if (loading) {
     return (
-      <div>
-        <h1 className="text-3xl font-bold mb-6">Journal</h1>
-        <p className="text-gray-400">Laden...</p>
+      <div className="animate-fade-in">
+        <h1 className="hud-title text-glow text-2xl mb-6">Journal</h1>
+        <p style={{ color: 'var(--color-text-muted)' }}>Systeme werden initialisiert...</p>
       </div>
     )
   }
@@ -282,10 +270,10 @@ function Journal() {
   ]
 
   return (
-    <div>
+    <div className="animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Journal</h1>
+        <h1 className="hud-title text-glow text-2xl">Journal</h1>
         {status?.is_unlocked && (
           <div className="flex items-center gap-4">
             {/* Medikamenten-Tracker Toggle */}
@@ -294,14 +282,13 @@ function Journal() {
                 type="checkbox"
                 checked={medEnabled}
                 onChange={toggleMedTracker}
-                className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-0 focus:ring-offset-0"
+                className="w-4 h-4 rounded accent-[var(--color-primary)]"
               />
-              <span className="text-sm text-gray-400">Medikamenten-Tracking</span>
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                Medikamenten-Tracking
+              </span>
             </label>
-            <button
-              onClick={lockJournal}
-              className="bg-red-900/30 hover:bg-red-900/50 text-red-300 px-4 py-2 rounded-lg transition-colors"
-            >
+            <button onClick={lockJournal} className="hud-btn hud-btn-danger">
               Sperren
             </button>
           </div>
@@ -310,12 +297,26 @@ function Journal() {
 
       {/* Fehler- und Erfolgsmeldungen */}
       {error && (
-        <div className="bg-red-900/30 border border-red-800 text-red-300 px-4 py-3 rounded-lg mb-6">
+        <div
+          className="px-4 py-3 rounded-lg mb-6 border"
+          style={{
+            background: 'rgba(255, 59, 92, 0.1)',
+            borderColor: 'rgba(255, 59, 92, 0.3)',
+            color: 'var(--color-danger)',
+          }}
+        >
           {error}
         </div>
       )}
       {message && (
-        <div className="bg-green-900/30 border border-green-800 text-green-300 px-4 py-3 rounded-lg mb-6">
+        <div
+          className="px-4 py-3 rounded-lg mb-6 border"
+          style={{
+            background: 'rgba(0, 255, 136, 0.1)',
+            borderColor: 'rgba(0, 255, 136, 0.3)',
+            color: 'var(--color-success)',
+          }}
+        >
           {message}
         </div>
       )}
@@ -323,26 +324,33 @@ function Journal() {
       {/* --- ZUSTAND 1: Setup --- */}
       {status && !status.is_setup && (
         <div className="max-w-md">
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-            <h2 className="text-xl font-bold mb-2">Journal einrichten</h2>
-            <p className="text-gray-400 text-sm mb-6">
+          <div className="hud-card p-6 animate-glow-pulse">
+            <h2
+              className="hud-title text-lg mb-2"
+              style={{ color: 'var(--color-primary)' }}
+            >
+              Journal einrichten
+            </h2>
+            <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
               Setze ein Passwort für dein verschlüsseltes Tagebuch.
               Dieses Passwort kann nicht zurückgesetzt werden.
             </p>
             <div className="mb-4">
-              <label className="block text-sm text-gray-400 mb-1">Passwort</label>
+              <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
+                Passwort
+              </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mindestens 8 Zeichen"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                className="hud-input"
               />
             </div>
             <button
               onClick={setupJournal}
               disabled={password.length < 8}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-2 rounded-lg transition-colors"
+              className="hud-btn hud-btn-primary w-full"
             >
               Journal einrichten
             </button>
@@ -353,9 +361,14 @@ function Journal() {
       {/* --- ZUSTAND 2: Unlock --- */}
       {status && status.is_setup && !status.is_unlocked && (
         <div className="max-w-md">
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-            <h2 className="text-xl font-bold mb-2">Journal entsperren</h2>
-            <p className="text-gray-400 text-sm mb-6">
+          <div className="hud-card p-6 animate-glow-pulse">
+            <h2
+              className="hud-title text-lg mb-2"
+              style={{ color: 'var(--color-primary)' }}
+            >
+              Journal entsperren
+            </h2>
+            <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
               Gib dein Passwort ein um auf deine Einträge zuzugreifen.
             </p>
             <div className="mb-4">
@@ -365,13 +378,13 @@ function Journal() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Passwort eingeben"
                 onKeyDown={(e) => e.key === 'Enter' && unlockJournal()}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                className="hud-input"
               />
             </div>
             <button
               onClick={unlockJournal}
               disabled={!password}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-2 rounded-lg transition-colors"
+              className="hud-btn hud-btn-primary w-full"
             >
               Entsperren
             </button>
@@ -383,7 +396,9 @@ function Journal() {
       {status?.is_unlocked && (
         <div>
           {/* Tab-Navigation */}
-          <div className="flex gap-1 mb-6 bg-gray-900 p-1 rounded-lg w-fit">
+          <div className="flex gap-1 mb-6 p-1 rounded-lg w-fit"
+            style={{ backgroundColor: 'var(--color-bg-surface)' }}
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -391,11 +406,7 @@ function Journal() {
                   setActiveTab(tab.key)
                   if (tab.key === 'mood') loadMoods()
                 }}
-                className={`px-4 py-2 rounded-md text-sm transition-colors ${
-                  activeTab === tab.key
-                    ? 'bg-white/10 text-white font-medium'
-                    : 'text-gray-400 hover:text-gray-300'
-                }`}
+                className={`hud-tab ${activeTab === tab.key ? 'hud-tab-active' : ''}`}
               >
                 {tab.label}
               </button>
@@ -407,39 +418,57 @@ function Journal() {
             <div>
               <button
                 onClick={() => setShowForm(!showForm)}
-                className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-colors mb-6"
+                className="hud-btn mb-6"
               >
                 {showForm ? 'Abbrechen' : '+ Neuer Eintrag'}
               </button>
 
+              {/* Neuer Eintrag Formular */}
               {showForm && (
-                <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
-                  <h2 className="text-xl font-bold mb-4">Neuer Eintrag</h2>
+                <div className="hud-card p-6 mb-6 animate-fade-in">
+                  <h2
+                    className="hud-title text-sm mb-4"
+                    style={{ color: 'var(--color-primary)' }}
+                  >
+                    Neuer Eintrag
+                  </h2>
                   <div className="mb-4">
-                    <label className="block text-sm text-gray-400 mb-1">Datum</label>
+                    <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
+                      Datum
+                    </label>
                     <input
                       type="date"
                       value={newEntry.date}
                       onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })}
-                      className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                      className="hud-input"
                     />
                   </div>
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-sm text-gray-400">Titel</label>
+                      <label className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                        Titel
+                      </label>
                       <button
                         type="button"
                         onClick={() => {
                           setAutoTitle(!autoTitle)
                           if (!autoTitle) setNewEntry({ ...newEntry, title: '' })
                         }}
-                        className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                        className="text-xs transition-colors"
+                        style={{ color: 'var(--color-text-muted)' }}
                       >
                         {autoTitle ? '✎ Titel selbst eingeben' : '✕ Auto-Titel verwenden'}
                       </button>
                     </div>
                     {autoTitle ? (
-                      <div className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 text-gray-500 text-sm">
+                      <div
+                        className="rounded-md px-4 py-2 text-xs"
+                        style={{
+                          background: 'rgba(13, 17, 23, 0.5)',
+                          border: '1px solid var(--color-border)',
+                          color: 'var(--color-text-muted)',
+                        }}
+                      >
                         Wird automatisch aus dem Inhalt generiert
                       </div>
                     ) : (
@@ -448,84 +477,92 @@ function Journal() {
                         value={newEntry.title}
                         onChange={(e) => setNewEntry({ ...newEntry, title: e.target.value })}
                         placeholder="Eigenen Titel eingeben..."
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                        className="hud-input"
                       />
                     )}
                   </div>
                   <div className="mb-6">
-                    <label className="block text-sm text-gray-400 mb-1">Inhalt</label>
+                    <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
+                      Inhalt
+                    </label>
                     <textarea
                       value={newEntry.content}
                       onChange={(e) => setNewEntry({ ...newEntry, content: e.target.value })}
                       placeholder="Schreibe deine Gedanken auf..."
                       rows={6}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500 resize-y"
+                      className="hud-input resize-y"
                     />
                   </div>
                   <button
                     onClick={createEntry}
                     disabled={!newEntry.content || (!autoTitle && !newEntry.title)}
-                    className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-2 rounded-lg transition-colors"
+                    className="hud-btn hud-btn-primary"
                   >
                     Eintrag speichern
                   </button>
                 </div>
               )}
 
+              {/* Leerer Zustand */}
               {entries.length === 0 && !showForm && (
                 <div className="text-center py-16">
-                  <p className="text-gray-500 text-lg mb-2">Noch keine Einträge.</p>
-                  <p className="text-gray-600">Klicke auf "+ Neuer Eintrag" um zu beginnen.</p>
+                  <p className="text-lg mb-2" style={{ color: 'var(--color-text-muted)' }}>
+                    Noch keine Einträge.
+                  </p>
+                  <p style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
+                    Klicke auf "+ Neuer Eintrag" um zu beginnen.
+                  </p>
                 </div>
               )}
 
+              {/* Einträge-Liste */}
               <div className="space-y-4">
                 {entries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="bg-gray-900 border border-gray-800 rounded-lg p-5 hover:border-gray-700 transition-colors"
-                  >
+                  <div key={entry.id} className="hud-card p-5 animate-fade-in">
                     {editingId === entry.id ? (
                       <div>
                         <div className="mb-4">
-                          <label className="block text-sm text-gray-400 mb-1">Datum</label>
+                          <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
+                            Datum
+                          </label>
                           <input
                             type="date"
                             value={editEntry.date}
                             onChange={(e) => setEditEntry({ ...editEntry, date: e.target.value })}
-                            className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                            className="hud-input"
                           />
                         </div>
                         <div className="mb-4">
-                          <label className="block text-sm text-gray-400 mb-1">Titel</label>
+                          <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
+                            Titel
+                          </label>
                           <input
                             type="text"
                             value={editEntry.title}
                             onChange={(e) => setEditEntry({ ...editEntry, title: e.target.value })}
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500"
+                            className="hud-input"
                           />
                         </div>
                         <div className="mb-4">
-                          <label className="block text-sm text-gray-400 mb-1">Inhalt</label>
+                          <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
+                            Inhalt
+                          </label>
                           <textarea
                             value={editEntry.content}
                             onChange={(e) => setEditEntry({ ...editEntry, content: e.target.value })}
                             rows={6}
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-gray-500 resize-y"
+                            className="hud-input resize-y"
                           />
                         </div>
                         <div className="flex gap-3">
                           <button
                             onClick={saveEdit}
                             disabled={!editEntry.title || !editEntry.content}
-                            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 rounded-lg transition-colors text-sm"
+                            className="hud-btn hud-btn-primary"
                           >
                             Speichern
                           </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-colors text-sm"
-                          >
+                          <button onClick={cancelEdit} className="hud-btn">
                             Abbrechen
                           </button>
                         </div>
@@ -533,24 +570,34 @@ function Journal() {
                     ) : (
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-gray-500">{entry.date}</span>
+                          <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                            {entry.date}
+                          </span>
                           <div className="flex items-center gap-3">
                             <button
                               onClick={() => startEdit(entry)}
-                              className="text-xs text-gray-400/50 hover:text-gray-300 transition-colors"
+                              className="text-xs transition-colors"
+                              style={{ color: 'var(--color-text-muted)' }}
                             >
                               Bearbeiten
                             </button>
                             <button
                               onClick={() => deleteEntry(entry.id)}
-                              className="text-xs text-red-400/50 hover:text-red-400 transition-colors"
+                              className="text-xs transition-colors"
+                              style={{ color: 'rgba(255, 59, 92, 0.4)' }}
+                              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-danger)')}
+                              onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')}
                             >
                               Löschen
                             </button>
                           </div>
                         </div>
-                        <h3 className="text-lg font-semibold mb-2">{entry.title}</h3>
-                        <p className="text-gray-400 whitespace-pre-wrap">{entry.content}</p>
+                        <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+                          {entry.title}
+                        </h3>
+                        <p className="whitespace-pre-wrap text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                          {entry.content}
+                        </p>
                       </div>
                     )}
                   </div>
