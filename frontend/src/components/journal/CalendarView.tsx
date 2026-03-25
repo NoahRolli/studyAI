@@ -1,12 +1,12 @@
 // CalendarView — Monatskalender für Journal-Einträge
 // Einzelklick → Cyan-Umrandung (Selektion)
-// Doppelklick → Modal: Einträge lesen/bearbeiten oder neuen erstellen
-// Zukunfts-Tage nicht klickbar. Mood-Toggle: Glow + Opacity variiert.
+// Doppelklick → Modal öffnet sich (CalendarDayModal)
+// Zukunfts-Tage nicht klickbar. Mood-Toggle: Glow + Opacity.
 
 import { useState, useEffect } from 'react'
 import { get } from '../../hooks/useAPI'
 import type { MoodResult, JournalEntry, JournalEntryCreate } from '../../types/models'
-import EntryForm from './EntryForm'
+import CalendarDayModal from './CalendarDayModal'
 
 // Kalender-Eintrag vom Backend (kein Content!)
 interface CalendarEntry {
@@ -76,7 +76,6 @@ function CalendarView({
   const [moodActive, setMoodActive] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [showNewForm, setShowNewForm] = useState(false)
 
   const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
   const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`
@@ -99,7 +98,6 @@ function CalendarView({
     }
     load()
     setSelectedDate(null)
-    setShowNewForm(false)
     setModalOpen(false)
   }, [monthStr])
 
@@ -118,29 +116,23 @@ function CalendarView({
     else setMonth(month + 1)
   }
 
-  // Einzelklick → Cyan-Umrandung (Selektion)
+  // Einzelklick → Cyan-Umrandung
   function handleDayClick(dateStr: string) {
     if (dateStr > todayStr) return
-    if (selectedDate === dateStr) {
-      setSelectedDate(null)
-    } else {
-      setSelectedDate(dateStr)
-    }
+    setSelectedDate(selectedDate === dateStr ? null : dateStr)
   }
 
   // Doppelklick → Modal öffnen
   function handleDayDoubleClick(dateStr: string) {
     if (dateStr > todayStr) return
     setSelectedDate(dateStr)
-    setShowNewForm(false)
     onCancelEdit()
     setModalOpen(true)
   }
 
-  // Modal schliessen — Selektion bleibt bestehen
+  // Modal schliessen — Selektion bleibt
   function closeModal() {
     setModalOpen(false)
-    setShowNewForm(false)
     onCancelEdit()
   }
 
@@ -225,8 +217,8 @@ function CalendarView({
               key={day}
               onClick={() => handleDayClick(dateStr)}
               onDoubleClick={() => handleDayDoubleClick(dateStr)}
-              className={`h-20 rounded-lg p-1.5 relative transition-all ${
-                isFuture ? 'opacity-30' : 'cursor-pointer hover:brightness-125'
+              className={`h-20 rounded-lg p-1.5 relative transition-all duration-200 ${
+                isFuture ? 'opacity-30' : 'cursor-pointer'
               }`}
               style={{
                 backgroundColor: isSelected
@@ -239,6 +231,20 @@ function CalendarView({
                   : isToday
                     ? '1px solid rgba(0, 255, 255, 0.3)'
                     : '1px solid transparent',
+              }}
+              onMouseEnter={(e) => {
+                if (!isFuture && !isSelected) {
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 255, 255, 0.05)'
+                  e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 255, 255, 0.1)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isFuture && !isSelected) {
+                  e.currentTarget.style.backgroundColor = isToday
+                    ? 'rgba(0, 255, 255, 0.06)'
+                    : 'rgba(13, 17, 23, 0.3)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }
               }}
             >
               <span
@@ -282,130 +288,22 @@ function CalendarView({
         </p>
       )}
 
-      {/* --- Modal: Tag-Detail (nur bei Doppelklick) --- */}
+      {/* Modal — nur bei Doppelklick */}
       {modalOpen && selectedDate && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          onClick={closeModal}
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
-        >
-          <div
-            className="hud-card p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto animate-fade-in"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              boxShadow: '0 0 30px rgba(0, 255, 255, 0.15)',
-              border: '1px solid rgba(0, 255, 255, 0.3)',
-            }}
-          >
-            {/* Modal-Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="hud-title text-base text-glow">
-                {selectedDate}
-              </h3>
-              <button
-                onClick={closeModal}
-                className="hud-btn px-2 py-1 text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Bestehende Einträge */}
-            {selectedEntries.length > 0 && (
-              <div className="space-y-3 mb-4">
-                {selectedEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="rounded-lg p-4"
-                    style={{
-                      backgroundColor: 'rgba(13, 17, 23, 0.5)',
-                      border: '1px solid var(--color-border)',
-                    }}
-                  >
-                    {editingId === entry.id ? (
-                      <EntryForm
-                        initialData={editEntry}
-                        isEdit
-                        onSave={onSaveEdit}
-                        onCancel={onCancelEdit}
-                      />
-                    ) : (
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <h4
-                            className="text-sm font-medium"
-                            style={{ color: 'var(--color-text-primary)' }}
-                          >
-                            {entry.title}
-                          </h4>
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => onStartEdit(entry)}
-                              className="text-xs"
-                              style={{ color: 'var(--color-text-muted)' }}
-                            >
-                              Bearbeiten
-                            </button>
-                            <button
-                              onClick={() => onDelete(entry.id)}
-                              className="text-xs"
-                              style={{ color: 'rgba(255, 59, 92, 0.4)' }}
-                              onMouseEnter={(e) =>
-                                (e.currentTarget.style.color = 'var(--color-danger)')
-                              }
-                              onMouseLeave={(e) =>
-                                (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')
-                              }
-                            >
-                              Löschen
-                            </button>
-                          </div>
-                        </div>
-                        <p
-                          className="whitespace-pre-wrap text-sm"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                        >
-                          {entry.content}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Kein Eintrag vorhanden */}
-            {selectedEntries.length === 0 && !showNewForm && (
-              <p
-                className="text-sm mb-4"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
-                Keine Einträge für diesen Tag.
-              </p>
-            )}
-
-            {/* Neuen Eintrag erstellen */}
-            {!showNewForm ? (
-              <button
-                onClick={() => setShowNewForm(true)}
-                className="hud-btn w-full"
-              >
-                + Neuer Eintrag
-              </button>
-            ) : (
-              <EntryForm
-                initialData={{ title: '', content: '', date: selectedDate }}
-                autoTitle={autoTitle}
-                onAutoTitleChange={onAutoTitleChange}
-                onSave={(data) => {
-                  onCreateEntry(data)
-                  setShowNewForm(false)
-                }}
-                onCancel={() => setShowNewForm(false)}
-              />
-            )}
-          </div>
-        </div>
+        <CalendarDayModal
+          selectedDate={selectedDate}
+          entries={selectedEntries}
+          editingId={editingId}
+          editEntry={editEntry}
+          onStartEdit={onStartEdit}
+          onSaveEdit={onSaveEdit}
+          onCancelEdit={onCancelEdit}
+          onDelete={onDelete}
+          onCreateEntry={onCreateEntry}
+          autoTitle={autoTitle}
+          onAutoTitleChange={onAutoTitleChange}
+          onClose={closeModal}
+        />
       )}
     </div>
   )
