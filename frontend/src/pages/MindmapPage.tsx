@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import type { Node, Edge } from 'reactflow'
+import type { Node } from 'reactflow'
 import ReactFlow, {
   useNodesState,
   useEdgesState,
