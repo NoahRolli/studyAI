@@ -3,11 +3,15 @@
 // Ordner sind klickbar → navigiert eine Ebene tiefer
 // Elemente können per Drag & Drop in Ordner verschoben werden
 // Breadcrumbs oben zeigen den aktuellen Pfad
+//
+// PointerSensor mit distance=8: Unterscheidet Klick von Drag
+// Kurzer Klick → Ordner öffnen / Modul-Detailseite
+// 8px+ ziehen → Drag startet
 
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { get, post, put, del } from '../hooks/useAPI'
-import { DndContext, DragOverlay } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import DraggableCard from '../components/DraggableCard'
 import DroppableFolder from '../components/DroppableFolder'
@@ -51,6 +55,16 @@ function Dashboard() {
 
   // Drag & Drop — welches Element wird gerade gezogen?
   const [dragLabel, setDragLabel] = useState<string | null>(null)
+
+  // Drag & Drop Sensor — erst nach 8px Bewegung aktivieren
+  // So funktioniert ein normaler Klick weiterhin (Ordner öffnen, Modul navigieren)
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  )
 
   // --- Daten laden ---
 
@@ -169,7 +183,6 @@ function Dashboard() {
   function handleDragStart(event: DragStartEvent) {
     const { active } = event
     const id = String(active.id)
-    // Label aus dem aktuellen Element finden
     if (id.startsWith('folder-')) {
       const fId = parseInt(id.replace('folder-', ''))
       const folder = folders.find((f) => f.id === fId)
@@ -186,7 +199,6 @@ function Dashboard() {
     setDragLabel(null)
     const { active, over } = event
 
-    // Kein Ziel oder auf sich selbst gedroppt → nichts tun
     if (!over || active.id === over.id) return
 
     const draggedId = String(active.id)
@@ -201,18 +213,14 @@ function Dashboard() {
       setError(null)
 
       if (draggedId.startsWith('folder-')) {
-        // Ordner verschieben → parent_id ändern
         const folderId = parseInt(draggedId.replace('folder-', ''))
-        // Nicht in sich selbst verschieben
         if (folderId === targetFolderId) return
         await put(`/api/folders/${folderId}`, { parent_id: targetFolderId })
       } else if (draggedId.startsWith('module-')) {
-        // Modul verschieben → folder_id ändern
         const moduleId = parseInt(draggedId.replace('module-', ''))
         await put(`/api/folders/move-module/${moduleId}`, { folder_id: targetFolderId })
       }
 
-      // Inhalt neu laden nach dem Verschieben
       await loadContents()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verschieben fehlgeschlagen')
@@ -372,8 +380,8 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Drag & Drop Kontext — umschliesst alle draggable/droppable Elemente */}
-      <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      {/* Drag & Drop Kontext mit PointerSensor (8px Mindestabstand) */}
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Ordner-Karten — gleichzeitig draggable UND droppable */}
           {folders.map((folder) => (
@@ -416,16 +424,12 @@ function Dashboard() {
             </DraggableCard>
           ))}
 
-          {/* Modul-Karten — nur draggable (nicht droppable) */}
+          {/* Modul-Karten — nur draggable */}
           {modules.map((module) => (
             <DraggableCard key={`module-${module.id}`} id={`module-${module.id}`} type="module">
               <Link
                 to={`/modules/${module.id}`}
                 className="hud-card p-5 block"
-                onClick={(e) => {
-                  // Drag soll nicht navigieren — nur echte Klicks
-                  if (dragLabel) e.preventDefault()
-                }}
               >
                 <div className="flex items-center gap-3 mb-2">
                   <span
