@@ -1,7 +1,8 @@
 # Model für Studienmodule (z.B. "Lineare Algebra", "Statistik")
-# Jedes Modul ist ein Ordner, der Dokumente enthält
+# Jedes Modul kann in einem Ordner liegen (folder_id)
+# oder auf Root-Level sein (folder_id=NULL)
 
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from backend.models.database import Base
@@ -20,7 +21,12 @@ class Module(Base):
     description = Column(String, default="")
 
     # Farbe für die UI-Darstellung (Hex-Code)
+    # Wird im Frontend nicht mehr angezeigt, aber bleibt im Backend erhalten
     color = Column(String, default="#4a90d9")
+
+    # Ordner-Zugehörigkeit — NULL bedeutet Root-Level (Dashboard)
+    # ForeignKey auf folders.id — Modul liegt in diesem Ordner
+    folder_id = Column(Integer, ForeignKey("folders.id"), nullable=True, index=True)
 
     # Zeitstempel — werden automatisch gesetzt
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
