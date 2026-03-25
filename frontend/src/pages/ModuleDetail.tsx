@@ -171,22 +171,12 @@ function ModuleDetail() {
         ← Zurück zum Dashboard
       </Link>
 
-      {/* Modul-Header */}
-      <div className="flex items-center gap-4 mb-8">
-        {/* Farbiger Punkt mit Glow */}
-        <div
-          className="w-4 h-4 rounded-full"
-          style={{
-            backgroundColor: module.color,
-            boxShadow: `0 0 12px ${module.color}60`,
-          }}
-        />
-        <div>
-          <h1 className="hud-title text-glow text-2xl">{module.name}</h1>
-          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {module.description}
-          </p>
-        </div>
+      {/* Modul-Header — ohne Farbpunkt */}
+      <div className="mb-8">
+        <h1 className="hud-title text-glow text-2xl">{module.name}</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+          {module.description}
+        </p>
       </div>
 
       {/* Fehlermeldung */}

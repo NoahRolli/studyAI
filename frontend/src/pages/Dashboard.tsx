@@ -1,6 +1,6 @@
 // Dashboard — Startseite mit Übersicht aller Studienmodule
 // Lädt Module von der API (GET /api/modules/)
-// Zeigt sie als HUD-Karten an mit Name, Beschreibung und Farbe
+// Zeigt sie als HUD-Karten an mit Name und Beschreibung
 // Enthält einen Button um neue Module zu erstellen
 // Modul-Karten sind klickbar und führen zur Detailseite (/modules/:id)
 
@@ -11,20 +11,12 @@ import type { Module, ModuleCreate } from '../types/models'
 
 function Dashboard() {
   // --- State ---
-
-  // Liste aller Module (kommt von der API)
   const [modules, setModules] = useState<Module[]>([])
-
-  // Ladezustand — zeigt Ladetext während der API-Call läuft
   const [loading, setLoading] = useState(true)
-
-  // Fehlermeldung falls die API nicht erreichbar ist
   const [error, setError] = useState<string | null>(null)
-
-  // Steuert ob das "Neues Modul"-Formular sichtbar ist
   const [showForm, setShowForm] = useState(false)
 
-  // Formular-Daten für ein neues Modul
+  // Formular-Daten — color wird unsichtbar mitgesendet (Backend braucht es)
   const [newModule, setNewModule] = useState<ModuleCreate>({
     name: '',
     description: '',
@@ -32,8 +24,6 @@ function Dashboard() {
   })
 
   // --- API-Aufrufe ---
-
-  // Module laden — wird beim ersten Rendern aufgerufen (useEffect)
   async function loadModules() {
     try {
       setLoading(true)
@@ -47,12 +37,10 @@ function Dashboard() {
     }
   }
 
-  // Einmal beim Mounten laden
   useEffect(() => {
     loadModules()
   }, [])
 
-  // Neues Modul erstellen
   async function createModule() {
     try {
       await post('/api/modules/', newModule)
@@ -64,7 +52,6 @@ function Dashboard() {
     }
   }
 
-  // Modul löschen — stopPropagation verhindert Navigation zur Detailseite
   async function deleteModule(id: number, event: React.MouseEvent) {
     event.preventDefault()
     event.stopPropagation()
@@ -79,7 +66,7 @@ function Dashboard() {
   // --- Render ---
   return (
     <div className="animate-fade-in">
-      {/* Header mit Titel und Button */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="hud-title text-glow text-2xl">Dashboard</h1>
         <button
@@ -90,14 +77,12 @@ function Dashboard() {
         </button>
       </div>
 
-      {/* Formular für neues Modul */}
+      {/* Formular — ohne Farbwähler */}
       {showForm && (
         <div className="hud-card p-6 mb-8 animate-fade-in">
           <h2 className="hud-title text-sm mb-4" style={{ color: 'var(--color-primary)' }}>
             Neues Modul erstellen
           </h2>
-
-          {/* Name */}
           <div className="mb-4">
             <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
               Name
@@ -110,9 +95,7 @@ function Dashboard() {
               className="hud-input"
             />
           </div>
-
-          {/* Beschreibung */}
-          <div className="mb-4">
+          <div className="mb-6">
             <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
               Beschreibung
             </label>
@@ -124,30 +107,10 @@ function Dashboard() {
               className="hud-input"
             />
           </div>
-
-          {/* Farbe */}
-          <div className="mb-6">
-            <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-              Farbe
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={newModule.color}
-                onChange={(e) => setNewModule({ ...newModule, color: e.target.value })}
-                className="w-10 h-10 rounded cursor-pointer bg-transparent border border-[var(--color-border)]"
-              />
-              <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                {newModule.color}
-              </span>
-            </div>
-          </div>
-
-          {/* Absenden */}
           <button
             onClick={createModule}
             disabled={!newModule.name}
-            className="hud-btn-primary hud-btn"
+            className="hud-btn hud-btn-primary"
           >
             Modul erstellen
           </button>
@@ -168,12 +131,10 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Ladezustand */}
       {loading && (
         <p style={{ color: 'var(--color-text-muted)' }}>Systeme werden geladen...</p>
       )}
 
-      {/* Leerer Zustand */}
       {!loading && modules.length === 0 && (
         <div className="text-center py-16">
           <p className="text-lg mb-2" style={{ color: 'var(--color-text-muted)' }}>
@@ -185,7 +146,7 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Modul-Karten — Grid Layout */}
+      {/* Modul-Karten — ohne Farbbalken */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {modules.map((module) => (
           <Link
@@ -193,26 +154,12 @@ function Dashboard() {
             key={module.id}
             className="hud-card p-5 block animate-fade-in"
           >
-            {/* Farbiger Balken oben — Modul-Farbe mit Glow */}
-            <div
-              className="h-1 rounded-full mb-4"
-              style={{
-                backgroundColor: module.color,
-                boxShadow: `0 0 10px ${module.color}60`,
-              }}
-            />
-
-            {/* Modul-Name */}
             <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--color-text-primary)' }}>
               {module.name}
             </h3>
-
-            {/* Beschreibung */}
             <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
               {module.description}
             </p>
-
-            {/* Footer: Datum + Löschen */}
             <div className="flex items-center justify-between">
               <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                 {new Date(module.created_at).toLocaleDateString('de-CH')}
