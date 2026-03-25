@@ -2,10 +2,8 @@
    Futuristisches HUD-Design mit Cyan-Akzenten
    Verwendet CSS Custom Properties für konsistente Farben
    Tailwind v4 wird über @import geladen */
-@import "tailwindcss";
-
-/* Google Font — Orbitron für futuristische Überschriften */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
 
 /* ============================================
    CSS Custom Properties — Farbpalette
