@@ -176,6 +176,16 @@ function Journal() {
               moods={s.moods}
               moodsLoaded={s.moodsLoaded}
               onLoadMoods={s.loadMoods}
+              entries={s.entries}
+              editingId={s.editingId}
+              editEntry={s.editEntry}
+              onStartEdit={s.startEdit}
+              onSaveEdit={s.saveEdit}
+              onCancelEdit={s.cancelEdit}
+              onDelete={s.deleteEntry}
+              onCreateEntry={s.createEntry}
+              autoTitle={s.autoTitle}
+              onAutoTitleChange={s.setAutoTitle}
             />
           )}
 
