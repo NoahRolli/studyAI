@@ -1,11 +1,10 @@
-// MindmapPage — Fullscreen Mindmap im neuronalen Netz-Style
-// Zeigt eine interaktive Mindmap basierend auf einer AI-Zusammenfassung
+// MindmapPage — Fullscreen Mindmap mit zwei Darstellungsoptionen
 // Route: /mindmap/:summaryId
 //
-// Design: Glühende Knoten mit Cyan-Glow, animierte Kanten,
-// dunkler Hintergrund mit Dot-Grid, neuronales Netz-Ästhetik
+// Layouts (umschaltbar):
+// 1. Tree — horizontale Baumstruktur, geordnet
+// 2. Neural — radial, organisch, wie ein neuronales Netz
 //
-// Flow: Backend liefert Baumstruktur → React Flow Nodes + Edges
 // Deep Dive: Klick auf Blatt-Knoten → AI generiert Unterknoten
 
 import { useState, useEffect, useCallback } from 'react'
@@ -21,19 +20,11 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { get, post } from '../hooks/useAPI'
-
-// --- Typen ---
-
-// Baumstruktur wie sie vom Backend kommt
-interface MindmapTreeNode {
-  id: number
-  label: string
-  detail: string
-  depth_level: number
-  position_x: number
-  position_y: number
-  children: MindmapTreeNode[]
-}
+import {
+  treeLayout,
+  neuralLayout,
+  type MindmapTreeNode,
+} from '../utils/mindmapLayouts'
 
 // API-Antworten
 interface MindmapResponse {
@@ -46,123 +37,8 @@ interface ExpandResponse {
   children: MindmapTreeNode[]
 }
 
-// --- Hilfsfunktionen ---
-
-// Knoten-Styling nach Tiefe — Glow-Intensität nimmt mit Tiefe ab
-function getNodeStyle(depth: number, hasChildren: boolean): React.CSSProperties {
-  // Basisfarbe: Cyan, wird mit Tiefe dunkler
-  const opacity = Math.max(0.6, 1 - depth * 0.15)
-  const glowSize = Math.max(8, 20 - depth * 4)
-  const fontSize = depth === 0 ? '13px' : depth === 1 ? '11px' : '10px'
-
-  return {
-    background: `rgba(0, 212, 255, ${0.08 + depth * 0.02})`,
-    border: `1px solid rgba(0, 212, 255, ${0.3 * opacity})`,
-    borderRadius: '12px',
-    padding: depth === 0 ? '14px 20px' : '10px 16px',
-    color: `rgba(0, 212, 255, ${opacity})`,
-    fontSize,
-    fontFamily: depth === 0 ? "'Orbitron', monospace" : "'Inter', sans-serif",
-    fontWeight: depth === 0 ? '600' : depth === 1 ? '500' : '400',
-    letterSpacing: depth === 0 ? '0.08em' : '0',
-    textTransform: depth === 0 ? 'uppercase' as const : 'none' as const,
-    maxWidth: depth === 0 ? '240px' : '200px',
-    textAlign: 'center' as const,
-    cursor: hasChildren ? 'default' : 'pointer',
-    boxShadow: `0 0 ${glowSize}px rgba(0, 212, 255, ${0.15 * opacity}), inset 0 0 ${glowSize / 2}px rgba(0, 212, 255, ${0.05 * opacity})`,
-    backdropFilter: 'blur(8px)',
-    transition: 'all 0.3s ease',
-  }
-}
-
-// Kanten-Style — glühende Linien
-function getEdgeStyle(sourceDepth: number): React.CSSProperties {
-  const opacity = Math.max(0.2, 0.5 - sourceDepth * 0.1)
-  return {
-    stroke: `rgba(0, 212, 255, ${opacity})`,
-    strokeWidth: Math.max(1, 2.5 - sourceDepth * 0.5),
-    filter: `drop-shadow(0 0 4px rgba(0, 212, 255, ${opacity * 0.6}))`,
-  }
-}
-
-// Baumstruktur → React Flow Nodes + Edges
-// Positioniert Knoten in einer horizontalen Baumstruktur
-function treeToFlow(
-  treeNodes: MindmapTreeNode[],
-  parentId?: string,
-  parentDepth: number = 0,
-  startX: number = 0,
-  startY: number = 0,
-  horizontalGap: number = 300,
-  verticalGap: number = 90,
-): { nodes: Node[]; edges: Edge[]; totalHeight: number } {
-  const nodes: Node[] = []
-  const edges: Edge[] = []
-  let currentY = startY
-
-  for (const treeNode of treeNodes) {
-    const nodeId = `node-${treeNode.id}`
-
-    // Kinder zuerst berechnen um die vertikale Position zu zentrieren
-    let childResult = { nodes: [] as Node[], edges: [] as Edge[], totalHeight: 0 }
-    if (treeNode.children.length > 0) {
-      childResult = treeToFlow(
-        treeNode.children,
-        nodeId,
-        treeNode.depth_level,
-        startX + horizontalGap,
-        currentY,
-        horizontalGap,
-        verticalGap,
-      )
-    }
-
-    // Y-Position: zentriert über den Kindern
-    const nodeHeight = treeNode.children.length > 0
-      ? currentY + childResult.totalHeight / 2
-      : currentY
-
-    // React Flow Node erstellen
-    nodes.push({
-      id: nodeId,
-      position: { x: startX, y: nodeHeight },
-      data: {
-        label: treeNode.label,
-        detail: treeNode.detail,
-        depth: treeNode.depth_level,
-        backendId: treeNode.id,
-        hasChildren: treeNode.children.length > 0,
-      },
-      style: getNodeStyle(treeNode.depth_level, treeNode.children.length > 0),
-    })
-
-    // Edge zum Elternknoten — glühende Cyan-Linie
-    if (parentId) {
-      edges.push({
-        id: `edge-${parentId}-${nodeId}`,
-        source: parentId,
-        target: nodeId,
-        style: getEdgeStyle(parentDepth),
-        animated: true,
-        type: 'smoothstep',
-      })
-    }
-
-    // Kind-Nodes und Edges hinzufügen
-    nodes.push(...childResult.nodes)
-    edges.push(...childResult.edges)
-
-    // Y-Position für nächsten Geschwister-Knoten
-    const usedHeight = treeNode.children.length > 0
-      ? childResult.totalHeight
-      : verticalGap
-    currentY += usedHeight
-  }
-
-  return { nodes, edges, totalHeight: currentY - startY }
-}
-
-// --- Komponente ---
+// Verfügbare Layout-Modi
+type LayoutMode = 'tree' | 'neural'
 
 function MindmapPage() {
   const { summaryId } = useParams<{ summaryId: string }>()
@@ -177,8 +53,33 @@ function MindmapPage() {
   const [expanding, setExpanding] = useState(false)
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
 
-  // Originale Baumdaten (für Rebuild nach Deep Dive)
+  // Layout-Modus (Standard: Tree)
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>('tree')
+
+  // Originale Baumdaten (für Rebuild nach Layout-Wechsel oder Deep Dive)
   const [treeData, setTreeData] = useState<MindmapTreeNode[]>([])
+
+  // --- Layout anwenden ---
+  // Wandelt die Baumdaten je nach Modus in React Flow Nodes/Edges um
+  function applyLayout(tree: MindmapTreeNode[], mode: LayoutMode) {
+    if (mode === 'neural') {
+      const { nodes: n, edges: e } = neuralLayout(tree)
+      setNodes(n)
+      setEdges(e)
+    } else {
+      const { nodes: n, edges: e } = treeLayout(tree)
+      setNodes(n)
+      setEdges(e)
+    }
+  }
+
+  // --- Layout wechseln ---
+  function switchLayout(mode: LayoutMode) {
+    setLayoutMode(mode)
+    if (treeData.length > 0) {
+      applyLayout(treeData, mode)
+    }
+  }
 
   // --- Mindmap laden oder generieren ---
   async function loadMindmap() {
@@ -192,9 +93,7 @@ function MindmapPage() {
         data = await post<MindmapResponse>(`/api/summaries/${summaryId}/mindmap`)
       }
       setTreeData(data.tree)
-      const { nodes: flowNodes, edges: flowEdges } = treeToFlow(data.tree)
-      setNodes(flowNodes)
-      setEdges(flowEdges)
+      applyLayout(data.tree, layoutMode)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Mindmap konnte nicht geladen werden')
     } finally {
@@ -209,6 +108,7 @@ function MindmapPage() {
   // --- Deep Dive: Knoten expandieren ---
   const onNodeClick = useCallback(async (_event: React.MouseEvent, node: Node) => {
     setSelectedNode(node)
+    // Nur expandieren wenn der Knoten keine Kinder hat
     if (node.data.hasChildren) return
     try {
       setExpanding(true)
@@ -245,15 +145,13 @@ function MindmapPage() {
 
       const updatedTree = insertChildren(treeData, node.data.backendId, childrenWithIds)
       setTreeData(updatedTree)
-      const { nodes: flowNodes, edges: flowEdges } = treeToFlow(updatedTree)
-      setNodes(flowNodes)
-      setEdges(flowEdges)
+      applyLayout(updatedTree, layoutMode)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Deep Dive fehlgeschlagen')
     } finally {
       setExpanding(false)
     }
-  }, [treeData, setNodes, setEdges])
+  }, [treeData, layoutMode, setNodes, setEdges])
 
   // --- Render ---
 
@@ -276,7 +174,7 @@ function MindmapPage() {
 
   return (
     <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg-deep)' }}>
-      {/* Header — HUD-Style */}
+      {/* Header */}
       <div
         className="flex items-center justify-between px-6 py-3 border-b"
         style={{
@@ -294,7 +192,28 @@ function MindmapPage() {
           </Link>
           <h1 className="hud-title text-sm text-glow">Mindmap</h1>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center gap-4">
+          {/* Layout-Switch */}
+          <div
+            className="flex gap-1 p-1 rounded-lg"
+            style={{ backgroundColor: 'var(--color-bg-surface)' }}
+          >
+            <button
+              onClick={() => switchLayout('tree')}
+              className={`hud-tab ${layoutMode === 'tree' ? 'hud-tab-active' : ''}`}
+            >
+              Tree
+            </button>
+            <button
+              onClick={() => switchLayout('neural')}
+              className={`hud-tab ${layoutMode === 'neural' ? 'hud-tab-active' : ''}`}
+            >
+              Neural
+            </button>
+          </div>
+
+          {/* Status */}
           {expanding && (
             <span className="text-xs animate-glow-pulse" style={{ color: 'var(--color-primary)' }}>
               Wird erweitert...
@@ -322,7 +241,7 @@ function MindmapPage() {
         </div>
       )}
 
-      {/* React Flow — Neuronales Netz Darstellung */}
+      {/* React Flow Mindmap */}
       <div className="flex-1">
         <ReactFlow
           nodes={nodes}
@@ -336,7 +255,6 @@ function MindmapPage() {
           maxZoom={2}
           style={{ backgroundColor: 'var(--color-bg-deep)' }}
         >
-          {/* Controls — passend zum HUD-Theme */}
           <Controls
             position="bottom-left"
             style={{
@@ -346,7 +264,6 @@ function MindmapPage() {
               boxShadow: '0 0 15px rgba(0, 212, 255, 0.1)',
             }}
           />
-          {/* MiniMap — Cyan-Töne */}
           <MiniMap
             position="bottom-right"
             nodeColor={() => 'rgba(0, 212, 255, 0.6)'}
@@ -357,7 +274,6 @@ function MindmapPage() {
               borderRadius: '8px',
             }}
           />
-          {/* Hintergrund — subtile Punkte */}
           <Background
             variant={BackgroundVariant.Dots}
             color="rgba(0, 212, 255, 0.1)"
@@ -367,7 +283,7 @@ function MindmapPage() {
         </ReactFlow>
       </div>
 
-      {/* Detail-Panel — zeigt Details des ausgewählten Knotens */}
+      {/* Detail-Panel */}
       {selectedNode && selectedNode.data.detail && (
         <div
           className="px-6 py-4 border-t"
