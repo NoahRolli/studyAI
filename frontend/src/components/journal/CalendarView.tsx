@@ -1,8 +1,8 @@
 // CalendarView — Monatskalender für Journal-Einträge
-// Klick auf Tag → Panel: Einträge lesen/bearbeiten oder neuen erstellen
+// Klick auf Tag → Modal: Einträge lesen/bearbeiten oder neuen erstellen
 // Zukunfts-Tage nicht klickbar. Mood-Toggle: Glow + Opacity variiert.
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { get } from '../../hooks/useAPI'
 import type { MoodResult, JournalEntry, JournalEntryCreate } from '../../types/models'
 import EntryForm from './EntryForm'
@@ -14,7 +14,7 @@ interface CalendarEntry {
   date: string
 }
 
-// Props — erweitert um Entry-Aktionen von Journal.tsx
+// Props — Entry-Aktionen von Journal.tsx
 interface CalendarViewProps {
   moods: MoodResult[]
   moodsLoaded: boolean
@@ -55,6 +55,12 @@ function getMoodStyle(score: number | undefined, moodActive: boolean) {
   }
 }
 
+// Monatsname für Header
+const MONTH_NAMES = [
+  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+]
+
 function CalendarView({
   moods, moodsLoaded, onLoadMoods,
   entries, editingId, editEntry,
@@ -74,11 +80,6 @@ function CalendarView({
   const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`
   const todayStr = today.toISOString().split('T')[0]
 
-  const monthNames = [
-    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
-  ]
-
   // Kalender-Einträge laden wenn Monat wechselt
   useEffect(() => {
     async function load() {
@@ -95,7 +96,6 @@ function CalendarView({
       }
     }
     load()
-    // Selektion zurücksetzen bei Monatswechsel
     setSelectedDate(null)
     setShowNewForm(false)
   }, [monthStr])
@@ -115,25 +115,26 @@ function CalendarView({
     else setMonth(month + 1)
   }
 
-  // Klick auf Tag — nur wenn nicht in der Zukunft
+  // Tag anklicken → Modal öffnen (nicht Zukunft)
   function handleDayClick(dateStr: string) {
     if (dateStr > todayStr) return
-    if (selectedDate === dateStr) {
-      // Erneut klicken → Panel schliessen
-      setSelectedDate(null)
-      setShowNewForm(false)
-    } else {
-      setSelectedDate(dateStr)
-      setShowNewForm(false)
-      onCancelEdit()
-    }
+    setSelectedDate(dateStr)
+    setShowNewForm(false)
+    onCancelEdit()
+  }
+
+  // Modal schliessen
+  function closeModal() {
+    setSelectedDate(null)
+    setShowNewForm(false)
+    onCancelEdit()
   }
 
   // Grid-Daten
   const daysInMonth = getDaysInMonth(year, month)
   const firstDayOffset = getFirstDayOffset(year, month)
 
-  // Kalender-Einträge nach Datum
+  // Kalender-Einträge nach Datum gruppieren
   const calByDate: Record<string, CalendarEntry[]> = {}
   for (const e of calEntries) {
     if (!calByDate[e.date]) calByDate[e.date] = []
@@ -146,7 +147,7 @@ function CalendarView({
     if (m.score !== undefined) moodById[m.entry_id] = m.score
   }
 
-  // Vollständige Einträge für den selektierten Tag (aus entries-Array)
+  // Vollständige Einträge für den selektierten Tag
   const selectedEntries = selectedDate
     ? entries.filter((e) => e.date === selectedDate)
     : []
@@ -161,7 +162,7 @@ function CalendarView({
             className="hud-title text-base"
             style={{ minWidth: '160px', textAlign: 'center' }}
           >
-            {monthNames[month]} {year}
+            {MONTH_NAMES[month]} {year}
           </span>
           <button onClick={nextMonth} className="hud-btn px-3 py-1">›</button>
         </div>
@@ -266,100 +267,130 @@ function CalendarView({
         </p>
       )}
 
-      {/* --- Day Panel: Einträge lesen/bearbeiten oder neuen erstellen --- */}
+      {/* --- Modal: Tag-Detail --- */}
       {selectedDate && (
-        <div className="mt-6 animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="hud-title text-sm">
-              {selectedDate}
-            </h3>
-            <button
-              onClick={() => { setSelectedDate(null); setShowNewForm(false) }}
-              className="text-xs transition-colors"
-              style={{ color: 'var(--color-text-muted)' }}
-            >
-              ✕ Schliessen
-            </button>
-          </div>
-
-          {/* Bestehende Einträge des Tages */}
-          {selectedEntries.length > 0 && (
-            <div className="space-y-3 mb-4">
-              {selectedEntries.map((entry) => (
-                <div key={entry.id} className="hud-card p-4">
-                  {editingId === entry.id ? (
-                    <EntryForm
-                      initialData={editEntry}
-                      isEdit
-                      onSave={onSaveEdit}
-                      onCancel={onCancelEdit}
-                    />
-                  ) : (
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h4
-                          className="text-sm font-medium"
-                          style={{ color: 'var(--color-text-primary)' }}
-                        >
-                          {entry.title}
-                        </h4>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => onStartEdit(entry)}
-                            className="text-xs"
-                            style={{ color: 'var(--color-text-muted)' }}
-                          >
-                            Bearbeiten
-                          </button>
-                          <button
-                            onClick={() => onDelete(entry.id)}
-                            className="text-xs"
-                            style={{ color: 'rgba(255, 59, 92, 0.4)' }}
-                            onMouseEnter={(e) =>
-                              (e.currentTarget.style.color = 'var(--color-danger)')
-                            }
-                            onMouseLeave={(e) =>
-                              (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')
-                            }
-                          >
-                            Löschen
-                          </button>
-                        </div>
-                      </div>
-                      {/* Content nur hier sichtbar — nicht in der Liste! */}
-                      <p
-                        className="whitespace-pre-wrap text-sm"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                      >
-                        {entry.content}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))}
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          onClick={closeModal}
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+        >
+          {/* Modal-Inhalt — Klick stoppt hier (schliesst nicht) */}
+          <div
+            className="hud-card p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              boxShadow: '0 0 30px rgba(0, 255, 255, 0.15)',
+              border: '1px solid rgba(0, 255, 255, 0.3)',
+            }}
+          >
+            {/* Modal-Header */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="hud-title text-base text-glow">
+                {selectedDate}
+              </h3>
+              <button
+                onClick={closeModal}
+                className="hud-btn px-2 py-1 text-xs"
+              >
+                ✕
+              </button>
             </div>
-          )}
 
-          {/* Neuen Eintrag erstellen */}
-          {!showNewForm ? (
-            <button
-              onClick={() => setShowNewForm(true)}
-              className="hud-btn"
-            >
-              + Eintrag für {selectedDate}
-            </button>
-          ) : (
-            <EntryForm
-              initialData={{ title: '', content: '', date: selectedDate }}
-              autoTitle={autoTitle}
-              onAutoTitleChange={onAutoTitleChange}
-              onSave={(data) => {
-                onCreateEntry(data)
-                setShowNewForm(false)
-              }}
-              onCancel={() => setShowNewForm(false)}
-            />
-          )}
+            {/* Bestehende Einträge */}
+            {selectedEntries.length > 0 && (
+              <div className="space-y-3 mb-4">
+                {selectedEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="rounded-lg p-4"
+                    style={{
+                      backgroundColor: 'rgba(13, 17, 23, 0.5)',
+                      border: '1px solid var(--color-border)',
+                    }}
+                  >
+                    {editingId === entry.id ? (
+                      <EntryForm
+                        initialData={editEntry}
+                        isEdit
+                        onSave={onSaveEdit}
+                        onCancel={onCancelEdit}
+                      />
+                    ) : (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <h4
+                            className="text-sm font-medium"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            {entry.title}
+                          </h4>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => onStartEdit(entry)}
+                              className="text-xs"
+                              style={{ color: 'var(--color-text-muted)' }}
+                            >
+                              Bearbeiten
+                            </button>
+                            <button
+                              onClick={() => onDelete(entry.id)}
+                              className="text-xs"
+                              style={{ color: 'rgba(255, 59, 92, 0.4)' }}
+                              onMouseEnter={(e) =>
+                                (e.currentTarget.style.color = 'var(--color-danger)')
+                              }
+                              onMouseLeave={(e) =>
+                                (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')
+                              }
+                            >
+                              Löschen
+                            </button>
+                          </div>
+                        </div>
+                        <p
+                          className="whitespace-pre-wrap text-sm"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          {entry.content}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Kein Eintrag vorhanden */}
+            {selectedEntries.length === 0 && !showNewForm && (
+              <p
+                className="text-sm mb-4"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                Keine Einträge für diesen Tag.
+              </p>
+            )}
+
+            {/* Neuen Eintrag erstellen */}
+            {!showNewForm ? (
+              <button
+                onClick={() => setShowNewForm(true)}
+                className="hud-btn w-full"
+              >
+                + Neuer Eintrag
+              </button>
+            ) : (
+              <EntryForm
+                initialData={{ title: '', content: '', date: selectedDate }}
+                autoTitle={autoTitle}
+                onAutoTitleChange={onAutoTitleChange}
+                onSave={(data) => {
+                  onCreateEntry(data)
+                  setShowNewForm(false)
+                }}
+                onCancel={() => setShowNewForm(false)}
+              />
+            )}
+          </div>
         </div>
       )}
     </div>
