@@ -12,6 +12,7 @@ from backend.journal.api.entries import router as journal_entries_router
 from backend.journal.api.analytics import router as journal_analytics_router
 from backend.journal.api.medications import router as journal_medications_router
 from backend.journal.models.journal_database import engine as journal_engine, JournalBase
+from backend.journal.api.calendar import router as journal_calendar_router
 # WICHTIG: Alle Models importieren, damit SQLAlchemy sie kennt
 from backend.models.module import Module  # noqa: F401
 from backend.models.document import Document  # noqa: F401
@@ -51,3 +52,4 @@ app.include_router(journal_auth_router)
 app.include_router(journal_entries_router)
 app.include_router(journal_analytics_router)
 app.include_router(journal_medications_router)
+app.include_router(journal_calendar_router)
