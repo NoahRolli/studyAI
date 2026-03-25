@@ -1,5 +1,6 @@
 // CalendarView — Monatskalender für Journal-Einträge
-// Klick auf Tag → Modal: Einträge lesen/bearbeiten oder neuen erstellen
+// Einzelklick → Cyan-Umrandung (Selektion)
+// Doppelklick → Modal: Einträge lesen/bearbeiten oder neuen erstellen
 // Zukunfts-Tage nicht klickbar. Mood-Toggle: Glow + Opacity variiert.
 
 import { useState, useEffect } from 'react'
@@ -74,6 +75,7 @@ function CalendarView({
   const [loading, setLoading] = useState(false)
   const [moodActive, setMoodActive] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
   const [showNewForm, setShowNewForm] = useState(false)
 
   const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
@@ -98,6 +100,7 @@ function CalendarView({
     load()
     setSelectedDate(null)
     setShowNewForm(false)
+    setModalOpen(false)
   }, [monthStr])
 
   // Mood laden wenn Toggle an
@@ -115,17 +118,28 @@ function CalendarView({
     else setMonth(month + 1)
   }
 
-  // Tag anklicken → Modal öffnen (nicht Zukunft)
+  // Einzelklick → Cyan-Umrandung (Selektion)
   function handleDayClick(dateStr: string) {
+    if (dateStr > todayStr) return
+    if (selectedDate === dateStr) {
+      setSelectedDate(null)
+    } else {
+      setSelectedDate(dateStr)
+    }
+  }
+
+  // Doppelklick → Modal öffnen
+  function handleDayDoubleClick(dateStr: string) {
     if (dateStr > todayStr) return
     setSelectedDate(dateStr)
     setShowNewForm(false)
     onCancelEdit()
+    setModalOpen(true)
   }
 
-  // Modal schliessen
+  // Modal schliessen — Selektion bleibt bestehen
   function closeModal() {
-    setSelectedDate(null)
+    setModalOpen(false)
     setShowNewForm(false)
     onCancelEdit()
   }
@@ -210,6 +224,7 @@ function CalendarView({
             <div
               key={day}
               onClick={() => handleDayClick(dateStr)}
+              onDoubleClick={() => handleDayDoubleClick(dateStr)}
               className={`h-20 rounded-lg p-1.5 relative transition-all ${
                 isFuture ? 'opacity-30' : 'cursor-pointer hover:brightness-125'
               }`}
@@ -267,14 +282,13 @@ function CalendarView({
         </p>
       )}
 
-      {/* --- Modal: Tag-Detail --- */}
-      {selectedDate && (
+      {/* --- Modal: Tag-Detail (nur bei Doppelklick) --- */}
+      {modalOpen && selectedDate && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
           onClick={closeModal}
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
         >
-          {/* Modal-Inhalt — Klick stoppt hier (schliesst nicht) */}
           <div
             className="hud-card p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto animate-fade-in"
             onClick={(e) => e.stopPropagation()}
