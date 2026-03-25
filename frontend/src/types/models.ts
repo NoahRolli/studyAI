@@ -169,3 +169,32 @@ export interface IntakeLogCreate {
 export interface MedicationSettingsResponse {
   is_enabled: boolean
 }
+
+// --- Ordner-Hierarchie ---
+
+// Ein Ordner (wie er vom Backend kommt)
+export interface Folder {
+  id: number
+  name: string
+  parent_id: number | null    // null = Root-Level
+  created_at: string
+}
+
+// Payload zum Erstellen eines neuen Ordners
+export interface FolderCreate {
+  name: string
+  parent_id?: number | null
+}
+
+// Inhalt eines Ordners (von GET /api/folders/contents)
+export interface FolderContents {
+  parent_id: number | null
+  folders: Folder[]
+  modules: Module[]
+}
+
+// Breadcrumb-Eintrag (von GET /api/folders/{id}/breadcrumbs)
+export interface BreadcrumbItem {
+  id: number
+  name: string
+}
