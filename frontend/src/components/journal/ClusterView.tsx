@@ -1,9 +1,9 @@
-// ClusterView — Themen-Cluster Visualisierung
+// ClusterView — Themen-Cluster Visualisierung + Mindmap-Button
 // Zeigt gruppierte Journal-Einträge nach thematischer Ähnlichkeit
-// Ruft POST /api/journal/analytics/clusters auf
-// Jeder Cluster hat ein AI-generiertes Label und eine Liste von Einträgen
+// Button oben navigiert zur Fullscreen Journal-Mindmap
 
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { post } from '../../hooks/useAPI'
 import type { ClusterResult } from '../../types/models'
 
@@ -11,11 +11,11 @@ import type { ClusterResult } from '../../types/models'
 const CLUSTER_COLORS = ['#00d4ff', '#a78bfa', '#00ff88', '#ffaa00', '#ff3b5c']
 
 function ClusterView() {
+  const navigate = useNavigate()
   const [clusters, setClusters] = useState<ClusterResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Cluster laden beim ersten Rendern
   useEffect(() => {
     loadClusters()
   }, [])
@@ -33,9 +33,12 @@ function ClusterView() {
     }
   }
 
-  // --- Render ---
   if (loading) {
-    return <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">Themen werden analysiert...</p>
+    return (
+      <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">
+        Themen werden analysiert...
+      </p>
+    )
   }
 
   if (error) {
@@ -63,20 +66,28 @@ function ClusterView() {
 
   return (
     <div className="animate-fade-in">
-      <h3
-        className="hud-title text-sm mb-4"
-        style={{ color: 'var(--color-primary)' }}
-      >
-        Themen-Cluster
-      </h3>
+      {/* Header mit Mindmap-Button */}
+      <div className="flex items-center justify-between mb-4">
+        <h3
+          className="hud-title text-sm"
+          style={{ color: 'var(--color-primary)' }}
+        >
+          Themen-Cluster
+        </h3>
+        <button
+          onClick={() => navigate('/journal/mindmap')}
+          className="hud-btn text-xs"
+        >
+          Mindmap öffnen
+        </button>
+      </div>
 
+      {/* Cluster-Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {clusters.map((cluster, index) => {
           const color = CLUSTER_COLORS[index % CLUSTER_COLORS.length]
-
           return (
             <div key={cluster.cluster_id} className="hud-card p-5 animate-fade-in">
-              {/* Cluster-Header mit farbigem Punkt + Glow */}
               <div className="flex items-center gap-3 mb-3">
                 <div
                   className="w-3 h-3 rounded-full shrink-0"
@@ -98,8 +109,6 @@ function ClusterView() {
                   {cluster.entry_ids.length} Einträge
                 </span>
               </div>
-
-              {/* Titel der enthaltenen Einträge */}
               <ul className="space-y-1">
                 {cluster.titles.map((title, i) => (
                   <li
@@ -107,7 +116,6 @@ function ClusterView() {
                     className="text-sm pl-6 relative"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
-                    {/* Kleiner farbiger Punkt vor jedem Titel */}
                     <span
                       className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full"
                       style={{ backgroundColor: color, opacity: 0.5 }}
