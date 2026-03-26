@@ -1,0 +1,214 @@
+// en.ts — English translations for Pallas
+// Struktur identisch zu de.ts für einfache i18next-Migration
+
+const en = {
+  // General
+  common: {
+    save: 'Save',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    edit: 'Edit',
+    back: 'Back',
+    loading: 'Loading...',
+    error: 'Error',
+    close: 'Close',
+    search: 'Search...',
+    noResults: 'No results for',
+    newEntry: '+ New Entry',
+    entries: 'Entries',
+  },
+
+  // Sidebar
+  sidebar: {
+    dashboard: 'Dashboard',
+    journal: 'Journal',
+    version: 'v0.1.0 — ONLINE',
+  },
+
+  // Dashboard
+  dashboard: {
+    title: 'Dashboard',
+    newFolder: '+ Folder',
+    newModule: '+ Module',
+    folderFormTitle: 'New Folder',
+    moduleFormTitle: 'New Module',
+    folderName: 'Name',
+    folderPlaceholder: 'e.g. Spring Semester 26',
+    createFolder: 'Create Folder',
+    moduleName: 'Name',
+    modulePlaceholder: 'e.g. Linear Algebra',
+    moduleDescription: 'Description',
+    moduleDescPlaceholder: 'e.g. Math Semester 2',
+    createModule: 'Create Module',
+    emptyRoot: 'Nothing here yet.',
+    emptyFolder: 'Folder is empty.',
+    emptyHint: 'Create a folder or module to get started.',
+    moveFailed: 'Move failed',
+  },
+
+  // Journal — Main
+  journal: {
+    title: 'Journal',
+    lock: 'Lock',
+    medTracking: 'Medication Tracking',
+    systemInit: 'Systems initializing...',
+    tabs: {
+      entries: 'Entries',
+      calendar: 'Calendar',
+      mood: 'Mood',
+      clusters: 'Topics',
+      storylines: 'Storylines',
+      medications: 'Medications',
+    },
+  },
+
+  // Journal Setup
+  journalSetup: {
+    title: 'Set up Journal',
+    description:
+      'Set a password for your encrypted journal. This password cannot be reset.',
+    passwordLabel: 'Password',
+    passwordPlaceholder: 'At least 8 characters',
+    submit: 'Set up Journal',
+  },
+
+  // Journal Unlock
+  journalUnlock: {
+    title: 'Unlock Journal',
+    description:
+      'Enter your password to access your entries.',
+    placeholder: 'Enter password',
+    submit: 'Unlock',
+  },
+
+  // Entry Form
+  entryForm: {
+    titleNew: 'New Entry',
+    titleEdit: 'Edit Entry',
+    dateLabel: 'Date',
+    titleLabel: 'Title',
+    titlePlaceholder: 'Enter your own title...',
+    titlePlaceholderEdit: 'Title',
+    autoTitleOn: '✕ Use auto-title',
+    autoTitleOff: '✎ Enter title manually',
+    autoTitleHint: 'Will be generated from the content automatically',
+    contentLabel: 'Content',
+    contentPlaceholder: 'Write down your thoughts...',
+    saveNew: 'Save Entry',
+    saveEdit: 'Save',
+  },
+
+  // Entry List
+  entryList: {
+    emptyTitle: 'No entries yet.',
+    emptyHint: 'Click "+ New Entry" to get started.',
+  },
+
+  // Calendar
+  calendar: {
+    moodGlow: 'Mood Glow',
+    loading: 'Loading calendar...',
+    months: [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ],
+    weekdays: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
+    noEntries: 'No entries for this day.',
+  },
+
+  // Mood Chart
+  moodChart: {
+    title: 'Mood Timeline',
+    loading: 'Analyzing mood...',
+    empty:
+      'No mood data yet. Create entries to see your mood timeline.',
+    unknown: 'unknown',
+  },
+
+  // Cluster View
+  clusterView: {
+    title: 'Topic Clusters',
+    openMindmap: 'Open Mindmap',
+    loading: 'Analyzing topics...',
+    empty: 'No clusters yet. At least 2 entries needed.',
+    entries: 'Entries',
+  },
+
+  // Storyline View
+  storylineView: {
+    title: 'Storylines',
+    loading: 'Detecting storylines...',
+    empty:
+      'No storylines detected yet. At least 3 entries needed.',
+    confidence: 'Confidence',
+    linkedEntries: 'linked entries',
+    arcTypes: {
+      rising: 'Rising',
+      falling: 'Falling',
+      resolved: 'Resolved',
+      ongoing: 'Ongoing',
+    },
+  },
+
+  // Medications
+  medication: {
+    formTitleNew: 'New Medication',
+    formTitleEdit: 'Edit Medication',
+    name: 'Name',
+    namePlaceholder: 'e.g. Ibuprofen',
+    dosage: 'Dosage',
+    dosagePlaceholder: 'e.g. 400mg',
+    frequency: 'Frequency',
+    frequencyPlaceholder: 'e.g. twice daily',
+    startDate: 'Start Date',
+    endDate: 'End Date (optional)',
+    notes: 'Notes / Side Effects (optional)',
+    notesPlaceholder: 'e.g. Do not take on empty stomach...',
+    newMedication: '+ New Medication',
+    emptyTitle: 'No medications yet.',
+    emptyHint: 'Click "+ New Medication" to get started.',
+    since: 'since',
+    until: 'until',
+  },
+
+  // Module Detail
+  moduleDetail: {
+    backToDashboard: '← Back to Dashboard',
+    notFound: 'Module not found.',
+    uploadTitle: 'Upload Document',
+    uploadHint:
+      'Supported formats: PDF, Word, PowerPoint, Excel, Markdown, TXT, Images (OCR)',
+    uploadButton: 'Choose File',
+    uploading: 'Uploading...',
+    documentsTitle: 'Documents',
+    emptyDocs: 'No documents yet.',
+    emptyDocsHint: 'Upload a document to get started.',
+    summarize: 'Summarize',
+    generating: 'Generating...',
+    summaryTitle: 'Summary',
+    openMindmap: 'Open Mindmap',
+    generatingMindmap: 'Creating mindmap...',
+    moduleLoading: 'Loading module...',
+  },
+
+  // Mindmap Pages
+  mindmap: {
+    title: 'Mindmap',
+    journalTitle: 'Journal Mindmap',
+    backToDashboard: '← Back',
+    backToJournal: '← Journal',
+    generating: 'Generating mindmap',
+    generatingHint: 'Building neural network...',
+    journalGeneratingHint:
+      'Analyzing clusters and storylines...',
+    expanding: 'Expanding...',
+    layoutTree: 'Tree',
+    layoutNeural: 'Neural',
+    minEntries: 'At least 2 entries needed for the mindmap.',
+    themes: 'Topics',
+    storylinesLabel: 'Storylines',
+    entry: 'Entry',
+  },
+} as const
+
+export default en
