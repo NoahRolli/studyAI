@@ -3,14 +3,10 @@
 // Ordner sind klickbar → navigiert eine Ebene tiefer
 // Elemente können per Drag & Drop in Ordner verschoben werden
 // Breadcrumbs oben zeigen den aktuellen Pfad
-//
-// PointerSensor mit distance=8: Unterscheidet Klick von Drag
-// Kurzer Klick → Ordner öffnen / Modul-Detailseite
-// 8px+ ziehen → Drag startet
-
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { get, post, put, del } from '../hooks/useAPI'
+import { useLanguage } from '../hooks/useLanguage'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import DraggableCard from '../components/DraggableCard'
@@ -25,49 +21,31 @@ import type {
 } from '../types/models'
 
 function Dashboard() {
+  const { t } = useLanguage()
+
   // --- State ---
-
-  // Aktueller Ordner (null = Root/Dashboard)
   const [currentFolderId, setCurrentFolderId] = useState<number | null>(null)
-
-  // Inhalt der aktuellen Ebene
   const [folders, setFolders] = useState<Folder[]>([])
   const [modules, setModules] = useState<Module[]>([])
-
-  // Breadcrumbs für die Navigation
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([])
-
-  // Lade- und Fehlerzustand
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  // Formular-Steuerung
   const [showFolderForm, setShowFolderForm] = useState(false)
   const [showModuleForm, setShowModuleForm] = useState(false)
-
-  // Formular-Daten
   const [newFolderName, setNewFolderName] = useState('')
   const [newModule, setNewModule] = useState<ModuleCreate>({
     name: '',
     description: '',
     color: '#00d4ff',
   })
-
-  // Drag & Drop — welches Element wird gerade gezogen?
   const [dragLabel, setDragLabel] = useState<string | null>(null)
 
   // Drag & Drop Sensor — erst nach 8px Bewegung aktivieren
-  // So funktioniert ein normaler Klick weiterhin (Ordner öffnen, Modul navigieren)
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   )
 
   // --- Daten laden ---
-
   async function loadContents() {
     try {
       setLoading(true)
@@ -77,25 +55,20 @@ function Dashboard() {
       setFolders(data.folders)
       setModules(data.modules)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Laden')
+      setError(err instanceof Error ? err.message : t.common.error)
     } finally {
       setLoading(false)
     }
   }
 
   async function loadBreadcrumbs() {
-    if (currentFolderId === null) {
-      setBreadcrumbs([])
-      return
-    }
+    if (currentFolderId === null) { setBreadcrumbs([]); return }
     try {
       const data = await get<BreadcrumbItem[]>(
         `/api/folders/${currentFolderId}/breadcrumbs`
       )
       setBreadcrumbs(data)
-    } catch {
-      setBreadcrumbs([])
-    }
+    } catch { setBreadcrumbs([]) }
   }
 
   useEffect(() => {
@@ -113,7 +86,7 @@ function Dashboard() {
       setShowFolderForm(false)
       await loadContents()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Erstellen')
+      setError(err instanceof Error ? err.message : t.common.error)
     }
   }
 
@@ -122,7 +95,6 @@ function Dashboard() {
     try {
       setError(null)
       const response = await post<Module>('/api/modules/', newModule)
-      // In aktuellen Ordner verschieben falls nicht Root
       if (currentFolderId !== null) {
         await put(`/api/folders/move-module/${response.id}`, {
           folder_id: currentFolderId,
@@ -132,7 +104,7 @@ function Dashboard() {
       setShowModuleForm(false)
       await loadContents()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Erstellen')
+      setError(err instanceof Error ? err.message : t.common.error)
     }
   }
 
@@ -143,7 +115,7 @@ function Dashboard() {
       await del(`/api/folders/${folderId}`)
       await loadContents()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Löschen')
+      setError(err instanceof Error ? err.message : t.common.error)
     }
   }
 
@@ -154,7 +126,7 @@ function Dashboard() {
       await del(`/api/modules/${moduleId}`)
       await loadContents()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Löschen')
+      setError(err instanceof Error ? err.message : t.common.error)
     }
   }
 
@@ -178,8 +150,6 @@ function Dashboard() {
   }
 
   // --- Drag & Drop Handler ---
-
-  // Beim Start: Label merken für die DragOverlay-Vorschau
   function handleDragStart(event: DragStartEvent) {
     const { active } = event
     const id = String(active.id)
@@ -194,24 +164,16 @@ function Dashboard() {
     }
   }
 
-  // Beim Drop: Element in den Ziel-Ordner verschieben
   async function handleDragEnd(event: DragEndEvent) {
     setDragLabel(null)
     const { active, over } = event
-
     if (!over || active.id === over.id) return
-
     const draggedId = String(active.id)
     const targetId = String(over.id)
-
-    // Ziel muss ein Ordner sein (drop-folder-X)
     if (!targetId.startsWith('drop-folder-')) return
-
     const targetFolderId = parseInt(targetId.replace('drop-folder-', ''))
-
     try {
       setError(null)
-
       if (draggedId.startsWith('folder-')) {
         const folderId = parseInt(draggedId.replace('folder-', ''))
         if (folderId === targetFolderId) return
@@ -220,10 +182,9 @@ function Dashboard() {
         const moduleId = parseInt(draggedId.replace('module-', ''))
         await put(`/api/folders/move-module/${moduleId}`, { folder_id: targetFolderId })
       }
-
       await loadContents()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verschieben fehlgeschlagen')
+      setError(err instanceof Error ? err.message : t.dashboard.moveFailed)
     }
   }
 
@@ -232,19 +193,19 @@ function Dashboard() {
     <div className="animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="hud-title text-glow text-2xl">Dashboard</h1>
+        <h1 className="hud-title text-glow text-2xl">{t.dashboard.title}</h1>
         <div className="flex items-center gap-3">
           <button
             onClick={() => { setShowFolderForm(!showFolderForm); setShowModuleForm(false) }}
             className="hud-btn"
           >
-            {showFolderForm ? 'Abbrechen' : '+ Ordner'}
+            {showFolderForm ? t.common.cancel : t.dashboard.newFolder}
           </button>
           <button
             onClick={() => { setShowModuleForm(!showModuleForm); setShowFolderForm(false) }}
             className="hud-btn"
           >
-            {showModuleForm ? 'Abbrechen' : '+ Modul'}
+            {showModuleForm ? t.common.cancel : t.dashboard.newModule}
           </button>
         </div>
       </div>
@@ -260,7 +221,7 @@ function Dashboard() {
               : 'var(--color-text-muted)',
           }}
         >
-          Dashboard
+          {t.sidebar.dashboard}
         </button>
         {breadcrumbs.map((crumb, index) => (
           <span key={crumb.id} className="flex items-center gap-2">
@@ -298,17 +259,17 @@ function Dashboard() {
       {showFolderForm && (
         <div className="hud-card p-6 mb-6 animate-fade-in">
           <h2 className="hud-title text-sm mb-4" style={{ color: 'var(--color-primary)' }}>
-            Neuer Ordner
+            {t.dashboard.folderFormTitle}
           </h2>
           <div className="mb-4">
             <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-              Name
+              {t.dashboard.folderName}
             </label>
             <input
               type="text"
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
-              placeholder="z.B. Frühjahrssemester 26"
+              placeholder={t.dashboard.folderPlaceholder}
               className="hud-input"
               onKeyDown={(e) => e.key === 'Enter' && newFolderName && createFolder()}
             />
@@ -318,7 +279,7 @@ function Dashboard() {
             disabled={!newFolderName}
             className="hud-btn hud-btn-primary"
           >
-            Ordner erstellen
+            {t.dashboard.createFolder}
           </button>
         </div>
       )}
@@ -327,29 +288,29 @@ function Dashboard() {
       {showModuleForm && (
         <div className="hud-card p-6 mb-6 animate-fade-in">
           <h2 className="hud-title text-sm mb-4" style={{ color: 'var(--color-primary)' }}>
-            Neues Modul
+            {t.dashboard.moduleFormTitle}
           </h2>
           <div className="mb-4">
             <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-              Name
+              {t.dashboard.moduleName}
             </label>
             <input
               type="text"
               value={newModule.name}
               onChange={(e) => setNewModule({ ...newModule, name: e.target.value })}
-              placeholder="z.B. Lineare Algebra"
+              placeholder={t.dashboard.modulePlaceholder}
               className="hud-input"
             />
           </div>
           <div className="mb-6">
             <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-              Beschreibung
+              {t.dashboard.moduleDescription}
             </label>
             <input
               type="text"
               value={newModule.description}
               onChange={(e) => setNewModule({ ...newModule, description: e.target.value })}
-              placeholder="z.B. Mathe Semester 2"
+              placeholder={t.dashboard.moduleDescPlaceholder}
               className="hud-input"
             />
           </div>
@@ -358,52 +319,39 @@ function Dashboard() {
             disabled={!newModule.name}
             className="hud-btn hud-btn-primary"
           >
-            Modul erstellen
+            {t.dashboard.createModule}
           </button>
         </div>
       )}
 
       {/* Ladezustand */}
       {loading && (
-        <p style={{ color: 'var(--color-text-muted)' }}>Wird geladen...</p>
+        <p style={{ color: 'var(--color-text-muted)' }}>{t.common.loading}</p>
       )}
 
       {/* Leerer Zustand */}
       {!loading && folders.length === 0 && modules.length === 0 && (
         <div className="text-center py-16">
           <p className="text-lg mb-2" style={{ color: 'var(--color-text-muted)' }}>
-            {currentFolderId === null ? 'Noch nichts vorhanden.' : 'Ordner ist leer.'}
+            {currentFolderId === null ? t.dashboard.emptyRoot : t.dashboard.emptyFolder}
           </p>
           <p style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
-            Erstelle einen Ordner oder ein Modul um loszulegen.
+            {t.dashboard.emptyHint}
           </p>
         </div>
       )}
 
-      {/* Drag & Drop Kontext mit PointerSensor (8px Mindestabstand) */}
+      {/* Drag & Drop Kontext */}
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Ordner-Karten — gleichzeitig draggable UND droppable */}
+          {/* Ordner-Karten */}
           {folders.map((folder) => (
             <DraggableCard key={`folder-${folder.id}`} id={`folder-${folder.id}`} type="folder">
               <DroppableFolder id={`drop-folder-${folder.id}`}>
-                <div
-                  onClick={() => openFolder(folder.id)}
-                  className="hud-card p-5 cursor-pointer"
-                >
+                <div onClick={() => openFolder(folder.id)} className="hud-card p-5 cursor-pointer">
                   <div className="flex items-center gap-3 mb-2">
-                    <span
-                      className="text-lg"
-                      style={{
-                        color: 'var(--color-primary)',
-                        textShadow: '0 0 8px rgba(0, 212, 255, 0.5)',
-                      }}
-                    >
-                      📁
-                    </span>
-                    <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                      {folder.name}
-                    </h3>
+                    <span className="text-lg" style={{ color: 'var(--color-primary)', textShadow: '0 0 8px rgba(0, 212, 255, 0.5)' }}>📁</span>
+                    <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>{folder.name}</h3>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
@@ -416,7 +364,7 @@ function Dashboard() {
                       onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-danger)')}
                       onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')}
                     >
-                      Löschen
+                      {t.common.delete}
                     </button>
                   </div>
                 </div>
@@ -424,30 +372,15 @@ function Dashboard() {
             </DraggableCard>
           ))}
 
-          {/* Modul-Karten — nur draggable */}
+          {/* Modul-Karten */}
           {modules.map((module) => (
             <DraggableCard key={`module-${module.id}`} id={`module-${module.id}`} type="module">
-              <Link
-                to={`/modules/${module.id}`}
-                className="hud-card p-5 block"
-              >
+              <Link to={`/modules/${module.id}`} className="hud-card p-5 block">
                 <div className="flex items-center gap-3 mb-2">
-                  <span
-                    className="text-lg"
-                    style={{
-                      color: 'var(--color-text-secondary)',
-                      textShadow: '0 0 6px rgba(0, 212, 255, 0.3)',
-                    }}
-                  >
-                    📄
-                  </span>
-                  <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                    {module.name}
-                  </h3>
+                  <span className="text-lg" style={{ color: 'var(--color-text-secondary)', textShadow: '0 0 6px rgba(0, 212, 255, 0.3)' }}>📄</span>
+                  <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>{module.name}</h3>
                 </div>
-                <p className="text-sm mb-3 pl-8" style={{ color: 'var(--color-text-secondary)' }}>
-                  {module.description}
-                </p>
+                <p className="text-sm mb-3 pl-8" style={{ color: 'var(--color-text-secondary)' }}>{module.description}</p>
                 <div className="flex items-center justify-between">
                   <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                     {new Date(module.created_at).toLocaleDateString('de-CH')}
@@ -459,7 +392,7 @@ function Dashboard() {
                     onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-danger)')}
                     onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')}
                   >
-                    Löschen
+                    {t.common.delete}
                   </button>
                 </div>
               </Link>
@@ -467,16 +400,12 @@ function Dashboard() {
           ))}
         </div>
 
-        {/* DragOverlay — schwebendes Element während des Ziehens */}
+        {/* DragOverlay */}
         <DragOverlay>
           {dragLabel && (
             <div
               className="hud-card px-4 py-3 text-sm font-medium"
-              style={{
-                color: 'var(--color-primary)',
-                boxShadow: '0 0 30px rgba(0, 212, 255, 0.4)',
-                pointerEvents: 'none',
-              }}
+              style={{ color: 'var(--color-primary)', boxShadow: '0 0 30px rgba(0, 212, 255, 0.4)', pointerEvents: 'none' }}
             >
               {dragLabel}
             </div>
