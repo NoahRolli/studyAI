@@ -1,6 +1,8 @@
 // JournalUnlock — Passwort eingeben um Journal zu entsperren
 // Wird angezeigt wenn is_setup === true aber is_unlocked === false
 
+import { useLanguage } from '../../hooks/useLanguage'
+
 interface JournalUnlockProps {
   password: string
   onPasswordChange: (pw: string) => void
@@ -8,6 +10,8 @@ interface JournalUnlockProps {
 }
 
 function JournalUnlock({ password, onPasswordChange, onUnlock }: JournalUnlockProps) {
+  const { t } = useLanguage()
+
   return (
     <div className="max-w-md">
       <div className="hud-card p-6 animate-glow-pulse">
@@ -15,17 +19,17 @@ function JournalUnlock({ password, onPasswordChange, onUnlock }: JournalUnlockPr
           className="hud-title text-lg mb-2"
           style={{ color: 'var(--color-primary)' }}
         >
-          Journal entsperren
+          {t.journalUnlock.title}
         </h2>
         <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
-          Gib dein Passwort ein um auf deine Einträge zuzugreifen.
+          {t.journalUnlock.description}
         </p>
         <div className="mb-4">
           <input
             type="password"
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
-            placeholder="Passwort eingeben"
+            placeholder={t.journalUnlock.placeholder}
             onKeyDown={(e) => e.key === 'Enter' && onUnlock()}
             className="hud-input"
           />
@@ -35,7 +39,7 @@ function JournalUnlock({ password, onPasswordChange, onUnlock }: JournalUnlockPr
           disabled={!password}
           className="hud-btn hud-btn-primary w-full"
         >
-          Entsperren
+          {t.journalUnlock.submit}
         </button>
       </div>
     </div>
