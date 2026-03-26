@@ -7,6 +7,7 @@ import { useRef } from 'react'
 import useJournalState from '../hooks/useJournalState'
 import type { JournalTab } from '../hooks/useJournalState'
 import type { JournalEntry } from '../types/models'
+import { useLanguage } from '../hooks/useLanguage'
 import useJournalLock from '../hooks/useJournalLock'
 import JournalSetup from '../components/journal/JournalSetup'
 import JournalUnlock from '../components/journal/JournalUnlock'
@@ -21,6 +22,7 @@ import JournalSearch from '../components/journal/JournalSearch'
 
 function Journal() {
   const s = useJournalState()
+  const { t } = useLanguage()
 
   // Ref um CalendarView von aussen zu steuern (Tag öffnen)
   const calendarRef = useRef<{ openDay: (date: string) => void }>(null)
@@ -36,7 +38,6 @@ function Journal() {
   // Suche: Treffer angeklickt → Kalender-Tab + Modal für den Tag
   function handleSearchSelect(entry: JournalEntry) {
     s.setActiveTab('calendar')
-    // Kleines Delay damit CalendarView mounted ist
     setTimeout(() => {
       calendarRef.current?.openDay(entry.date)
     }, 100)
@@ -46,9 +47,9 @@ function Journal() {
   if (s.loading) {
     return (
       <div className="animate-fade-in">
-        <h1 className="hud-title text-glow text-2xl mb-6">Journal</h1>
+        <h1 className="hud-title text-glow text-2xl mb-6">{t.journal.title}</h1>
         <p style={{ color: 'var(--color-text-muted)' }}>
-          Systeme werden initialisiert...
+          {t.journal.systemInit}
         </p>
       </div>
     )
@@ -56,13 +57,13 @@ function Journal() {
 
   // Tab-Konfiguration (Medikamente nur wenn aktiviert)
   const tabs: { key: JournalTab; label: string }[] = [
-    { key: 'entries', label: 'Einträge' },
-    { key: 'calendar', label: 'Kalender' },
-    { key: 'mood', label: 'Stimmung' },
-    { key: 'clusters', label: 'Themen' },
-    { key: 'storylines', label: 'Storylines' },
+    { key: 'entries', label: t.journal.tabs.entries },
+    { key: 'calendar', label: t.journal.tabs.calendar },
+    { key: 'mood', label: t.journal.tabs.mood },
+    { key: 'clusters', label: t.journal.tabs.clusters },
+    { key: 'storylines', label: t.journal.tabs.storylines },
     ...(s.medEnabled
-      ? [{ key: 'medications' as JournalTab, label: 'Medikamente' }]
+      ? [{ key: 'medications' as JournalTab, label: t.journal.tabs.medications }]
       : []),
   ]
 
@@ -70,10 +71,9 @@ function Journal() {
     <div className="animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="hud-title text-glow text-2xl">Journal</h1>
+        <h1 className="hud-title text-glow text-2xl">{t.journal.title}</h1>
         {s.status?.is_unlocked && (
           <div className="flex items-center gap-4">
-            {/* Globale Suche */}
             <JournalSearch
               entries={s.entries}
               onSelectEntry={handleSearchSelect}
@@ -86,11 +86,11 @@ function Journal() {
                 className="w-4 h-4 rounded accent-[var(--color-primary)]"
               />
               <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                Medikamenten-Tracking
+                {t.journal.medTracking}
               </span>
             </label>
             <button onClick={s.lockJournal} className="hud-btn hud-btn-danger">
-              Sperren
+              {t.journal.lock}
             </button>
           </div>
         )}
@@ -169,7 +169,7 @@ function Journal() {
                 onClick={() => s.setShowForm(!s.showForm)}
                 className="hud-btn mb-6"
               >
-                {s.showForm ? 'Abbrechen' : '+ Neuer Eintrag'}
+                {s.showForm ? t.common.cancel : t.common.newEntry}
               </button>
               {s.showForm && (
                 <EntryForm
