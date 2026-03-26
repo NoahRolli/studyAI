@@ -1,5 +1,6 @@
-// CalendarView — Monatskalender für Journal-Einträge
+// CalendarView — Monatskalender für Journal-Einträge + Medikamente
 // Einzelklick → Cyan-Umrandung, Doppelklick → Modal
+// Mood-Toggle: Glow + Opacity. Med-Pillen: grün/rot pro Tag.
 // forwardRef: Suche kann von aussen einen Tag öffnen (openDay)
 
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
@@ -12,6 +13,14 @@ interface CalendarEntry {
   id: number
   title: string
   date: string
+}
+
+// Medikamenten-Einnahme vom Backend
+interface IntakeCalendarEntry {
+  medication_id: number
+  med_name: string
+  date: string
+  status: 'taken' | 'skipped'
 }
 
 // Props — Entry-Aktionen von Journal.tsx
@@ -29,6 +38,7 @@ interface CalendarViewProps {
   onCreateEntry: (data: JournalEntryCreate) => void
   autoTitle: boolean
   onAutoTitleChange: (val: boolean) => void
+  medEnabled: boolean
 }
 
 // Ref-Handle für externe Steuerung
@@ -48,16 +58,13 @@ function getFirstDayOffset(year: number, month: number): number {
 }
 
 // Mood-Score → Glow + Opacity
-function getMoodStyle(score: number | undefined, moodActive: boolean) {
-  if (!moodActive || score === undefined) {
+function getMoodStyle(score: number | undefined, active: boolean) {
+  if (!active || score === undefined) {
     return { opacity: 0.7, glow: '0 0 6px var(--color-primary)' }
   }
-  const normalizedOpacity = 0.2 + ((score + 1) / 2) * 0.8
-  const glowSize = Math.round(4 + ((score + 1) / 2) * 12)
-  return {
-    opacity: normalizedOpacity,
-    glow: `0 0 ${glowSize}px var(--color-primary)`,
-  }
+  const op = 0.2 + ((score + 1) / 2) * 0.8
+  const gl = Math.round(4 + ((score + 1) / 2) * 12)
+  return { opacity: op, glow: `0 0 ${gl}px var(--color-primary)` }
 }
 
 const MONTH_NAMES = [
@@ -70,12 +77,13 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
     moods, moodsLoaded, onLoadMoods,
     entries, editingId, editEntry,
     onStartEdit, onSaveEdit, onCancelEdit, onDelete, onCreateEntry,
-    autoTitle, onAutoTitleChange,
+    autoTitle, onAutoTitleChange, medEnabled,
   }, ref) {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
   const [calEntries, setCalEntries] = useState<CalendarEntry[]>([])
+  const [intakes, setIntakes] = useState<IntakeCalendarEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [moodActive, setMoodActive] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -88,7 +96,6 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
   // Externe Steuerung: Suche kann einen Tag öffnen
   useImperativeHandle(ref, () => ({
     openDay(date: string) {
-      // Monat zum Datum navigieren
       const [y, m] = date.split('-').map(Number)
       setYear(y)
       setMonth(m - 1)
@@ -97,7 +104,7 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
     },
   }))
 
-  // Kalender-Einträge laden wenn Monat wechselt
+  // Einträge + Medikamente laden wenn Monat wechselt
   useEffect(() => {
     async function load() {
       setLoading(true)
@@ -108,14 +115,26 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
         setCalEntries(data)
       } catch {
         setCalEntries([])
-      } finally {
-        setLoading(false)
       }
+      // Medikamenten-Einnahmen laden (wenn aktiv)
+      if (medEnabled) {
+        try {
+          const med = await get<IntakeCalendarEntry[]>(
+            `/api/journal/medications/intake/calendar/${monthStr}`
+          )
+          setIntakes(med)
+        } catch {
+          setIntakes([])
+        }
+      } else {
+        setIntakes([])
+      }
+      setLoading(false)
     }
     load()
     setSelectedDate(null)
     setModalOpen(false)
-  }, [monthStr])
+  }, [monthStr, medEnabled])
 
   // Mood laden wenn Toggle an
   useEffect(() => {
@@ -131,13 +150,11 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
     else setMonth(month + 1)
   }
 
-  // Einzelklick → Cyan-Umrandung
   function handleDayClick(dateStr: string) {
     if (dateStr > todayStr) return
     setSelectedDate(selectedDate === dateStr ? null : dateStr)
   }
 
-  // Doppelklick → Modal
   function handleDayDoubleClick(dateStr: string) {
     if (dateStr > todayStr) return
     setSelectedDate(dateStr)
@@ -153,12 +170,21 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
   const daysInMonth = getDaysInMonth(year, month)
   const firstDayOffset = getFirstDayOffset(year, month)
 
+  // Einträge nach Datum
   const calByDate: Record<string, CalendarEntry[]> = {}
   for (const e of calEntries) {
     if (!calByDate[e.date]) calByDate[e.date] = []
     calByDate[e.date].push(e)
   }
 
+  // Medikamenten-Einnahmen nach Datum
+  const intakeByDate: Record<string, IntakeCalendarEntry[]> = {}
+  for (const i of intakes) {
+    if (!intakeByDate[i.date]) intakeByDate[i.date] = []
+    intakeByDate[i.date].push(i)
+  }
+
+  // Mood nach Entry-ID
   const moodById: Record<number, number> = {}
   for (const m of moods) {
     if (m.score !== undefined) moodById[m.entry_id] = m.score
@@ -170,7 +196,7 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
 
   return (
     <div className="animate-fade-in">
-      {/* Navigation + Mood-Toggle */}
+      {/* Navigation + Toggles */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button onClick={prevMonth} className="hud-btn px-3 py-1">‹</button>
@@ -218,6 +244,7 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
           const day = i + 1
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
           const dayEntries = calByDate[dateStr] || []
+          const dayIntakes = intakeByDate[dateStr] || []
           const isToday = dateStr === todayStr
           const isFuture = dateStr > todayStr
           const isSelected = dateStr === selectedDate
@@ -257,6 +284,7 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
                 }
               }}
             >
+              {/* Tageszahl */}
               <span
                 className="text-xs font-medium"
                 style={{
@@ -268,6 +296,7 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
                 {day}
               </span>
 
+              {/* Eintrag-Punkte */}
               {dayEntries.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {dayEntries.map((entry) => {
@@ -285,6 +314,27 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
                       />
                     )
                   })}
+                </div>
+              )}
+
+              {/* Medikamenten-Pillen (unten rechts) */}
+              {dayIntakes.length > 0 && (
+                <div className="absolute bottom-1 right-1 flex gap-0.5">
+                  {dayIntakes.map((intake) => (
+                    <div
+                      key={`${intake.medication_id}-${intake.date}`}
+                      title={`${intake.med_name}: ${intake.status === 'taken' ? '✓' : '✕'}`}
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{
+                        backgroundColor: intake.status === 'taken'
+                          ? 'var(--color-success)'
+                          : 'var(--color-danger)',
+                        boxShadow: intake.status === 'taken'
+                          ? '0 0 4px rgba(0, 255, 136, 0.4)'
+                          : '0 0 4px rgba(255, 59, 92, 0.4)',
+                      }}
+                    />
+                  ))}
                 </div>
               )}
             </div>
