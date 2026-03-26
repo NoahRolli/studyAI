@@ -3,6 +3,7 @@
 // Wird per Doppelklick auf einen Tag geöffnet
 
 import { useState } from 'react'
+import { useLanguage } from '../../hooks/useLanguage'
 import type { JournalEntry, JournalEntryCreate } from '../../types/models'
 import EntryForm from './EntryForm'
 
@@ -26,6 +27,7 @@ function CalendarDayModal({
   onStartEdit, onSaveEdit, onCancelEdit, onDelete, onCreateEntry,
   autoTitle, onAutoTitleChange, onClose,
 }: CalendarDayModalProps) {
+  const { t } = useLanguage()
   const [showNewForm, setShowNewForm] = useState(false)
 
   return (
@@ -87,7 +89,7 @@ function CalendarDayModal({
                           className="text-xs"
                           style={{ color: 'var(--color-text-muted)' }}
                         >
-                          Bearbeiten
+                          {t.common.edit}
                         </button>
                         <button
                           onClick={() => onDelete(entry.id)}
@@ -100,7 +102,7 @@ function CalendarDayModal({
                             (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')
                           }
                         >
-                          Löschen
+                          {t.common.delete}
                         </button>
                       </div>
                     </div>
@@ -123,7 +125,7 @@ function CalendarDayModal({
             className="text-sm mb-4"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            Keine Einträge für diesen Tag.
+            {t.calendar.noEntries}
           </p>
         )}
 
@@ -133,7 +135,7 @@ function CalendarDayModal({
             onClick={() => setShowNewForm(true)}
             className="hud-btn w-full"
           >
-            + Neuer Eintrag
+            {t.common.newEntry}
           </button>
         ) : (
           <EntryForm
