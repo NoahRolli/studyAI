@@ -267,3 +267,52 @@ def get_intake_logs(
         except Exception:
             continue
     return result
+
+# ============================================
+# Kalender-Ansicht — Einnahmen pro Monat
+# ============================================
+
+@router.get("/intake/calendar/{month}")
+def get_intake_calendar(
+    month: str,
+    db: Session = Depends(get_journal_db),
+):
+    """Alle Einnahme-Logs aller Medikamente für einen Monat.
+
+    Gibt pro Log: medication_id, med_name, date, status zurück.
+    Für die Kalender-Ansicht (Pill-Icons pro Tag).
+    """
+    require_unlocked()
+    key = session_manager.get_key()
+
+    # Alle aktiven Medikamente laden
+    meds = db.query(Medication).filter(Medication.is_deleted == 0).all()
+    med_names: dict[int, str] = {}
+    for med in meds:
+        try:
+            med_names[med.id] = decrypt_text(med.encrypted_name, key)
+        except Exception:
+            continue
+
+    # Alle Intake-Logs der aktiven Medikamente laden + filtern
+    result = []
+    for med_id in med_names:
+        logs = db.query(IntakeLog).filter(
+            IntakeLog.medication_id == med_id
+        ).all()
+        for log in logs:
+            try:
+                date_str = decrypt_text(log.encrypted_date, key)
+                if not date_str.startswith(month):
+                    continue
+                status = decrypt_text(log.encrypted_status, key)
+                result.append({
+                    "medication_id": med_id,
+                    "med_name": med_names[med_id],
+                    "date": date_str,
+                    "status": status,
+                })
+            except Exception:
+                continue
+
+    return result
