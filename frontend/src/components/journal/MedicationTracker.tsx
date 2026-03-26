@@ -1,10 +1,10 @@
 // MedicationTracker — Medikamenten-Liste mit Einnahme-Tracking
 // Zeigt alle aktiven Medikamente mit täglicher Checkbox (taken/skipped)
 // HUD-Design mit Glow-Effekten und Status-Farben
-// Formular-Logik ist in MedicationForm.tsx ausgelagert
 
 import { useState, useEffect } from 'react'
 import { get, post, put, del } from '../../hooks/useAPI'
+import { useLanguage } from '../../hooks/useLanguage'
 import type { Medication, MedicationCreate, IntakeLog } from '../../types/models'
 import MedicationForm from './MedicationForm'
 
@@ -14,11 +14,11 @@ interface MedicationTrackerProps {
 }
 
 function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
+  const { t } = useLanguage()
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [intakeLogs, setIntakeLogs] = useState<Record<number, IntakeLog[]>>({})
-
   const today = new Date().toISOString().split('T')[0]
 
   // --- Einnahme-Logs laden ---
@@ -47,7 +47,7 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
       setShowForm(false)
       onReload()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Erstellen')
+      setError(err instanceof Error ? err.message : t.common.error)
     }
   }
 
@@ -59,7 +59,7 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
       setEditingId(null)
       onReload()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Speichern')
+      setError(err instanceof Error ? err.message : t.common.error)
     }
   }
 
@@ -68,7 +68,7 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
       await del(`/api/journal/medications/${id}`)
       onReload()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Löschen')
+      setError(err instanceof Error ? err.message : t.common.error)
     }
   }
 
@@ -85,7 +85,7 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
       })
       await loadIntakeLogs()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Protokollieren')
+      setError(err instanceof Error ? err.message : t.common.error)
     }
   }
 
@@ -95,7 +95,6 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
     return todayLog ? todayLog.status : null
   }
 
-  // --- Render ---
   return (
     <div>
       {/* Fehler */}
@@ -120,7 +119,7 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
           onClick={() => { setShowForm(true); setEditingId(null) }}
           className="hud-btn mb-6"
         >
-          + Neues Medikament
+          {t.medication.newMedication}
         </button>
       )}
 
@@ -128,10 +127,10 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
       {medications.length === 0 && !showForm && (
         <div className="text-center py-16">
           <p className="text-lg mb-2" style={{ color: 'var(--color-text-muted)' }}>
-            Noch keine Medikamente.
+            {t.medication.emptyTitle}
           </p>
           <p style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
-            Klicke auf "+ Neues Medikament" um zu beginnen.
+            {t.medication.emptyHint}
           </p>
         </div>
       )}
@@ -157,7 +156,6 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    {/* Einnahme-Checkbox — Grün=genommen, Rot=übersprungen */}
                     <button
                       onClick={() => toggleIntake(med.id)}
                       className="w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-300"
@@ -202,7 +200,7 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
                       className="text-xs transition-colors"
                       style={{ color: 'var(--color-text-muted)' }}
                     >
-                      Bearbeiten
+                      {t.common.edit}
                     </button>
                     <button
                       onClick={() => deleteMedication(med.id)}
@@ -211,21 +209,20 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
                       onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-danger)')}
                       onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')}
                     >
-                      Löschen
+                      {t.common.delete}
                     </button>
                   </div>
                 </div>
-                {/* Details */}
                 <div className="flex gap-4 text-xs mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                   <span>{med.dosage}</span>
                   <span style={{ color: 'var(--color-border)' }}>·</span>
                   <span>{med.frequency}</span>
                   <span style={{ color: 'var(--color-border)' }}>·</span>
-                  <span>seit {med.start_date}</span>
+                  <span>{t.medication.since} {med.start_date}</span>
                   {med.end_date && (
                     <>
                       <span style={{ color: 'var(--color-border)' }}>·</span>
-                      <span>bis {med.end_date}</span>
+                      <span>{t.medication.until} {med.end_date}</span>
                     </>
                   )}
                 </div>
