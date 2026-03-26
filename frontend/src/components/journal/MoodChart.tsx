@@ -1,7 +1,6 @@
 // MoodChart — Stimmungsverlauf als Linien-Chart
 // Zeigt Mood-Scores (-1.0 bis 1.0) über Zeit an
 // Daten kommen als Props vom Parent (Journal.tsx)
-// So bleiben sie beim Tab-Wechsel erhalten
 // Verwendet recharts mit HUD-Farbpalette
 
 import {
@@ -14,6 +13,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts'
+import { useLanguage } from '../../hooks/useLanguage'
 import type { MoodResult, JournalEntry } from '../../types/models'
 
 // Props — Daten kommen vom Parent
@@ -32,15 +32,16 @@ interface ChartPoint {
 }
 
 function MoodChart({ entries, moods, loading }: MoodChartProps) {
+  const { t } = useLanguage()
+
   // --- Daten aufbereiten ---
   const entryMap = new Map(entries.map((e) => [e.id, e]))
-
   const data: ChartPoint[] = moods
     .filter((m) => !m.error)
     .map((m) => {
       const entry = entryMap.get(m.entry_id)
       return {
-        date: entry?.date ?? 'unbekannt',
+        date: entry?.date ?? t.moodChart.unknown,
         score: m.score,
         label: m.label,
         title: entry?.title ?? '',
@@ -50,13 +51,17 @@ function MoodChart({ entries, moods, loading }: MoodChartProps) {
 
   // --- Render ---
   if (loading) {
-    return <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">Stimmung wird analysiert...</p>
+    return (
+      <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">
+        {t.moodChart.loading}
+      </p>
+    )
   }
 
   if (data.length === 0) {
     return (
       <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">
-        Noch keine Mood-Daten. Erstelle Einträge um deinen Stimmungsverlauf zu sehen.
+        {t.moodChart.empty}
       </p>
     )
   }
@@ -67,14 +72,13 @@ function MoodChart({ entries, moods, loading }: MoodChartProps) {
         className="hud-title text-sm mb-4"
         style={{ color: 'var(--color-primary)' }}
       >
-        Stimmungsverlauf
+        {t.moodChart.title}
       </h3>
 
       {/* Chart-Container mit HUD-Border */}
       <div className="hud-card p-4">
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-            {/* Grid — subtile Cyan-Linien */}
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 212, 255, 0.08)" />
             <XAxis
               dataKey="date"
@@ -87,10 +91,8 @@ function MoodChart({ entries, moods, loading }: MoodChartProps) {
               stroke="var(--color-border)"
               tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
             />
-            {/* Nulllinie — Referenz für neutral */}
             <ReferenceLine y={0} stroke="var(--color-border)" strokeDasharray="4 4" />
             <Tooltip content={<MoodTooltip />} />
-            {/* Linie — Cyan mit Glow */}
             <Line
               type="monotone"
               dataKey="score"
@@ -109,9 +111,7 @@ function MoodChart({ entries, moods, loading }: MoodChartProps) {
 // Custom Tooltip — zeigt Titel, Label und Score beim Hovern
 function MoodTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null
-
   const point = payload[0].payload as ChartPoint
-
   return (
     <div
       className="rounded-lg px-3 py-2 shadow-lg border"
