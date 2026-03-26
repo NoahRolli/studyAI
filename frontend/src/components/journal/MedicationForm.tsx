@@ -1,13 +1,9 @@
 // MedicationForm — Formular zum Erstellen und Bearbeiten von Medikamenten
 // Wird von MedicationTracker für "Neu" und "Bearbeiten" verwendet
 // HUD-Design mit Glow-Effekten und Cyan-Akzenten
-//
-// Props:
-// - initialData: Vorbelegte Werte (beim Bearbeiten)
-// - onSave: Callback mit den Formulardaten
-// - onCancel: Abbrechen-Callback
 
 import { useState } from 'react'
+import { useLanguage } from '../../hooks/useLanguage'
 import type { MedicationCreate } from '../../types/models'
 
 interface MedicationFormProps {
@@ -17,6 +13,8 @@ interface MedicationFormProps {
 }
 
 function MedicationForm({ initialData, onSave, onCancel }: MedicationFormProps) {
+  const { t } = useLanguage()
+
   // Formular-State — entweder mit initialData (Edit) oder leer (Neu)
   const [form, setForm] = useState<MedicationCreate>(
     initialData || {
@@ -35,19 +33,19 @@ function MedicationForm({ initialData, onSave, onCancel }: MedicationFormProps) 
         className="hud-title text-sm mb-4"
         style={{ color: 'var(--color-primary)' }}
       >
-        {initialData ? 'Medikament bearbeiten' : 'Neues Medikament'}
+        {initialData ? t.medication.formTitleEdit : t.medication.formTitleNew}
       </h2>
 
       {/* Name */}
       <div className="mb-4">
         <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-          Name
+          {t.medication.name}
         </label>
         <input
           type="text"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
-          placeholder="z.B. Ibuprofen"
+          placeholder={t.medication.namePlaceholder}
           className="hud-input"
         />
       </div>
@@ -56,25 +54,25 @@ function MedicationForm({ initialData, onSave, onCancel }: MedicationFormProps) 
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
           <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-            Dosis
+            {t.medication.dosage}
           </label>
           <input
             type="text"
             value={form.dosage}
             onChange={(e) => setForm({ ...form, dosage: e.target.value })}
-            placeholder="z.B. 400mg"
+            placeholder={t.medication.dosagePlaceholder}
             className="hud-input"
           />
         </div>
         <div>
           <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-            Frequenz
+            {t.medication.frequency}
           </label>
           <input
             type="text"
             value={form.frequency}
             onChange={(e) => setForm({ ...form, frequency: e.target.value })}
-            placeholder="z.B. 2x täglich"
+            placeholder={t.medication.frequencyPlaceholder}
             className="hud-input"
           />
         </div>
@@ -84,7 +82,7 @@ function MedicationForm({ initialData, onSave, onCancel }: MedicationFormProps) 
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
           <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-            Start-Datum
+            {t.medication.startDate}
           </label>
           <input
             type="date"
@@ -95,7 +93,7 @@ function MedicationForm({ initialData, onSave, onCancel }: MedicationFormProps) 
         </div>
         <div>
           <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-            End-Datum (optional)
+            {t.medication.endDate}
           </label>
           <input
             type="date"
@@ -109,12 +107,12 @@ function MedicationForm({ initialData, onSave, onCancel }: MedicationFormProps) 
       {/* Notizen */}
       <div className="mb-6">
         <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-          Notizen / Nebenwirkungen (optional)
+          {t.medication.notes}
         </label>
         <textarea
           value={form.notes || ''}
           onChange={(e) => setForm({ ...form, notes: e.target.value || null })}
-          placeholder="z.B. Nicht auf leeren Magen nehmen..."
+          placeholder={t.medication.notesPlaceholder}
           rows={3}
           className="hud-input resize-y"
         />
@@ -127,10 +125,10 @@ function MedicationForm({ initialData, onSave, onCancel }: MedicationFormProps) 
           disabled={!form.name || !form.dosage || !form.frequency}
           className="hud-btn hud-btn-primary"
         >
-          Speichern
+          {t.common.save}
         </button>
         <button onClick={onCancel} className="hud-btn">
-          Abbrechen
+          {t.common.cancel}
         </button>
       </div>
     </div>
