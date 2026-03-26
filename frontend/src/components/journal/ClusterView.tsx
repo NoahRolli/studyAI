@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { post } from '../../hooks/useAPI'
+import { useLanguage } from '../../hooks/useLanguage'
 import type { ClusterResult } from '../../types/models'
 
 // Cluster-Farben — Cyan-Palette passend zum HUD-Theme
@@ -12,6 +13,7 @@ const CLUSTER_COLORS = ['#00d4ff', '#a78bfa', '#00ff88', '#ffaa00', '#ff3b5c']
 
 function ClusterView() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const [clusters, setClusters] = useState<ClusterResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -27,7 +29,7 @@ function ClusterView() {
       const data = await post<ClusterResult[]>('/api/journal/analytics/clusters')
       setClusters(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Clustering fehlgeschlagen')
+      setError(err instanceof Error ? err.message : t.common.error)
     } finally {
       setLoading(false)
     }
@@ -36,7 +38,7 @@ function ClusterView() {
   if (loading) {
     return (
       <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">
-        Themen werden analysiert...
+        {t.clusterView.loading}
       </p>
     )
   }
@@ -59,7 +61,7 @@ function ClusterView() {
   if (clusters.length === 0) {
     return (
       <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">
-        Noch keine Cluster. Mindestens 2 Einträge nötig.
+        {t.clusterView.empty}
       </p>
     )
   }
@@ -72,13 +74,13 @@ function ClusterView() {
           className="hud-title text-sm"
           style={{ color: 'var(--color-primary)' }}
         >
-          Themen-Cluster
+          {t.clusterView.title}
         </h3>
         <button
           onClick={() => navigate('/journal/mindmap')}
           className="hud-btn text-xs"
         >
-          Mindmap öffnen
+          {t.clusterView.openMindmap}
         </button>
       </div>
 
@@ -106,7 +108,7 @@ function ClusterView() {
                   className="text-xs ml-auto"
                   style={{ color: 'var(--color-text-muted)' }}
                 >
-                  {cluster.entry_ids.length} Einträge
+                  {cluster.entry_ids.length} {t.clusterView.entries}
                 </span>
               </div>
               <ul className="space-y-1">
