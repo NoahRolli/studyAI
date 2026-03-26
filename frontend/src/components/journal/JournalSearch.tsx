@@ -3,6 +3,7 @@
 // Klick auf Treffer → Callback an Journal.tsx (Tab-Wechsel + Modal)
 
 import { useState, useRef, useEffect } from 'react'
+import { useLanguage } from '../../hooks/useLanguage'
 import type { JournalEntry } from '../../types/models'
 
 interface JournalSearchProps {
@@ -25,6 +26,7 @@ function getSnippet(text: string, query: string, maxLen = 60): string {
 }
 
 function JournalSearch({ entries, onSelectEntry }: JournalSearchProps) {
+  const { t } = useLanguage()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -68,7 +70,7 @@ function JournalSearch({ entries, onSelectEntry }: JournalSearchProps) {
           setOpen(true)
         }}
         onFocus={() => { if (query.trim().length >= 2) setOpen(true) }}
-        placeholder="Suche..."
+        placeholder={t.common.search}
         className="hud-input text-xs py-1.5 px-3"
         style={{ width: '180px' }}
       />
@@ -88,16 +90,14 @@ function JournalSearch({ entries, onSelectEntry }: JournalSearchProps) {
               className="px-3 py-3 text-xs"
               style={{ color: 'var(--color-text-muted)' }}
             >
-              Keine Treffer für "{query}"
+              {t.common.noResults} "{query}"
             </div>
           ) : (
             results.map((entry) => {
-              // Prüfen wo der Treffer ist (Titel oder Content)
               const inTitle = entry.title.toLowerCase().includes(trimmed)
               const snippet = inTitle
                 ? entry.title
                 : getSnippet(entry.content, trimmed)
-
               return (
                 <button
                   key={entry.id}
