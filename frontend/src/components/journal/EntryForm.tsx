@@ -2,6 +2,7 @@
 // Wiederverwendbar: Create-Mode (autoTitle möglich) + Edit-Mode
 
 import { useState } from 'react'
+import { useLanguage } from '../../hooks/useLanguage'
 import type { JournalEntryCreate } from '../../types/models'
 
 interface EntryFormProps {
@@ -23,6 +24,8 @@ function EntryForm({
   onSave,
   onCancel,
 }: EntryFormProps) {
+  const { t } = useLanguage()
+
   // Lokaler Formular-State
   const [form, setForm] = useState<JournalEntryCreate>(
     initialData || {
@@ -41,7 +44,7 @@ function EntryForm({
         className="hud-title text-sm mb-4"
         style={{ color: 'var(--color-primary)' }}
       >
-        {isEdit ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}
+        {isEdit ? t.entryForm.titleEdit : t.entryForm.titleNew}
       </h2>
 
       {/* Datum */}
@@ -50,7 +53,7 @@ function EntryForm({
           className="block text-xs mb-1"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          Datum
+          {t.entryForm.dateLabel}
         </label>
         <input
           type="date"
@@ -67,7 +70,7 @@ function EntryForm({
             className="text-xs"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            Titel
+            {t.entryForm.titleLabel}
           </label>
           {!isEdit && onAutoTitleChange && (
             <button
@@ -79,7 +82,7 @@ function EntryForm({
               className="text-xs transition-colors"
               style={{ color: 'var(--color-text-muted)' }}
             >
-              {autoTitle ? '✎ Titel selbst eingeben' : '✕ Auto-Titel verwenden'}
+              {autoTitle ? t.entryForm.autoTitleOff : t.entryForm.autoTitleOn}
             </button>
           )}
         </div>
@@ -92,14 +95,14 @@ function EntryForm({
               color: 'var(--color-text-muted)',
             }}
           >
-            Wird automatisch aus dem Inhalt generiert
+            {t.entryForm.autoTitleHint}
           </div>
         ) : (
           <input
             type="text"
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
-            placeholder={isEdit ? 'Titel' : 'Eigenen Titel eingeben...'}
+            placeholder={isEdit ? t.entryForm.titlePlaceholderEdit : t.entryForm.titlePlaceholder}
             className="hud-input"
           />
         )}
@@ -111,12 +114,12 @@ function EntryForm({
           className="block text-xs mb-1"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          Inhalt
+          {t.entryForm.contentLabel}
         </label>
         <textarea
           value={form.content}
           onChange={(e) => setForm({ ...form, content: e.target.value })}
-          placeholder="Schreibe deine Gedanken auf..."
+          placeholder={t.entryForm.contentPlaceholder}
           rows={6}
           className="hud-input resize-y"
         />
@@ -129,10 +132,10 @@ function EntryForm({
           disabled={!isValid}
           className="hud-btn hud-btn-primary"
         >
-          {isEdit ? 'Speichern' : 'Eintrag speichern'}
+          {isEdit ? t.entryForm.saveEdit : t.entryForm.saveNew}
         </button>
         <button onClick={onCancel} className="hud-btn">
-          Abbrechen
+          {t.common.cancel}
         </button>
       </div>
     </div>
