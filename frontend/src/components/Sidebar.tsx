@@ -1,15 +1,19 @@
 // Sidebar — Hauptnavigation der Pallas App
 // Wird links auf jeder Seite angezeigt (via Layout.tsx)
 // Enthält Links zu allen Hauptbereichen: Dashboard, Journal
+// Language-Toggle unten für DE/EN Umschaltung
 // Futuristisches Design mit Glow-Effekten und Orbitron Font
-// Später kommen hinzu: Modul-Liste, Settings, AI-Provider-Wechsel
 
 import { NavLink } from 'react-router-dom'
+import { useLanguage } from '../hooks/useLanguage'
+import LanguageToggle from './LanguageToggle'
 
 function Sidebar() {
+  // Translations-Objekt für aktuelle Sprache
+  const { t } = useLanguage()
+
   // NavLink-Styling: Aktiver Link bekommt Cyan-Glow,
   // inaktive Links sind gedimmt und glühen beim Hover
-  // isActive wird automatisch von React Router gesetzt
   const linkStyle = ({ isActive }: { isActive: boolean }) =>
     `block px-4 py-2.5 rounded-md transition-all duration-300 text-sm tracking-wide ${
       isActive
@@ -18,8 +22,6 @@ function Sidebar() {
     }`
 
   return (
-    // aside = semantisches HTML für Seitenleisten
-    // Feste Breite, dunkler Hintergrund, rechter Rand mit Glow
     <aside
       className="w-64 p-6 flex flex-col border-r"
       style={{
@@ -32,34 +34,38 @@ function Sidebar() {
         Pallas
       </h1>
 
-      {/* Navigation — NavLink statt <a> für Client-Side Routing
-          Das heisst: Kein Seiten-Neuladen, nur der Content-Bereich wechselt */}
+      {/* Navigation — NavLink für Client-Side Routing */}
       <nav className="flex flex-col gap-2">
-        {/* to="/" → Dashboard (Startseite) */}
         <NavLink to="/" className={linkStyle} end>
-          Dashboard
+          {t.sidebar.dashboard}
         </NavLink>
-
-        {/* to="/journal" → Verschlüsseltes Tagebuch */}
         <NavLink to="/journal" className={linkStyle}>
-          Journal
+          {t.sidebar.journal}
         </NavLink>
       </nav>
 
+      {/* Spacer — drückt alles Folgende nach unten */}
+      <div className="mt-auto" />
+
+      {/* Language-Toggle — DE/EN Umschalter */}
+      <div className="mb-4">
+        <LanguageToggle />
+      </div>
+
       {/* Trennlinie — subtiler Cyan-Hauch */}
       <div
-        className="mt-auto mb-4 h-px"
+        className="mb-4 h-px"
         style={{ backgroundColor: 'var(--color-border)' }}
       />
 
       {/* Footer mit Versionsnummer und Status-Indikator */}
       <div className="flex items-center gap-2">
-        {/* Pulsierender Punkt — zeigt dass das System aktiv ist */}
-        <div className="w-2 h-2 rounded-full animate-glow-pulse"
+        <div
+          className="w-2 h-2 rounded-full animate-glow-pulse"
           style={{ backgroundColor: 'var(--color-success)' }}
         />
         <span style={{ color: 'var(--color-text-muted)', fontSize: '0.7rem' }}>
-          v0.1.0 — ONLINE
+          {t.sidebar.version}
         </span>
       </div>
     </aside>
