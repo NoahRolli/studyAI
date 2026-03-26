@@ -1,9 +1,12 @@
 // Journal — Orchestrator für das verschlüsselte Tagebuch
 // Delegiert alles an Sub-Komponenten und useJournalState Hook
 // Drei Zustände: Setup → Unlock → Tabs (Einträge, Kalender, Analytics, Meds)
+// Globale Suche im Header über alle Einträge
 
+import { useRef } from 'react'
 import useJournalState from '../hooks/useJournalState'
 import type { JournalTab } from '../hooks/useJournalState'
+import type { JournalEntry } from '../types/models'
 import useJournalLock from '../hooks/useJournalLock'
 import JournalSetup from '../components/journal/JournalSetup'
 import JournalUnlock from '../components/journal/JournalUnlock'
@@ -14,9 +17,13 @@ import MoodChart from '../components/journal/MoodChart'
 import ClusterView from '../components/journal/ClusterView'
 import StorylineView from '../components/journal/StorylineView'
 import MedicationTracker from '../components/journal/MedicationTracker'
+import JournalSearch from '../components/journal/JournalSearch'
 
 function Journal() {
   const s = useJournalState()
+
+  // Ref um CalendarView von aussen zu steuern (Tag öffnen)
+  const calendarRef = useRef<{ openDay: (date: string) => void }>(null)
 
   // Auto-Lock bei Navigation weg oder Laptop-Zuklappen
   useJournalLock({
@@ -25,6 +32,15 @@ function Journal() {
     lockOnNavigateAway: true,
     lockOnVisibilityChange: true,
   })
+
+  // Suche: Treffer angeklickt → Kalender-Tab + Modal für den Tag
+  function handleSearchSelect(entry: JournalEntry) {
+    s.setActiveTab('calendar')
+    // Kleines Delay damit CalendarView mounted ist
+    setTimeout(() => {
+      calendarRef.current?.openDay(entry.date)
+    }, 100)
+  }
 
   // Loading-Zustand
   if (s.loading) {
@@ -57,6 +73,11 @@ function Journal() {
         <h1 className="hud-title text-glow text-2xl">Journal</h1>
         {s.status?.is_unlocked && (
           <div className="flex items-center gap-4">
+            {/* Globale Suche */}
+            <JournalSearch
+              entries={s.entries}
+              onSelectEntry={handleSearchSelect}
+            />
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -173,6 +194,7 @@ function Journal() {
           {/* Tab: Kalender */}
           {s.activeTab === 'calendar' && (
             <CalendarView
+              ref={calendarRef}
               moods={s.moods}
               moodsLoaded={s.moodsLoaded}
               onLoadMoods={s.loadMoods}
