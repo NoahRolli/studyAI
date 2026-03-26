@@ -1,9 +1,8 @@
 // CalendarView — Monatskalender für Journal-Einträge
-// Einzelklick → Cyan-Umrandung (Selektion)
-// Doppelklick → Modal öffnet sich (CalendarDayModal)
-// Zukunfts-Tage nicht klickbar. Mood-Toggle: Glow + Opacity.
+// Einzelklick → Cyan-Umrandung, Doppelklick → Modal
+// forwardRef: Suche kann von aussen einen Tag öffnen (openDay)
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { get } from '../../hooks/useAPI'
 import type { MoodResult, JournalEntry, JournalEntryCreate } from '../../types/models'
 import CalendarDayModal from './CalendarDayModal'
@@ -32,6 +31,11 @@ interface CalendarViewProps {
   onAutoTitleChange: (val: boolean) => void
 }
 
+// Ref-Handle für externe Steuerung
+export interface CalendarViewHandle {
+  openDay: (date: string) => void
+}
+
 // Tage im Monat
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate()
@@ -56,18 +60,18 @@ function getMoodStyle(score: number | undefined, moodActive: boolean) {
   }
 }
 
-// Monatsname für Header
 const MONTH_NAMES = [
   'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
   'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
 ]
 
-function CalendarView({
-  moods, moodsLoaded, onLoadMoods,
-  entries, editingId, editEntry,
-  onStartEdit, onSaveEdit, onCancelEdit, onDelete, onCreateEntry,
-  autoTitle, onAutoTitleChange,
-}: CalendarViewProps) {
+const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
+  function CalendarView({
+    moods, moodsLoaded, onLoadMoods,
+    entries, editingId, editEntry,
+    onStartEdit, onSaveEdit, onCancelEdit, onDelete, onCreateEntry,
+    autoTitle, onAutoTitleChange,
+  }, ref) {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
@@ -80,6 +84,18 @@ function CalendarView({
   const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
   const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`
   const todayStr = today.toISOString().split('T')[0]
+
+  // Externe Steuerung: Suche kann einen Tag öffnen
+  useImperativeHandle(ref, () => ({
+    openDay(date: string) {
+      // Monat zum Datum navigieren
+      const [y, m] = date.split('-').map(Number)
+      setYear(y)
+      setMonth(m - 1)
+      setSelectedDate(date)
+      setModalOpen(true)
+    },
+  }))
 
   // Kalender-Einträge laden wenn Monat wechselt
   useEffect(() => {
@@ -106,7 +122,6 @@ function CalendarView({
     if (moodActive && !moodsLoaded) onLoadMoods()
   }, [moodActive, moodsLoaded, onLoadMoods])
 
-  // Monat navigieren
   function prevMonth() {
     if (month === 0) { setMonth(11); setYear(year - 1) }
     else setMonth(month - 1)
@@ -122,7 +137,7 @@ function CalendarView({
     setSelectedDate(selectedDate === dateStr ? null : dateStr)
   }
 
-  // Doppelklick → Modal öffnen
+  // Doppelklick → Modal
   function handleDayDoubleClick(dateStr: string) {
     if (dateStr > todayStr) return
     setSelectedDate(dateStr)
@@ -130,30 +145,25 @@ function CalendarView({
     setModalOpen(true)
   }
 
-  // Modal schliessen — Selektion bleibt
   function closeModal() {
     setModalOpen(false)
     onCancelEdit()
   }
 
-  // Grid-Daten
   const daysInMonth = getDaysInMonth(year, month)
   const firstDayOffset = getFirstDayOffset(year, month)
 
-  // Kalender-Einträge nach Datum gruppieren
   const calByDate: Record<string, CalendarEntry[]> = {}
   for (const e of calEntries) {
     if (!calByDate[e.date]) calByDate[e.date] = []
     calByDate[e.date].push(e)
   }
 
-  // Mood nach Entry-ID
   const moodById: Record<number, number> = {}
   for (const m of moods) {
     if (m.score !== undefined) moodById[m.entry_id] = m.score
   }
 
-  // Vollständige Einträge für den selektierten Tag
   const selectedEntries = selectedDate
     ? entries.filter((e) => e.date === selectedDate)
     : []
@@ -288,7 +298,7 @@ function CalendarView({
         </p>
       )}
 
-      {/* Modal — nur bei Doppelklick */}
+      {/* Modal */}
       {modalOpen && selectedDate && (
         <CalendarDayModal
           selectedDate={selectedDate}
@@ -307,6 +317,6 @@ function CalendarView({
       )}
     </div>
   )
-}
+})
 
 export default CalendarView
