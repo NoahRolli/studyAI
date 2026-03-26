@@ -15,8 +15,8 @@ function LanguageToggle() {
   const { language, setLanguage } = useLanguage()
 
   return (
-    <div
-      className="flex gap-1 p-1 rounded-lg"
+   <div
+      className="flex gap-1 p-1 rounded-lg w-fit"
       style={{ backgroundColor: 'var(--color-bg-surface)' }}
     >
       {LANGUAGES.map(({ key, label }) => (
