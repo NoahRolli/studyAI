@@ -1,38 +1,27 @@
 // ModuleDetail — Detailseite für ein einzelnes Studienmodul
 // Zeigt alle Dokumente des Moduls an
 // Ermöglicht Datei-Upload, Zusammenfassung generieren und Mindmap öffnen
-//
-// Route: /modules/:id (id kommt aus der URL)
-// Nutzt useParams() um die Modul-ID aus der URL zu lesen
 
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { get, post, del } from '../hooks/useAPI'
+import { useLanguage } from '../hooks/useLanguage'
 import type { Module, Document, Summary } from '../types/models'
 
 function ModuleDetail() {
-  // --- URL-Parameter ---
-  // useParams liest die :id aus der URL, z.B. /modules/3 → id = "3"
   const { id } = useParams<{ id: string }>()
+  const { t } = useLanguage()
 
-  // --- State ---
   const [module, setModule] = useState<Module | null>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  // Upload-State
   const [uploading, setUploading] = useState(false)
-
-  // Zusammenfassung-State (pro Dokument)
   const [summaries, setSummaries] = useState<Record<number, Summary>>({})
   const [generating, setGenerating] = useState<number | null>(null)
-
-  // Mindmap-Generierung State
   const [generatingMindmap, setGeneratingMindmap] = useState<number | null>(null)
 
-  // --- Summaries aus der DB laden ---
-  // Holt für jedes Dokument die neueste Zusammenfassung
+  // Summaries aus der DB laden
   async function loadSummaries(docs: Document[]) {
     const loaded: Record<number, Summary> = {}
     for (const doc of docs) {
@@ -48,7 +37,7 @@ function ModuleDetail() {
     setSummaries(loaded)
   }
 
-  // --- Daten laden ---
+  // Daten laden
   async function loadModule() {
     try {
       setLoading(true)
@@ -59,18 +48,17 @@ function ModuleDetail() {
       setDocuments(docsData)
       await loadSummaries(docsData)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Laden')
+      setError(err instanceof Error ? err.message : t.common.error)
     } finally {
       setLoading(false)
     }
   }
 
-  // Beim ersten Rendern und wenn sich die ID ändert
   useEffect(() => {
     if (id) loadModule()
   }, [id])
 
-  // --- Datei-Upload ---
+  // Datei-Upload
   async function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
@@ -85,18 +73,18 @@ function ModuleDetail() {
       )
       if (!response.ok) {
         const err = await response.json().catch(() => ({}))
-        throw new Error(err.detail || `Upload fehlgeschlagen: ${response.status}`)
+        throw new Error(err.detail || `Upload failed: ${response.status}`)
       }
       await loadModule()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload fehlgeschlagen')
+      setError(err instanceof Error ? err.message : t.common.error)
     } finally {
       setUploading(false)
       event.target.value = ''
     }
   }
 
-  // --- Zusammenfassung generieren ---
+  // Zusammenfassung generieren
   async function generateSummary(documentId: number) {
     try {
       setGenerating(documentId)
@@ -104,13 +92,13 @@ function ModuleDetail() {
       const summary = await post<Summary>(`/api/documents/${documentId}/summarize`)
       setSummaries((prev) => ({ ...prev, [documentId]: summary }))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Zusammenfassung fehlgeschlagen')
+      setError(err instanceof Error ? err.message : t.common.error)
     } finally {
       setGenerating(null)
     }
   }
 
-  // --- Mindmap generieren und öffnen ---
+  // Mindmap generieren und öffnen
   async function openMindmap(summaryId: number) {
     try {
       setGeneratingMindmap(summaryId)
@@ -122,27 +110,26 @@ function ModuleDetail() {
       }
       window.location.href = `/mindmap/${summaryId}`
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Mindmap konnte nicht erstellt werden')
+      setError(err instanceof Error ? err.message : t.common.error)
     } finally {
       setGeneratingMindmap(null)
     }
   }
 
-  // --- Dokument löschen ---
+  // Dokument löschen
   async function deleteDocument(documentId: number) {
     try {
       await del(`/api/documents/${documentId}`)
       await loadModule()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Löschen fehlgeschlagen')
+      setError(err instanceof Error ? err.message : t.common.error)
     }
   }
 
-  // --- Render ---
   if (loading) {
     return (
       <div className="animate-fade-in">
-        <p style={{ color: 'var(--color-text-muted)' }}>Modul wird geladen...</p>
+        <p style={{ color: 'var(--color-text-muted)' }}>{t.moduleDetail.moduleLoading}</p>
       </div>
     )
   }
@@ -151,10 +138,10 @@ function ModuleDetail() {
     return (
       <div className="text-center py-16 animate-fade-in">
         <p className="text-lg mb-4" style={{ color: 'var(--color-text-muted)' }}>
-          Modul nicht gefunden.
+          {t.moduleDetail.notFound}
         </p>
         <Link to="/" className="text-sm" style={{ color: 'var(--color-primary)' }}>
-          ← Zurück zum Dashboard
+          {t.moduleDetail.backToDashboard}
         </Link>
       </div>
     )
@@ -162,16 +149,14 @@ function ModuleDetail() {
 
   return (
     <div className="animate-fade-in">
-      {/* Navigation zurück */}
       <Link
         to="/"
         className="text-xs mb-4 inline-block transition-colors"
         style={{ color: 'var(--color-text-muted)' }}
       >
-        ← Zurück zum Dashboard
+        {t.moduleDetail.backToDashboard}
       </Link>
 
-      {/* Modul-Header — ohne Farbpunkt */}
       <div className="mb-8">
         <h1 className="hud-title text-glow text-2xl">{module.name}</h1>
         <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
@@ -179,7 +164,6 @@ function ModuleDetail() {
         </p>
       </div>
 
-      {/* Fehlermeldung */}
       {error && (
         <div
           className="px-4 py-3 rounded-lg mb-6 border"
@@ -195,17 +179,14 @@ function ModuleDetail() {
 
       {/* Upload-Bereich */}
       <div className="hud-card p-6 mb-8">
-        <h2
-          className="hud-title text-sm mb-3"
-          style={{ color: 'var(--color-primary)' }}
-        >
-          Dokument hochladen
+        <h2 className="hud-title text-sm mb-3" style={{ color: 'var(--color-primary)' }}>
+          {t.moduleDetail.uploadTitle}
         </h2>
         <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
-          Unterstützte Formate: PDF, Word, PowerPoint, Excel, Markdown, TXT, Bilder (OCR)
+          {t.moduleDetail.uploadHint}
         </p>
         <label className="hud-btn inline-block cursor-pointer">
-          {uploading ? 'Wird hochgeladen...' : 'Datei auswählen'}
+          {uploading ? t.moduleDetail.uploading : t.moduleDetail.uploadButton}
           <input
             type="file"
             onChange={handleFileUpload}
@@ -216,31 +197,25 @@ function ModuleDetail() {
         </label>
       </div>
 
-      {/* Dokument-Liste Header */}
-      <h2
-        className="hud-title text-sm mb-4"
-        style={{ color: 'var(--color-primary)' }}
-      >
-        Dokumente ({documents.length})
+      {/* Dokument-Liste */}
+      <h2 className="hud-title text-sm mb-4" style={{ color: 'var(--color-primary)' }}>
+        {t.moduleDetail.documentsTitle} ({documents.length})
       </h2>
 
-      {/* Leerer Zustand */}
       {documents.length === 0 && (
         <div className="hud-card text-center py-12">
           <p className="mb-1" style={{ color: 'var(--color-text-muted)' }}>
-            Noch keine Dokumente.
+            {t.moduleDetail.emptyDocs}
           </p>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
-            Lade ein Dokument hoch um loszulegen.
+            {t.moduleDetail.emptyDocsHint}
           </p>
         </div>
       )}
 
-      {/* Dokument-Karten */}
       <div className="space-y-4">
         {documents.map((doc) => (
           <div key={doc.id} className="hud-card p-5 animate-fade-in">
-            {/* Dokument-Header */}
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h3 className="font-medium text-sm" style={{ color: 'var(--color-text-primary)' }}>
@@ -250,7 +225,6 @@ function ModuleDetail() {
                   {doc.file_type.toUpperCase()} · {new Date(doc.uploaded_at).toLocaleDateString('de-CH')}
                 </span>
               </div>
-              {/* Aktionen */}
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => generateSummary(doc.id)}
@@ -258,7 +232,7 @@ function ModuleDetail() {
                   className="hud-btn hud-btn-primary"
                   style={{ fontSize: '0.65rem' }}
                 >
-                  {generating === doc.id ? 'Generiert...' : 'Zusammenfassen'}
+                  {generating === doc.id ? t.moduleDetail.generating : t.moduleDetail.summarize}
                 </button>
                 <button
                   onClick={() => deleteDocument(doc.id)}
@@ -267,25 +241,20 @@ function ModuleDetail() {
                   onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-danger)')}
                   onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')}
                 >
-                  Löschen
+                  {t.common.delete}
                 </button>
               </div>
             </div>
 
-            {/* Zusammenfassung anzeigen (falls vorhanden) */}
             {summaries[doc.id] && (
-              <div
-                className="mt-4 pt-4"
-                style={{ borderTop: '1px solid var(--color-border)' }}
-              >
+              <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
-                    Zusammenfassung
+                    {t.moduleDetail.summaryTitle}
                     <span className="ml-2" style={{ color: 'var(--color-text-muted)' }}>
                       via {summaries[doc.id].ai_provider}
                     </span>
                   </h4>
-                  {/* Mindmap-Button */}
                   <button
                     onClick={() => openMindmap(summaries[doc.id].id)}
                     disabled={generatingMindmap === summaries[doc.id].id}
@@ -293,14 +262,13 @@ function ModuleDetail() {
                     style={{ fontSize: '0.65rem' }}
                   >
                     {generatingMindmap === summaries[doc.id].id
-                      ? 'Mindmap wird erstellt...'
-                      : 'Mindmap öffnen'}
+                      ? t.moduleDetail.generatingMindmap
+                      : t.moduleDetail.openMindmap}
                   </button>
                 </div>
                 <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                   {summaries[doc.id].summary}
                 </p>
-                {/* Schlüsselbegriffe als Tags */}
                 {summaries[doc.id].key_terms.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {summaries[doc.id].key_terms.map((term, i) => (
