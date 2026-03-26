@@ -5,6 +5,7 @@
 
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { get } from '../../hooks/useAPI'
+import { useLanguage } from '../../hooks/useLanguage'
 import type { MoodResult, JournalEntry, JournalEntryCreate } from '../../types/models'
 import CalendarDayModal from './CalendarDayModal'
 
@@ -67,11 +68,6 @@ function getMoodStyle(score: number | undefined, active: boolean) {
   return { opacity: op, glow: `0 0 ${gl}px var(--color-primary)` }
 }
 
-const MONTH_NAMES = [
-  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
-]
-
 const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
   function CalendarView({
     moods, moodsLoaded, onLoadMoods,
@@ -79,6 +75,8 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
     onStartEdit, onSaveEdit, onCancelEdit, onDelete, onCreateEntry,
     autoTitle, onAutoTitleChange, medEnabled,
   }, ref) {
+
+  const { t } = useLanguage()
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
@@ -89,7 +87,6 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
 
-  const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
   const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`
   const todayStr = today.toISOString().split('T')[0]
 
@@ -116,7 +113,6 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
       } catch {
         setCalEntries([])
       }
-      // Medikamenten-Einnahmen laden (wenn aktiv)
       if (medEnabled) {
         try {
           const med = await get<IntakeCalendarEntry[]>(
@@ -145,6 +141,7 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
     if (month === 0) { setMonth(11); setYear(year - 1) }
     else setMonth(month - 1)
   }
+
   function nextMonth() {
     if (month === 11) { setMonth(0); setYear(year + 1) }
     else setMonth(month + 1)
@@ -204,7 +201,7 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
             className="hud-title text-base"
             style={{ minWidth: '160px', textAlign: 'center' }}
           >
-            {MONTH_NAMES[month]} {year}
+            {t.calendar.months[month]} {year}
           </span>
           <button onClick={nextMonth} className="hud-btn px-3 py-1">›</button>
         </div>
@@ -216,14 +213,14 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
             className="w-4 h-4 rounded accent-[var(--color-primary)]"
           />
           <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            Mood-Glow
+            {t.calendar.moodGlow}
           </span>
         </label>
       </div>
 
       {/* Wochentag-Header */}
       <div className="grid grid-cols-7 gap-1 mb-1">
-        {weekdays.map((d) => (
+        {t.calendar.weekdays.map((d: string) => (
           <div
             key={d}
             className="text-center text-xs py-2"
@@ -239,7 +236,6 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
         {Array.from({ length: firstDayOffset }).map((_, i) => (
           <div key={`empty-${i}`} className="h-20 rounded-lg" />
         ))}
-
         {Array.from({ length: daysInMonth }).map((_, i) => {
           const day = i + 1
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -248,7 +244,6 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
           const isToday = dateStr === todayStr
           const isFuture = dateStr > todayStr
           const isSelected = dateStr === selectedDate
-
           return (
             <div
               key={day}
@@ -284,7 +279,6 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
                 }
               }}
             >
-              {/* Tageszahl */}
               <span
                 className="text-xs font-medium"
                 style={{
@@ -295,8 +289,6 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
               >
                 {day}
               </span>
-
-              {/* Eintrag-Punkte */}
               {dayEntries.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {dayEntries.map((entry) => {
@@ -316,8 +308,6 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
                   })}
                 </div>
               )}
-
-              {/* Medikamenten-Pillen (unten rechts) */}
               {dayIntakes.length > 0 && (
                 <div className="absolute bottom-1 right-1 flex gap-0.5">
                   {dayIntakes.map((intake) => (
@@ -344,7 +334,7 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
 
       {loading && (
         <p className="text-center mt-4 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          Kalender wird geladen...
+          {t.calendar.loading}
         </p>
       )}
 
