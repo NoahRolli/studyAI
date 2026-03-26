@@ -1,7 +1,6 @@
 // JournalMindmapPage — Fullscreen Mindmap aus Journal-Clustern + Storylines
 // Route: /journal/mindmap
 // Wurzel → Cluster-Labels → Einträge (Titel)
-// Storylines als farbige Edges zwischen Einträgen
 
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
@@ -15,63 +14,56 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { post } from '../hooks/useAPI'
+import { useLanguage } from '../hooks/useLanguage'
 import { treeLayout, neuralLayout } from '../utils/mindmapLayouts'
 import type { ClusterResult, StorylineResult } from '../types/models'
 import type { MindmapTreeNode } from '../utils/mindmapLayouts'
 
-// Layout-Modi
 type LayoutMode = 'tree' | 'neural'
 
-// Storyline-Farben für Edges
-const STORY_COLORS = ['#a78bfa', '#ffaa00', '#ff3b5c', '#00ff88', '#00d4ff']
-
 function JournalMindmapPage() {
+  const { t } = useLanguage()
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('tree')
   const [treeData, setTreeData] = useState<MindmapTreeNode[]>([])
-  const [selectedNode, setSelectedNode] = useState<{ label: string; detail: string } | null>(null)
+  const [selectedNode, setSelectedNode] = useState<{
+    label: string
+    detail: string
+  } | null>(null)
 
-  // Layout anwenden
   function applyLayout(tree: MindmapTreeNode[], mode: LayoutMode) {
     const result = mode === 'neural' ? neuralLayout(tree) : treeLayout(tree)
     setNodes(result.nodes)
     setEdges(result.edges)
   }
 
-  // Layout wechseln
   function switchLayout(mode: LayoutMode) {
     setLayoutMode(mode)
     if (treeData.length > 0) applyLayout(treeData, mode)
   }
 
-  // Daten laden: Clusters + Storylines → Baum bauen
   useEffect(() => {
     async function load() {
       try {
         setLoading(true)
         setError(null)
-
-        // Beide Endpoints parallel aufrufen
         const [clusters, storylines] = await Promise.all([
           post<ClusterResult[]>('/api/journal/analytics/clusters').catch(() => []),
           post<StorylineResult[]>('/api/journal/analytics/storylines').catch(() => []),
         ])
-
         if (clusters.length === 0) {
-          setError('Mindestens 2 Einträge für die Mindmap nötig.')
+          setError(t.mindmap.minEntries)
           setLoading(false)
           return
         }
-
-        // Baum aufbauen: Wurzel → Cluster → Einträge
-        const tree = buildTree(clusters, storylines)
+        const tree = buildTree(clusters, storylines, t)
         setTreeData(tree)
         applyLayout(tree, layoutMode)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Mindmap konnte nicht geladen werden')
+        setError(err instanceof Error ? err.message : t.common.error)
       } finally {
         setLoading(false)
       }
@@ -79,7 +71,6 @@ function JournalMindmapPage() {
     load()
   }, [])
 
-  // Ladebildschirm
   if (loading) {
     return (
       <div
@@ -87,9 +78,9 @@ function JournalMindmapPage() {
         style={{ backgroundColor: 'var(--color-bg-deep)' }}
       >
         <div className="text-center animate-fade-in">
-          <p className="hud-title text-sm text-glow mb-2">Journal-Mindmap</p>
+          <p className="hud-title text-sm text-glow mb-2">{t.mindmap.journalTitle}</p>
           <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            Cluster und Storylines werden analysiert...
+            {t.mindmap.journalGeneratingHint}
           </p>
         </div>
       </div>
@@ -112,9 +103,9 @@ function JournalMindmapPage() {
             className="text-xs transition-colors"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            ← Journal
+            {t.mindmap.backToJournal}
           </Link>
-          <h1 className="hud-title text-sm text-glow">Journal-Mindmap</h1>
+          <h1 className="hud-title text-sm text-glow">{t.mindmap.journalTitle}</h1>
         </div>
         <div
           className="flex gap-1 p-1 rounded-lg"
@@ -124,18 +115,17 @@ function JournalMindmapPage() {
             onClick={() => switchLayout('tree')}
             className={`hud-tab ${layoutMode === 'tree' ? 'hud-tab-active' : ''}`}
           >
-            Tree
+            {t.mindmap.layoutTree}
           </button>
           <button
             onClick={() => switchLayout('neural')}
             className={`hud-tab ${layoutMode === 'neural' ? 'hud-tab-active' : ''}`}
           >
-            Neural
+            {t.mindmap.layoutNeural}
           </button>
         </div>
       </div>
 
-      {/* Fehler */}
       {error && (
         <div
           className="mx-6 mt-3 px-4 py-2 rounded-lg text-sm border"
@@ -149,7 +139,6 @@ function JournalMindmapPage() {
         </div>
       )}
 
-      {/* React Flow */}
       <div className="flex-1">
         <ReactFlow
           nodes={nodes}
@@ -195,7 +184,6 @@ function JournalMindmapPage() {
         </ReactFlow>
       </div>
 
-      {/* Detail-Panel */}
       {selectedNode && selectedNode.detail && (
         <div
           className="px-6 py-4 border-t"
@@ -220,23 +208,20 @@ function JournalMindmapPage() {
 function buildTree(
   clusters: ClusterResult[],
   storylines: StorylineResult[],
+  t: ReturnType<typeof useLanguage>['t'],
 ): MindmapTreeNode[] {
-  // Wurzelknoten: jeder Cluster ist ein Kind
   const clusterNodes: MindmapTreeNode[] = clusters.map((cluster, ci) => {
-    // Storylines finden die Einträge in diesem Cluster betreffen
     const relevantStories = storylines.filter((s) =>
       s.entry_ids.some((id) => cluster.entry_ids.includes(id))
     )
-    // Detail-Text für den Cluster-Knoten
     const storyInfo = relevantStories.length > 0
-      ? `\nStorylines: ${relevantStories.map((s) => `${s.title} (${s.arc_type})`).join(', ')}`
+      ? `\n${t.mindmap.storylines}: ${relevantStories.map((s) => `${s.title} (${s.arc_type})`).join(', ')}`
       : ''
 
-    // Kinder: einzelne Einträge
     const entryNodes: MindmapTreeNode[] = cluster.titles.map((title, ti) => ({
       id: cluster.entry_ids[ti] + 10000,
       label: title,
-      detail: `Eintrag #${cluster.entry_ids[ti]}`,
+      detail: `${t.mindmap.entry} #${cluster.entry_ids[ti]}`,
       depth_level: 2,
       position_x: 0,
       position_y: 0,
@@ -246,7 +231,7 @@ function buildTree(
     return {
       id: ci + 1000,
       label: cluster.label,
-      detail: `${cluster.entry_ids.length} Einträge${storyInfo}`,
+      detail: `${cluster.entry_ids.length} ${t.common.entries}${storyInfo}`,
       depth_level: 1,
       position_x: 0,
       position_y: 0,
@@ -256,8 +241,8 @@ function buildTree(
 
   return [{
     id: 1,
-    label: 'Journal',
-    detail: `${clusters.length} Themen, ${storylines.length} Storylines`,
+    label: t.journal.title,
+    detail: `${clusters.length} ${t.mindmap.themes}, ${storylines.length} ${t.mindmap.storylines}`,
     depth_level: 0,
     position_x: 0,
     position_y: 0,
