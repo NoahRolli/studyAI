@@ -208,6 +208,7 @@ function Journal() {
               onCreateEntry={s.createEntry}
               autoTitle={s.autoTitle}
               onAutoTitleChange={s.setAutoTitle}
+              medEnabled={s.medEnabled}
             />
           )}
 
