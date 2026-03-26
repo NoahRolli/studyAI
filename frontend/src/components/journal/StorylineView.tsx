@@ -1,29 +1,26 @@
 // StorylineView — Narrative Bögen über mehrere Einträge
 // Zeigt erkannte Storylines mit Arc-Typ und Konfidenz
 // Ruft POST /api/journal/analytics/storylines auf
-//
-// Arc-Typen: rising (steigend), falling (abklingend),
-// resolved (abgeschlossen), ongoing (offen)
 
 import { useState, useEffect } from 'react'
 import { post } from '../../hooks/useAPI'
+import { useLanguage } from '../../hooks/useLanguage'
 import type { StorylineResult } from '../../types/models'
 
-// Arc-Typ Konfiguration: Label, Farbe, Icon
-// Farben passend zum HUD-Theme
-const ARC_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
-  rising:   { label: 'Steigend',       color: '#00ff88', icon: '↗' },
-  falling:  { label: 'Abklingend',     color: '#ff3b5c', icon: '↘' },
-  resolved: { label: 'Abgeschlossen',  color: '#00d4ff', icon: '✓' },
-  ongoing:  { label: 'Offen',          color: '#ffaa00', icon: '→' },
+// Arc-Typ Konfiguration: Farbe + Icon (Label kommt aus i18n)
+const ARC_CONFIG: Record<string, { color: string; icon: string }> = {
+  rising:   { color: '#00ff88', icon: '↗' },
+  falling:  { color: '#ff3b5c', icon: '↘' },
+  resolved: { color: '#00d4ff', icon: '✓' },
+  ongoing:  { color: '#ffaa00', icon: '→' },
 }
 
 function StorylineView() {
+  const { t } = useLanguage()
   const [storylines, setStorylines] = useState<StorylineResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Storylines laden beim ersten Rendern
   useEffect(() => {
     loadStorylines()
   }, [])
@@ -35,15 +32,18 @@ function StorylineView() {
       const data = await post<StorylineResult[]>('/api/journal/analytics/storylines')
       setStorylines(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Storyline-Analyse fehlgeschlagen')
+      setError(err instanceof Error ? err.message : t.common.error)
     } finally {
       setLoading(false)
     }
   }
 
-  // --- Render ---
   if (loading) {
-    return <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">Storylines werden erkannt...</p>
+    return (
+      <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">
+        {t.storylineView.loading}
+      </p>
+    )
   }
 
   if (error) {
@@ -64,9 +64,15 @@ function StorylineView() {
   if (storylines.length === 0) {
     return (
       <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">
-        Noch keine Storylines erkannt. Mindestens 3 Einträge nötig.
+        {t.storylineView.empty}
       </p>
     )
+  }
+
+  // Arc-Label aus i18n holen, Fallback auf Key
+  function getArcLabel(arcType: string): string {
+    const labels = t.storylineView.arcTypes as Record<string, string>
+    return labels[arcType] ?? arcType
   }
 
   return (
@@ -75,18 +81,18 @@ function StorylineView() {
         className="hud-title text-sm mb-4"
         style={{ color: 'var(--color-primary)' }}
       >
-        Storylines
+        {t.storylineView.title}
       </h3>
 
       <div className="space-y-4">
         {storylines.map((story, index) => {
           const arc = ARC_CONFIG[story.arc_type] ?? ARC_CONFIG.ongoing
+          const arcLabel = getArcLabel(story.arc_type)
 
           return (
             <div key={index} className="hud-card p-5 animate-fade-in">
               {/* Storyline-Header */}
               <div className="flex items-center gap-3 mb-3">
-                {/* Arc-Icon mit Glow */}
                 <span
                   className="text-lg"
                   style={{
@@ -96,15 +102,12 @@ function StorylineView() {
                 >
                   {arc.icon}
                 </span>
-
                 <h4
                   className="font-semibold text-sm"
                   style={{ color: 'var(--color-text-primary)' }}
                 >
                   {story.title}
                 </h4>
-
-                {/* Arc-Badge */}
                 <span
                   className="text-xs px-2 py-0.5 rounded-full ml-auto border"
                   style={{
@@ -113,14 +116,14 @@ function StorylineView() {
                     borderColor: arc.color + '40',
                   }}
                 >
-                  {arc.label}
+                  {arcLabel}
                 </span>
               </div>
 
               {/* Konfidenz-Balken */}
               <div className="flex items-center gap-3 mb-2">
                 <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  Konfidenz
+                  {t.storylineView.confidence}
                 </span>
                 <div
                   className="flex-1 h-1.5 rounded-full overflow-hidden"
@@ -142,7 +145,7 @@ function StorylineView() {
 
               {/* Anzahl verknüpfter Einträge */}
               <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                {story.entry_ids.length} verknüpfte Einträge
+                {story.entry_ids.length} {t.storylineView.linkedEntries}
               </p>
             </div>
           )
