@@ -2,6 +2,7 @@
 // SICHERHEIT: Zeigt nur Datum + Titel — kein Content in der Übersicht!
 // Content wird erst sichtbar wenn man den Eintrag zum Bearbeiten öffnet
 
+import { useLanguage } from '../../hooks/useLanguage'
 import type { JournalEntry, JournalEntryCreate } from '../../types/models'
 import EntryForm from './EntryForm'
 
@@ -24,15 +25,17 @@ function EntryList({
   onCancelEdit,
   onDelete,
 }: EntryListProps) {
+  const { t } = useLanguage()
+
   // Leerer Zustand
   if (entries.length === 0) {
     return (
       <div className="text-center py-16">
         <p className="text-lg mb-2" style={{ color: 'var(--color-text-muted)' }}>
-          Noch keine Einträge.
+          {t.entryList.emptyTitle}
         </p>
         <p style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
-          Klicke auf "+ Neuer Eintrag" um zu beginnen.
+          {t.entryList.emptyHint}
         </p>
       </div>
     )
@@ -73,7 +76,7 @@ function EntryList({
                   className="text-xs transition-colors"
                   style={{ color: 'var(--color-text-muted)' }}
                 >
-                  Bearbeiten
+                  {t.common.edit}
                 </button>
                 <button
                   onClick={() => onDelete(entry.id)}
@@ -86,7 +89,7 @@ function EntryList({
                     (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')
                   }
                 >
-                  Löschen
+                  {t.common.delete}
                 </button>
               </div>
             </div>
