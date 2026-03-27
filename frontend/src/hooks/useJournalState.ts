@@ -1,9 +1,11 @@
 // useJournalState — Zentraler State-Hook für das Journal
 // Kapselt allen State, API-Aufrufe und Logik
 // Journal.tsx importiert nur diesen Hook und verteilt die Daten
+// language wird aus useLanguage geholt und an Backend-Calls angehängt
 
 import { useState, useEffect } from 'react'
 import { get, post, del, put } from './useAPI'
+import { useLanguage } from './useLanguage'
 import type {
   JournalStatus,
   JournalEntry,
@@ -23,6 +25,9 @@ export type JournalTab =
   | 'medications'
 
 export default function useJournalState() {
+  // Sprache aus Context holen — wird an API-Calls angehängt
+  const { language } = useLanguage()
+
   // --- Core State ---
   const [status, setStatus] = useState<JournalStatus | null>(null)
   const [password, setPassword] = useState('')
@@ -56,7 +61,7 @@ export default function useJournalState() {
       const data = await get<JournalEntry[]>('/api/journal/entries/')
       setEntries(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Laden der Einträge')
+      setError(err instanceof Error ? err.message : 'Error loading entries')
     }
   }
 
@@ -77,7 +82,7 @@ export default function useJournalState() {
       const data = await get<Medication[]>('/api/journal/medications/')
       setMedications(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Laden der Medikamente')
+      setError(err instanceof Error ? err.message : 'Error loading medications')
     }
   }
 
@@ -91,7 +96,7 @@ export default function useJournalState() {
         await loadMedSettings()
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Laden')
+      setError(err instanceof Error ? err.message : 'Error loading status')
     } finally {
       setLoading(false)
     }
@@ -116,10 +121,10 @@ export default function useJournalState() {
       setError(null)
       await post('/api/journal/setup', { password })
       setPassword('')
-      setMessage('Journal eingerichtet! Bitte jetzt entsperren.')
+      setMessage('Journal set up! Please unlock now.')
       await loadStatus()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Setup')
+      setError(err instanceof Error ? err.message : 'Setup failed')
     }
   }
 
@@ -131,7 +136,7 @@ export default function useJournalState() {
       setMessage(null)
       await loadStatus()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falsches Passwort')
+      setError(err instanceof Error ? err.message : 'Wrong password')
     }
   }
 
@@ -141,11 +146,12 @@ export default function useJournalState() {
       resetState()
       await loadStatus()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Sperren')
+      setError(err instanceof Error ? err.message : 'Lock failed')
     }
   }
 
   // --- Entry-Aktionen ---
+  // language wird als Query-Parameter an create angehängt (Auto-Titel)
   async function createEntry(data: JournalEntryCreate) {
     try {
       setError(null)
@@ -153,13 +159,13 @@ export default function useJournalState() {
         ...data,
         title: autoTitle ? null : data.title,
       }
-      await post('/api/journal/entries/', payload)
+      await post(`/api/journal/entries/?language=${language}`, payload)
       setShowForm(false)
       setAutoTitle(true)
       setMoodsLoaded(false)
       await loadEntries()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Erstellen')
+      setError(err instanceof Error ? err.message : 'Error creating entry')
     }
   }
 
@@ -169,7 +175,7 @@ export default function useJournalState() {
       setMoodsLoaded(false)
       await loadEntries()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Löschen')
+      setError(err instanceof Error ? err.message : 'Error deleting entry')
     }
   }
 
@@ -193,19 +199,21 @@ export default function useJournalState() {
       setMoodsLoaded(false)
       await loadEntries()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Speichern')
+      setError(err instanceof Error ? err.message : 'Error saving entry')
     }
   }
 
-  // --- Mood ---
+  // --- Mood --- language als Query-Parameter
   async function loadMoods() {
     if (moodsLoaded) return
     try {
-      const data = await post<MoodResult[]>('/api/journal/analytics/mood')
+      const data = await post<MoodResult[]>(
+        `/api/journal/analytics/mood?language=${language}`
+      )
       setMoods(data)
       setMoodsLoaded(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Mood-Analyse fehlgeschlagen')
+      setError(err instanceof Error ? err.message : 'Mood analysis failed')
     }
   }
 
@@ -223,7 +231,7 @@ export default function useJournalState() {
         if (activeTab === 'medications') setActiveTab('entries')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Umschalten')
+      setError(err instanceof Error ? err.message : 'Toggle failed')
     }
   }
 
