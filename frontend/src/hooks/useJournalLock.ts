@@ -1,18 +1,23 @@
 // useJournalLock — Automatische Sperrung des Journals
 // Sperrt das Journal automatisch wenn:
-// 1. Der User die Journal-Seite verlässt (Komponente wird unmounted)
+// 1. Der User die Journal-Seite verlässt (aber NICHT zur Journal-Mindmap)
 // 2. Der Laptop geschlossen / Bildschirm gesperrt wird (visibilitychange)
 // 3. Der User einen anderen Browser-Tab öffnet (visibilitychange)
 //
-// Nutzt die POST /api/journal/lock API um die Session serverseitig zu beenden
-// Der AES-Key wird aus dem RAM gelöscht — Daten sind wieder verschlüsselt
-//
-// WICHTIG: Route-Change Lock funktioniert über useEffect Cleanup (return),
-// weil die Journal-Komponente beim Navigieren unmounted wird.
-// Zu dem Zeitpunkt sind State-Werte veraltet — darum Refs für aktuelle Werte.
+// WICHTIG: Navigation zu /journal/mindmap sperrt NICHT —
+// das ist ein Journal-Feature und die Session bleibt offen
 
 import { useEffect, useRef } from 'react'
 import { post } from './useAPI'
+
+// Routen die zum Journal gehören — hier wird NICHT gesperrt
+const JOURNAL_ROUTES = ['/journal', '/journal/mindmap']
+
+function isJournalRoute(): boolean {
+  return JOURNAL_ROUTES.some((route) =>
+    window.location.pathname.startsWith(route)
+  )
+}
 
 interface UseJournalLockOptions {
   isUnlocked: boolean
@@ -44,23 +49,26 @@ function useJournalLock({
       await post('/api/journal/lock')
       onLockedRef.current()
     } catch {
-      // Lock fehlgeschlagen — trotzdem Frontend-State zurücksetzen
       onLockedRef.current()
     } finally {
       isLocking.current = false
     }
   }
 
-  // --- 1. Unmount: Sperren wenn Journal-Komponente verlassen wird ---
-  // useEffect mit leerem Array [] → Cleanup läuft nur beim Unmount
-  // Das passiert wenn der User z.B. zum Dashboard navigiert
+  // --- 1. Unmount: Sperren wenn Journal-Bereich verlassen wird ---
+  // Prüft ob die neue Route noch im Journal-Bereich ist
+  // /journal → /journal/mindmap = NICHT sperren
+  // /journal → /dashboard = SPERREN
   useEffect(() => {
     if (!lockOnNavigateAway) return
     return () => {
-      // Cleanup: Journal-Seite wird verlassen → sperren
       if (isUnlockedRef.current) {
-        // fire-and-forget: Backend sperrt die Session
-        post('/api/journal/lock').catch(() => {})
+        // Kleines Delay damit React Router die URL aktualisiert hat
+        setTimeout(() => {
+          if (!isJournalRoute()) {
+            post('/api/journal/lock').catch(() => {})
+          }
+        }, 50)
       }
     }
   }, [lockOnNavigateAway])
@@ -70,7 +78,6 @@ function useJournalLock({
     if (!lockOnVisibilityChange || !isUnlocked) return
 
     function handleVisibilityChange() {
-      // document.hidden === true wenn Tab nicht sichtbar ist
       if (document.hidden) {
         lockJournal()
       }
