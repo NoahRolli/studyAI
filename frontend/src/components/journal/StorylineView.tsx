@@ -16,7 +16,7 @@ const ARC_CONFIG: Record<string, { color: string; icon: string }> = {
 }
 
 function StorylineView() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [storylines, setStorylines] = useState<StorylineResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +29,7 @@ function StorylineView() {
     try {
       setLoading(true)
       setError(null)
-      const data = await post<StorylineResult[]>('/api/journal/analytics/storylines')
+      const data = await post<StorylineResult[]>(`/api/journal/analytics/storylines?language=${language}`)
       setStorylines(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : t.common.error)

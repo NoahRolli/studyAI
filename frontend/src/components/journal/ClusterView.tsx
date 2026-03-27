@@ -13,7 +13,7 @@ const CLUSTER_COLORS = ['#00d4ff', '#a78bfa', '#00ff88', '#ffaa00', '#ff3b5c']
 
 function ClusterView() {
   const navigate = useNavigate()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [clusters, setClusters] = useState<ClusterResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -26,7 +26,7 @@ function ClusterView() {
     try {
       setLoading(true)
       setError(null)
-      const data = await post<ClusterResult[]>('/api/journal/analytics/clusters')
+      const data = await post<ClusterResult[]>(`/api/journal/analytics/clusters?language=${language}`)
       setClusters(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : t.common.error)
