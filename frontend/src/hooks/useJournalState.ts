@@ -190,11 +190,13 @@ export default function useJournalState() {
     setEditEntry({ title: '', content: '', date: '' })
   }
 
-  async function saveEdit() {
+  async function saveEdit(data?: JournalEntryCreate) {
     if (!editingId) return
     try {
       setError(null)
-      await put(`/api/journal/entries/${editingId}`, editEntry)
+      // Daten vom EntryForm verwenden falls übergeben, sonst editEntry State
+      const payload = data || editEntry
+      await put(`/api/journal/entries/${editingId}`, payload)
       cancelEdit()
       setMoodsLoaded(false)
       await loadEntries()
