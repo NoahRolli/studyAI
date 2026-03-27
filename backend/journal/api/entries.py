@@ -3,8 +3,9 @@
 # Jedes Feld (Titel, Inhalt, Datum) wird unabhängig verschlüsselt
 # mit eigenem IV und Auth-Tag — sicher und einzeln entschlüsselbar
 # Auto-Titel: Wenn kein Titel angegeben, generiert Ollama einen
+# language Query-Parameter steuert die Sprache der Auto-Titel-Generierung
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from backend.journal.models.journal_database import get_journal_db
 from backend.journal.models.journal_entry import JournalEntry
@@ -38,37 +39,40 @@ def get_entries(db: Session = Depends(get_journal_db)):
                 "updated_at": entry.updated_at.isoformat(),
             })
         except Exception:
-            # Eintrag kann nicht entschlüsselt werden — überspringen
             continue
 
     return decrypted
 
 
 # POST /api/journal/entries — Neuen Eintrag erstellen (wird verschlüsselt)
-# Wenn kein Titel angegeben, wird er via Ollama aus dem Inhalt generiert
+# language Parameter für Auto-Titel-Generierung via Ollama
 @router.post("/")
-async def create_entry(data: EntryCreate, db: Session = Depends(get_journal_db)):
+async def create_entry(
+    data: EntryCreate,
+    language: str = Query(default="de", regex="^(de|en)$"),
+    db: Session = Depends(get_journal_db),
+):
     require_unlocked()
     aes_key = session_manager.get_key()
 
     # Titel: User-Eingabe verwenden oder via Ollama generieren
     title = data.title if data.title and data.title.strip() else None
     if not title:
-        title = await journal_ai.generate_title(data.content)
+        title = await journal_ai.generate_title(data.content, language)
 
     # Jedes Feld unabhängig verschlüsseln (eigener IV + Tag pro Feld)
     entry = JournalEntry(
         encrypted_title=encrypt_text(title, aes_key),
         encrypted_content=encrypt_text(data.content, aes_key),
         encrypted_date=encrypt_text(data.date, aes_key),
-        iv=b'',          # Nicht mehr benötigt (IV ist im Feld enthalten)
-        auth_tag=b'',    # Nicht mehr benötigt (Tag ist im Feld enthalten)
+        iv=b'',
+        auth_tag=b'',
     )
     db.add(entry)
     db.commit()
     db.refresh(entry)
 
-    return {"id": entry.id, "title": title, "message": "Eintrag erstellt und verschlüsselt."}
+    return {"id": entry.id, "title": title, "message": "Entry created and encrypted."}
 
 
 # GET /api/journal/entries/{id} — Einzelnen Eintrag abrufen
@@ -80,7 +84,7 @@ def get_entry(entry_id: int, db: Session = Depends(get_journal_db)):
         JournalEntry.id == entry_id, JournalEntry.is_deleted == 0
     ).first()
     if not entry:
-        raise HTTPException(status_code=404, detail="Eintrag nicht gefunden.")
+        raise HTTPException(status_code=404, detail="Entry not found.")
 
     aes_key = session_manager.get_key()
 
@@ -103,28 +107,25 @@ def update_entry(entry_id: int, data: EntryUpdate, db: Session = Depends(get_jou
         JournalEntry.id == entry_id, JournalEntry.is_deleted == 0
     ).first()
     if not entry:
-        raise HTTPException(status_code=404, detail="Eintrag nicht gefunden.")
+        raise HTTPException(status_code=404, detail="Entry not found.")
 
     aes_key = session_manager.get_key()
 
-    # Aktuelle Werte entschlüsseln als Fallback
     current_title = decrypt_text(entry.encrypted_title, aes_key)
     current_content = decrypt_text(entry.encrypted_content, aes_key)
     current_date = decrypt_text(entry.encrypted_date, aes_key)
 
-    # Neue Werte übernehmen oder alte behalten
     new_title = data.title if data.title is not None else current_title
     new_content = data.content if data.content is not None else current_content
     new_date = data.date if data.date is not None else current_date
 
-    # Komplett neu verschlüsseln (neuer IV pro Feld)
     entry.encrypted_title = encrypt_text(new_title, aes_key)
     entry.encrypted_content = encrypt_text(new_content, aes_key)
     entry.encrypted_date = encrypt_text(new_date, aes_key)
 
     db.commit()
     db.refresh(entry)
-    return {"id": entry.id, "message": "Eintrag aktualisiert und neu verschlüsselt."}
+    return {"id": entry.id, "message": "Entry updated and re-encrypted."}
 
 
 # DELETE /api/journal/entries/{id} — Soft-Delete
@@ -136,11 +137,11 @@ def delete_entry(entry_id: int, db: Session = Depends(get_journal_db)):
         JournalEntry.id == entry_id, JournalEntry.is_deleted == 0
     ).first()
     if not entry:
-        raise HTTPException(status_code=404, detail="Eintrag nicht gefunden.")
+        raise HTTPException(status_code=404, detail="Entry not found.")
 
     entry.is_deleted = 1
     db.commit()
-    return {"message": "Eintrag gelöscht."}
+    return {"message": "Entry deleted."}
 
 
 # POST /api/journal/entries/{id}/restore — Wiederherstellen
@@ -152,8 +153,8 @@ def restore_entry(entry_id: int, db: Session = Depends(get_journal_db)):
         JournalEntry.id == entry_id, JournalEntry.is_deleted == 1
     ).first()
     if not entry:
-        raise HTTPException(status_code=404, detail="Gelöschter Eintrag nicht gefunden.")
+        raise HTTPException(status_code=404, detail="Deleted entry not found.")
 
     entry.is_deleted = 0
     db.commit()
-    return {"message": "Eintrag wiederhergestellt."}
+    return {"message": "Entry restored."}
