@@ -1,13 +1,14 @@
 /* Pallas — Globale Styles
    Futuristisches HUD-Design mit Cyan-Akzenten
    Verwendet CSS Custom Properties für konsistente Farben
-   Tailwind v4 wird über @import geladen */
+   Tailwind v4 wird über @import geladen
+   Themes: HUD (default) + Professional (gedämpft) */
+
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
 /* ============================================
-   CSS Custom Properties — Farbpalette
-   Zentral definiert, überall wiederverwendbar
+   Theme: HUD (Default) — Cyan-Glow, futuristisch
    ============================================ */
 :root {
   /* Primärfarben — Cyan/Teal Akzente */
@@ -35,6 +36,53 @@
   --color-success: #00ff88;
   --color-danger: #ff3b5c;
   --color-warning: #ffaa00;
+
+  /* Font-Overrides für Themes */
+  --font-heading: 'Orbitron', monospace;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  /* Glow-Intensität (steuerbar pro Theme) */
+  --glow-opacity: 1;
+  --card-blur: 12px;
+}
+
+/* ============================================
+   Theme: Professional — Gedämpft, seriöser
+   Teal statt Cyan, kein Glow, subtile Borders
+   ============================================ */
+[data-theme="professional"] {
+  /* Primärfarben — Teal/Petrol, weniger grell */
+  --color-primary: #5ba4b5;
+  --color-primary-dim: #5ba4b580;
+  --color-primary-glow: 0 0 8px rgba(91, 164, 181, 0.15);
+  --color-primary-glow-strong: 0 0 12px rgba(91, 164, 181, 0.2);
+
+  /* Hintergründe — etwas wärmer/weicher */
+  --color-bg-deep: #0f1318;
+  --color-bg-base: #13181f;
+  --color-bg-surface: #1a1f28;
+  --color-bg-elevated: #212832;
+
+  /* Borders — subtiler */
+  --color-border: #2a3040;
+  --color-border-glow: #5ba4b520;
+
+  /* Text — etwas weicher */
+  --color-text-primary: #d4dbe6;
+  --color-text-secondary: #8490a3;
+  --color-text-muted: #505a6b;
+
+  /* Status — gedämpfter */
+  --color-success: #34d399;
+  --color-danger: #f87171;
+  --color-warning: #fbbf24;
+
+  /* Heading-Font: Inter statt Orbitron */
+  --font-heading: 'Inter', system-ui, sans-serif;
+
+  /* Glow runterdrehen */
+  --glow-opacity: 0.3;
+  --card-blur: 8px;
 }
 
 /* ============================================
@@ -43,10 +91,10 @@
 body {
   background-color: var(--color-bg-deep);
   color: var(--color-text-primary);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-body);
 }
 
-/* Scrollbar — dünn, mit Cyan-Akzent */
+/* Scrollbar — dünn, mit Akzent */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -61,10 +109,13 @@ body {
   background: var(--color-primary-dim);
 }
 
-/* Text-Auswahl in Cyan */
+/* Text-Auswahl */
 ::selection {
   background: rgba(0, 212, 255, 0.3);
   color: white;
+}
+[data-theme="professional"] ::selection {
+  background: rgba(91, 164, 181, 0.3);
 }
 
 /* ============================================
@@ -80,12 +131,22 @@ body {
   );
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(var(--card-blur));
   transition: all 0.3s ease;
 }
 
-/* Hover-Effekt: Cyan-Glow am Rand */
+/* Hover-Effekt: Glow am Rand */
 .hud-card:hover {
+  border-color: var(--color-border-glow);
+  box-shadow: var(--color-primary-glow);
+}
+
+/* Professional: Kein Glassmorphism, solidere Karten */
+[data-theme="professional"] .hud-card {
+  background: var(--color-bg-surface);
+  backdrop-filter: none;
+}
+[data-theme="professional"] .hud-card:hover {
   border-color: var(--color-border-glow);
   box-shadow: var(--color-primary-glow);
 }
@@ -97,22 +158,30 @@ body {
   color: var(--color-primary);
   padding: 8px 20px;
   border-radius: 6px;
-  font-family: 'Orbitron', monospace;
+  font-family: var(--font-heading);
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   transition: all 0.3s ease;
   cursor: pointer;
 }
-
 .hud-btn:hover {
   background: rgba(0, 212, 255, 0.2);
   box-shadow: var(--color-primary-glow);
 }
-
 .hud-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+/* Professional: Buttons weniger sci-fi */
+[data-theme="professional"] .hud-btn {
+  background: var(--color-bg-elevated);
+  border-color: var(--color-border);
+  letter-spacing: 0.02em;
+}
+[data-theme="professional"] .hud-btn:hover {
+  background: rgba(91, 164, 181, 0.15);
 }
 
 /* HUD-Button Variante: Primär (ausgefüllt) */
@@ -121,7 +190,6 @@ body {
   border: 1px solid var(--color-primary);
   color: var(--color-primary);
 }
-
 .hud-btn-primary:hover {
   background: rgba(0, 212, 255, 0.3);
   box-shadow: var(--color-primary-glow-strong);
@@ -133,10 +201,12 @@ body {
   border: 1px solid rgba(255, 59, 92, 0.3);
   color: var(--color-danger);
 }
-
 .hud-btn-danger:hover {
   background: rgba(255, 59, 92, 0.2);
   box-shadow: 0 0 20px rgba(255, 59, 92, 0.3);
+}
+[data-theme="professional"] .hud-btn-danger:hover {
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.15);
 }
 
 /* HUD-Input — Eingabefelder */
@@ -149,28 +219,40 @@ body {
   transition: all 0.3s ease;
   width: 100%;
 }
-
 .hud-input:focus {
   outline: none;
   border-color: var(--color-primary-dim);
   box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
 }
-
 .hud-input::placeholder {
   color: var(--color-text-muted);
 }
+[data-theme="professional"] .hud-input {
+  background: var(--color-bg-base);
+}
+[data-theme="professional"] .hud-input:focus {
+  box-shadow: 0 0 6px rgba(91, 164, 181, 0.1);
+}
 
-/* HUD-Überschriften — Orbitron Font, Tracking */
+/* HUD-Überschriften — Font aus CSS-Variable */
 .hud-title {
-  font-family: 'Orbitron', monospace;
+  font-family: var(--font-heading);
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+[data-theme="professional"] .hud-title {
+  letter-spacing: 0.03em;
+  text-transform: none;
+  font-weight: 600;
 }
 
 /* Glühender Text — für Akzente und Highlights */
 .text-glow {
   color: var(--color-primary);
   text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+[data-theme="professional"] .text-glow {
+  text-shadow: none;
 }
 
 /* ============================================
@@ -182,9 +264,12 @@ body {
   0%, 100% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.2); }
   50% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.4); }
 }
-
 .animate-glow-pulse {
   animation: glow-pulse 3s ease-in-out infinite;
+}
+/* Professional: Kein Glow-Puls */
+[data-theme="professional"] .animate-glow-pulse {
+  animation: none;
 }
 
 /* Fade-In von unten — für Karten und Inhalte */
@@ -198,7 +283,6 @@ body {
     transform: translateY(0);
   }
 }
-
 .animate-fade-in {
   animation: fade-in-up 0.4s ease-out;
 }
@@ -216,13 +300,17 @@ body {
     linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
   background-size: 40px 40px;
 }
+/* Professional: Kein Grid-Hintergrund */
+[data-theme="professional"] .hud-grid-bg {
+  background-image: none;
+}
 
 /* ============================================
    Tab-Navigation
    ============================================ */
 .hud-tab {
   padding: 8px 16px;
-  font-family: 'Orbitron', monospace;
+  font-family: var(--font-heading);
   font-size: 0.7rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -233,14 +321,25 @@ body {
   border: none;
   background: transparent;
 }
-
 .hud-tab:hover {
   color: var(--color-text-secondary);
   background: rgba(0, 212, 255, 0.05);
 }
-
 .hud-tab-active {
   color: var(--color-primary);
   background: rgba(0, 212, 255, 0.1);
   border: 1px solid var(--color-border-glow);
+}
+
+[data-theme="professional"] .hud-tab {
+  letter-spacing: 0.03em;
+  text-transform: none;
+  font-size: 0.8rem;
+}
+[data-theme="professional"] .hud-tab:hover {
+  background: rgba(91, 164, 181, 0.08);
+}
+[data-theme="professional"] .hud-tab-active {
+  background: rgba(91, 164, 181, 0.12);
+  border-color: var(--color-border-glow);
 }
