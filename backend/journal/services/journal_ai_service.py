@@ -31,7 +31,7 @@ class JournalAIService:
                     "prompt": prompt,
                     "stream": False,
                     "options": {"num_predict": max_tokens},
-                }
+                },
             )
 
             if response.status_code != 200:
@@ -71,59 +71,91 @@ class JournalAIService:
         # Strategie 3: Rohtext direkt
         return json.loads(text.strip())
 
-    async def analyze_mood(self, title: str, content: str) -> dict:
+    async def analyze_mood(
+        self, title: str, content: str, language: str = "de"
+    ) -> dict:
         """
         Analysiert die Stimmung eines Journal-Eintrags.
         Gibt zurück: {"score": float, "label": str, "keywords": list}
         - score: -1.0 (sehr negativ) bis 1.0 (sehr positiv)
-        - label: z.B. "freudig", "nachdenklich", "traurig"
+        - label: Präzises Stimmungswort (nicht generisch)
         - keywords: Stimmungsprägende Wörter aus dem Text
         """
-        prompt = f"""Analysiere die Stimmung dieses Tagebucheintrags.
+        # Sprachabhängige Prompts — bessere Labels durch konkrete Beispiele
+        if language == "de":
+            prompt = f"""Analysiere die Stimmung dieses Tagebucheintrags präzise.
 
 Titel: {title}
 Inhalt: {content[:2000]}
 
 Antworte NUR im JSON-Format:
-{{"score": 0.5, "label": "nachdenklich", "keywords": ["Wort1", "Wort2"]}}
+{{"score": 0.3, "label": "zuversichtlich", "keywords": ["Wort1", "Wort2"]}}
 
-score: -1.0 (sehr negativ) bis 1.0 (sehr positiv)
-label: ein Wort das die Stimmung beschreibt
-keywords: 3-5 stimmungsprägende Wörter aus dem Text"""
+Regeln:
+- score: -1.0 (verzweifelt) bis 1.0 (euphorisch), 0.0 = neutral
+- label: EIN präzises Wort. NICHT "neutral" oder "gemischt" verwenden.
+  Gute Beispiele: zuversichtlich, melancholisch, dankbar, erschöpft,
+  aufgeregt, besorgt, gelassen, frustriert, inspiriert, einsam,
+  nostalgisch, entschlossen, überfordert, erleichtert, sehnsüchtig
+- keywords: 3-5 stimmungsprägende Wörter direkt aus dem Text"""
+        else:
+            prompt = f"""Analyze the mood of this journal entry precisely.
+
+Title: {title}
+Content: {content[:2000]}
+
+Respond ONLY in JSON format:
+{{"score": 0.3, "label": "hopeful", "keywords": ["word1", "word2"]}}
+
+Rules:
+- score: -1.0 (desperate) to 1.0 (euphoric), 0.0 = neutral
+- label: ONE precise word. Do NOT use "neutral" or "mixed".
+  Good examples: hopeful, melancholic, grateful, exhausted,
+  excited, anxious, serene, frustrated, inspired, lonely,
+  nostalgic, determined, overwhelmed, relieved, longing
+- keywords: 3-5 mood-defining words directly from the text"""
 
         response_text = await self._chat(prompt, max_tokens=500)
         try:
             return self._parse_json(response_text)
         except json.JSONDecodeError:
-            return {"score": 0.0, "label": "unbekannt", "keywords": []}
+            fallback = "unbekannt" if language == "de" else "unknown"
+            return {"score": 0.0, "label": fallback, "keywords": []}
 
-    async def generate_title(self, content: str) -> str:
+    async def generate_title(
+        self, content: str, language: str = "de"
+    ) -> str:
         """
         Generiert einen kurzen Titel aus dem Inhalt eines Eintrags.
         Wird aufgerufen wenn der User das Titel-Feld leer lässt.
-        Gibt einen Titel zurück (max 6 Wörter).
         """
-        # Prüfen ob Ollama verfügbar ist
         if not await self.is_available():
-            return "Ohne Titel"
+            return "Ohne Titel" if language == "de" else "Untitled"
 
-        prompt = f"""Generiere einen kurzen Titel für diesen Tagebucheintrag.
+        if language == "de":
+            prompt = f"""Generiere einen kurzen Titel für diesen Tagebucheintrag.
 Der Titel soll den Kern des Eintrags in maximal 6 Wörtern zusammenfassen.
 Antworte NUR mit dem Titel, kein anderer Text, keine Anführungszeichen.
 
 Eintrag:
 {content[:1000]}"""
+        else:
+            prompt = f"""Generate a short title for this journal entry.
+The title should capture the core in 6 words max.
+Respond ONLY with the title, no other text, no quotes.
 
+Entry:
+{content[:1000]}"""
+
+        fallback = "Ohne Titel" if language == "de" else "Untitled"
         try:
             result = await self._chat(prompt, max_tokens=30)
-            # Bereinigen: Anführungszeichen, Zeilenumbrüche entfernen
             title = result.strip().strip('"').strip("'").split("\n")[0]
-            # Fallback wenn Ollama leeren oder zu langen Titel liefert
             if not title or len(title) > 100:
-                return "Ohne Titel"
+                return fallback
             return title
         except Exception:
-            return "Ohne Titel"
+            return fallback
 
 
 # Singleton-Instanz — wird von anderen Services importiert
