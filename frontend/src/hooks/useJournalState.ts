@@ -55,6 +55,9 @@ export default function useJournalState() {
   const [medEnabled, setMedEnabled] = useState(false)
   const [medications, setMedications] = useState<Medication[]>([])
 
+  // Medikamenten-Erinnerung — wird nach Unlock getriggert
+  const [showMedReminder, setShowMedReminder] = useState(false)
+
   // --- API-Aufrufe ---
   async function loadEntries() {
     try {
@@ -113,6 +116,7 @@ export default function useJournalState() {
     setActiveTab('entries')
     setEditingId(null)
     setEditEntry({ title: '', content: '', date: '' })
+    setShowMedReminder(false)
     setStatus((prev) => prev ? { ...prev, is_unlocked: false } : prev)
   }
 
@@ -135,6 +139,8 @@ export default function useJournalState() {
       setPassword('')
       setMessage(null)
       await loadStatus()
+      // Nach erfolgreichem Unlock: Medikamenten-Erinnerung triggern
+      setShowMedReminder(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Wrong password')
     }
@@ -151,7 +157,6 @@ export default function useJournalState() {
   }
 
   // --- Entry-Aktionen ---
-  // language wird als Query-Parameter an create angehängt (Auto-Titel)
   async function createEntry(data: JournalEntryCreate) {
     try {
       setError(null)
@@ -194,7 +199,6 @@ export default function useJournalState() {
     if (!editingId) return
     try {
       setError(null)
-      // Daten vom EntryForm verwenden falls übergeben, sonst editEntry State
       const payload = data || editEntry
       await put(`/api/journal/entries/${editingId}`, payload)
       cancelEdit()
@@ -237,6 +241,11 @@ export default function useJournalState() {
     }
   }
 
+  // --- Med-Erinnerung schliessen ---
+  function dismissMedReminder() {
+    setShowMedReminder(false)
+  }
+
   // --- Init ---
   useEffect(() => { loadStatus() }, [])
 
@@ -245,10 +254,10 @@ export default function useJournalState() {
     status, password, setPassword, entries, loading, error, message,
     activeTab, setActiveTab, showForm, setShowForm, autoTitle, setAutoTitle,
     editingId, editEntry, setEditEntry, moods, moodsLoaded, medEnabled,
-    medications,
+    medications, showMedReminder,
     // Aktionen
     setupJournal, unlockJournal, lockJournal, resetState,
     createEntry, deleteEntry, startEdit, cancelEdit, saveEdit,
-    loadMoods, loadMedications, toggleMedTracker,
+    loadMoods, loadMedications, toggleMedTracker, dismissMedReminder,
   }
 }
