@@ -3,7 +3,7 @@
 # Nutzt einfaches Schwellwert-Clustering (kein scikit-learn nötig)
 #
 # Flow: Embeddings laden → Ähnlichkeitsmatrix → Cluster bilden
-# Cluster-Labels werden via Ollama generiert
+# Cluster-Labels werden via Ollama generiert (sprachabhängig)
 
 from backend.journal.services.embedding_service import cosine_similarity
 from backend.journal.services.journal_ai_service import journal_ai
@@ -16,10 +16,10 @@ def cluster_entries(
     """
     Gruppiert Einträge nach thematischer Ähnlichkeit.
     Einfaches Single-Link Clustering ohne externe Libraries.
-    
+
     entries: Liste von {"id": int, "title": str, "embedding": list[float]}
     threshold: Mindest-Ähnlichkeit für gleichen Cluster (0.0-1.0)
-    
+
     Gibt zurück: Liste von Clustern mit Entry-IDs
     [{"cluster_id": 0, "entry_ids": [1, 3, 7], "entries": [...]}]
     """
@@ -35,10 +35,8 @@ def cluster_entries(
         for j in range(i + 1, n):
             emb_i = entries[i].get("embedding")
             emb_j = entries[j].get("embedding")
-
             if not emb_i or not emb_j:
                 continue
-
             similarity = cosine_similarity(emb_i, emb_j)
             if similarity >= threshold:
                 # Cluster zusammenführen: alle mit j's Cluster-ID
@@ -64,33 +62,41 @@ def cluster_entries(
             "entry_ids": [entries[i]["id"] for i in indices],
             "titles": [entries[i]["title"] for i in indices],
         })
-
     return result
 
 
-async def label_cluster(titles: list[str]) -> str:
+async def label_cluster(titles: list[str], language: str = "de") -> str:
     """
     Generiert ein kurzes Label für einen Cluster via Ollama.
     Basiert auf den Titeln der enthaltenen Einträge.
+    Sprachabhängig — de oder en.
     """
     if not titles:
-        return "Unbenannt"
-
+        return "Unbenannt" if language == "de" else "Unnamed"
     if len(titles) == 1:
         return titles[0]
 
     titles_text = "\n".join(f"- {t}" for t in titles[:10])
 
-    try:
-        result = await journal_ai._chat(
-            prompt=f"""Diese Tagebucheinträge gehören thematisch zusammen.
+    if language == "de":
+        prompt = f"""Diese Tagebucheinträge gehören thematisch zusammen.
 Gib dem Cluster einen kurzen Titel (maximal 4 Wörter).
 Antworte NUR mit dem Titel, kein anderer Text.
 
 Einträge:
-{titles_text}""",
-            max_tokens=50,
-        )
+{titles_text}"""
+        fallback = "Themengruppe"
+    else:
+        prompt = f"""These journal entries belong to the same topic.
+Give the cluster a short title (4 words max).
+Respond ONLY with the title, no other text.
+
+Entries:
+{titles_text}"""
+        fallback = "Topic Group"
+
+    try:
+        result = await journal_ai._chat(prompt=prompt, max_tokens=50)
         return result.strip().strip('"').strip("'")
     except Exception:
-        return "Themengruppe"
+        return fallback
