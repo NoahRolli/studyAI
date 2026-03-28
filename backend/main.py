@@ -21,6 +21,7 @@ from backend.models.mindmap_node import MindmapNode  # noqa: F401
 from backend.models.folder import Folder  # noqa: F401
 from backend.journal.models.journal_entry import JournalEntry  # noqa: F401
 from backend.journal.models.medication import Medication, IntakeLog, MedicationSettings  # noqa: F401
+from backend.journal.models.mood_cache import MoodCache  # noqa: F401
 # Erstellt alle Tabellen in beiden Datenbanken beim Server-Start
 Base.metadata.create_all(bind=engine)
 JournalBase.metadata.create_all(bind=journal_engine)
