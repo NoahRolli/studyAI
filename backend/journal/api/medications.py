@@ -311,7 +311,8 @@ def get_intake_calendar(
 @router.get("/pending-today")
 def get_pending_today(db: Session = Depends(get_journal_db)):
     """
-    Prüft welche Medikamente heute noch nicht bestätigt wurden.
+    Prüft welche Medikamente heute noch nicht als 'taken' bestätigt wurden.
+    'skipped' zählt NICHT als erledigt — nur 'taken' schliesst ab.
     Gibt Liste von {id, name, dosage} zurück für die Erinnerung.
     Leere Liste = alles erledigt oder Tracker deaktiviert.
     """
@@ -330,7 +331,7 @@ def get_pending_today(db: Session = Depends(get_journal_db)):
     if not meds:
         return []
 
-    # Für jedes Medikament prüfen ob heute schon ein Log existiert
+    # Für jedes Medikament prüfen ob heute ein 'taken' Log existiert
     pending = []
     for med in meds:
         try:
@@ -343,17 +344,20 @@ def get_pending_today(db: Session = Depends(get_journal_db)):
             IntakeLog.medication_id == med.id
         ).all()
 
-        has_today_log = False
+        taken_today = False
         for log in logs:
             try:
                 log_date = decrypt_text(log.encrypted_date, key)
                 if log_date == today:
-                    has_today_log = True
-                    break
+                    log_status = decrypt_text(log.encrypted_status, key)
+                    # Nur 'taken' zählt als erledigt
+                    if log_status == "taken":
+                        taken_today = True
+                        break
             except Exception:
                 continue
 
-        if not has_today_log:
+        if not taken_today:
             pending.append({
                 "id": med_data["id"],
                 "name": med_data["name"],
