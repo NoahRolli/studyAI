@@ -5,8 +5,11 @@
 # WICHTIG: Entschlüsselte Daten leben nur im RAM während der Analyse
 # Ergebnisse enthalten keine verschlüsselten Rohdaten
 # WICHTIG: Soft-gelöschte Einträge (is_deleted=1) werden überall gefiltert
+#
+# Mood-Caching: Ergebnisse werden in mood_cache Tabelle gespeichert
+# Nur neue/geänderte Einträge werden via Ollama analysiert
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from backend.journal.api.dependencies import require_unlocked
 from backend.journal.services.session_service import session_manager
 from backend.journal.services.crypto_service import decrypt_text
@@ -39,14 +42,15 @@ def _decrypt_entry(entry: JournalEntry, key: bytes) -> dict:
     }
 
 
-# --- Mood Endpunkte ---
+# --- Mood Endpunkte (mit Cache) ---
 
 @router.post("/mood/{entry_id}")
 async def get_entry_mood(
     entry_id: int,
+    language: str = Query(default="de"),
     db: Session = Depends(get_journal_db),
 ):
-    """Analysiert die Stimmung eines einzelnen Eintrags."""
+    """Analysiert die Stimmung eines einzelnen Eintrags (gecacht)."""
     entry = db.query(JournalEntry).filter(
         JournalEntry.id == entry_id, JournalEntry.is_deleted == 0
     ).first()
@@ -60,32 +64,43 @@ async def get_entry_mood(
         entry_id=decrypted["id"],
         title=decrypted["title"],
         content=decrypted["content"],
+        language=language,
+        db=db,
     )
 
 
 @router.post("/mood")
 async def get_all_moods(
+    language: str = Query(default="de"),
     db: Session = Depends(get_journal_db),
 ):
-    """Analysiert die Stimmung aller Einträge. Für Zeitraum-Übersichten."""
-    entries = db.query(JournalEntry).filter(JournalEntry.is_deleted == 0).all()
+    """
+    Analysiert die Stimmung aller Einträge (gecacht).
+    Nur neue/geänderte Einträge werden via Ollama analysiert.
+    """
+    entries = db.query(JournalEntry).filter(
+        JournalEntry.is_deleted == 0
+    ).all()
     if not entries:
         return []
 
     key = session_manager.get_key()
     decrypted = [_decrypt_entry(e, key) for e in entries]
 
-    return await analyze_multiple_entries(decrypted)
+    return await analyze_multiple_entries(decrypted, language, db)
 
 
 # --- Clustering Endpunkte ---
 
 @router.post("/clusters")
 async def get_clusters(
+    language: str = Query(default="de"),
     db: Session = Depends(get_journal_db),
 ):
     """Gruppiert alle Einträge nach thematischer Ähnlichkeit."""
-    entries = db.query(JournalEntry).filter(JournalEntry.is_deleted == 0).all()
+    entries = db.query(JournalEntry).filter(
+        JournalEntry.is_deleted == 0
+    ).all()
     if len(entries) < 2:
         raise HTTPException(
             status_code=400,
@@ -108,7 +123,7 @@ async def get_clusters(
 
     # Labels für jeden Cluster via AI generieren
     for c in clusters:
-        c["label"] = await label_cluster(c["titles"])
+        c["label"] = await label_cluster(c["titles"], language)
 
     return clusters
 
@@ -117,6 +132,7 @@ async def get_clusters(
 
 @router.post("/storylines")
 async def get_storylines(
+    language: str = Query(default="de"),
     db: Session = Depends(get_journal_db),
 ):
     """Erkennt narrative Bögen über mehrere Einträge."""
@@ -132,4 +148,4 @@ async def get_storylines(
     key = session_manager.get_key()
     decrypted = [_decrypt_entry(e, key) for e in entries]
 
-    return await detect_storylines(decrypted)
+    return await detect_storylines(decrypted, language)
