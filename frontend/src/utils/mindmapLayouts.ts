@@ -3,16 +3,14 @@
 //
 // 1. Tree-Layout: Horizontale Baumstruktur, geordnet, übersichtlich
 // 2. Neural-Layout: Radial/organisch, wie ein neuronales Netz
-//    Knoten werden kreisförmig um den Kern angeordnet
-//    Zufällige Offsets sorgen für organische, gehirnartige Ästhetik
 //
-// Beide Layouts geben React Flow Nodes + Edges zurück
+// Jeder Hauptast (depth 1) bekommt eine eigene Farbe
+// Kinder erben die Farbe ihres Astes für visuelle Zugehörigkeit
 
 import type { Node, Edge } from 'reactflow'
 
 // --- Typen ---
 
-// Baumstruktur wie sie vom Backend kommt
 export interface MindmapTreeNode {
   id: number
   label: string
@@ -23,48 +21,92 @@ export interface MindmapTreeNode {
   children: MindmapTreeNode[]
 }
 
-// --- Shared: Knoten-Styling ---
+// --- Farbpalette für Äste ---
+// Jeder Hauptast (Index 0-7) bekommt eine eigene Akzentfarbe
+// Kinder erben die Farbe über branchIndex
 
-// Glow-Intensität nimmt mit Tiefe ab
-export function getNodeStyle(depth: number, hasChildren: boolean): React.CSSProperties {
+const BRANCH_COLORS = [
+  { r: 0, g: 212, b: 255 },   // Cyan (Original)
+  { r: 168, g: 85, b: 247 },  // Violett
+  { r: 52, g: 211, b: 153 },  // Smaragd
+  { r: 251, g: 146, b: 60 },  // Orange
+  { r: 244, g: 114, b: 182 }, // Pink
+  { r: 250, g: 204, b: 21 },  // Gelb
+  { r: 56, g: 189, b: 248 },  // Himmelblau
+  { r: 163, g: 230, b: 53 },  // Lime
+]
+
+function getBranchColor(branchIndex: number) {
+  return BRANCH_COLORS[branchIndex % BRANCH_COLORS.length]
+}
+
+function rgba(c: { r: number; g: number; b: number }, a: number) {
+  return `rgba(${c.r}, ${c.g}, ${c.b}, ${a})`
+}
+
+// --- Tree-Layout Knoten-Style mit Ast-Farbe ---
+
+export function getNodeStyle(
+  depth: number,
+  hasChildren: boolean,
+  branchIndex: number = 0,
+): React.CSSProperties {
+  // Root-Knoten (depth 0) bleibt immer Cyan
+  const color = depth === 0
+    ? BRANCH_COLORS[0]
+    : getBranchColor(branchIndex)
+
   const opacity = Math.max(0.6, 1 - depth * 0.15)
   const glowSize = Math.max(8, 20 - depth * 4)
   const fontSize = depth === 0 ? '13px' : depth === 1 ? '11px' : '10px'
 
   return {
-    background: `rgba(0, 212, 255, ${0.08 + depth * 0.02})`,
-    border: `1px solid rgba(0, 212, 255, ${0.3 * opacity})`,
+    background: rgba(color, 0.08 + depth * 0.02),
+    border: `1px solid ${rgba(color, 0.3 * opacity)}`,
     borderRadius: depth === 0 ? '50%' : '12px',
     padding: depth === 0 ? '20px' : '10px 16px',
-    color: `rgba(0, 212, 255, ${opacity})`,
+    color: rgba(color, opacity),
     fontSize,
-    fontFamily: depth === 0 ? "'Orbitron', monospace" : "'Inter', sans-serif",
+    fontFamily: depth === 0
+      ? "var(--font-heading)"
+      : "var(--font-body)",
     fontWeight: depth === 0 ? '600' : depth === 1 ? '500' : '400',
     letterSpacing: depth === 0 ? '0.08em' : '0',
     textTransform: depth === 0 ? 'uppercase' as const : 'none' as const,
     maxWidth: depth === 0 ? '160px' : '180px',
     textAlign: 'center' as const,
     cursor: hasChildren ? 'default' : 'pointer',
-    boxShadow: `0 0 ${glowSize}px rgba(0, 212, 255, ${0.15 * opacity}), inset 0 0 ${glowSize / 2}px rgba(0, 212, 255, ${0.05 * opacity})`,
+    boxShadow: `0 0 ${glowSize}px ${rgba(color, 0.15 * opacity)}`,
     backdropFilter: 'blur(8px)',
     transition: 'all 0.3s ease',
   }
 }
 
-// Neural-Layout: Runde Knoten für organisches Gefühl
-function getNeuralNodeStyle(depth: number, hasChildren: boolean): React.CSSProperties {
+// --- Neural-Layout Knoten-Style ---
+
+function getNeuralNodeStyle(
+  depth: number,
+  hasChildren: boolean,
+  branchIndex: number = 0,
+): React.CSSProperties {
+  const color = depth === 0
+    ? BRANCH_COLORS[0]
+    : getBranchColor(branchIndex)
+
   const opacity = Math.max(0.6, 1 - depth * 0.12)
   const glowSize = Math.max(10, 25 - depth * 4)
   const fontSize = depth === 0 ? '12px' : depth === 1 ? '10px' : '9px'
 
   return {
-    background: `radial-gradient(circle, rgba(0, 212, 255, ${0.12 + depth * 0.02}), rgba(0, 212, 255, ${0.04}))`,
-    border: `1px solid rgba(0, 212, 255, ${0.35 * opacity})`,
+    background: `radial-gradient(circle, ${rgba(color, 0.12 + depth * 0.02)}, ${rgba(color, 0.04)})`,
+    border: `1px solid ${rgba(color, 0.35 * opacity)}`,
     borderRadius: '50%',
     padding: depth === 0 ? '24px 18px' : depth === 1 ? '16px 14px' : '12px 10px',
-    color: `rgba(0, 212, 255, ${opacity})`,
+    color: rgba(color, opacity),
     fontSize,
-    fontFamily: depth === 0 ? "'Orbitron', monospace" : "'Inter', sans-serif",
+    fontFamily: depth === 0
+      ? "var(--font-heading)"
+      : "var(--font-body)",
     fontWeight: depth === 0 ? '600' : '400',
     letterSpacing: depth === 0 ? '0.06em' : '0',
     textTransform: depth === 0 ? 'uppercase' as const : 'none' as const,
@@ -76,34 +118,49 @@ function getNeuralNodeStyle(depth: number, hasChildren: boolean): React.CSSPrope
     justifyContent: 'center',
     textAlign: 'center' as const,
     cursor: hasChildren ? 'default' : 'pointer',
-    boxShadow: `0 0 ${glowSize}px rgba(0, 212, 255, ${0.2 * opacity}), 0 0 ${glowSize * 2}px rgba(0, 212, 255, ${0.06 * opacity})`,
+    boxShadow: `0 0 ${glowSize}px ${rgba(color, 0.2 * opacity)}`,
     backdropFilter: 'blur(10px)',
     transition: 'all 0.4s ease',
   }
 }
 
-// Kanten-Style für beide Layouts
-export function getEdgeStyle(sourceDepth: number): React.CSSProperties {
+// --- Kanten-Styles ---
+
+export function getEdgeStyle(
+  sourceDepth: number,
+  branchIndex: number = 0,
+): React.CSSProperties {
+  const color = sourceDepth === 0
+    ? BRANCH_COLORS[0]
+    : getBranchColor(branchIndex)
+
   const opacity = Math.max(0.2, 0.5 - sourceDepth * 0.1)
   return {
-    stroke: `rgba(0, 212, 255, ${opacity})`,
+    stroke: rgba(color, opacity),
     strokeWidth: Math.max(1, 2.5 - sourceDepth * 0.5),
-    filter: `drop-shadow(0 0 4px rgba(0, 212, 255, ${opacity * 0.6}))`,
+    filter: `drop-shadow(0 0 4px ${rgba(color, opacity * 0.6)})`,
   }
 }
 
-// Neural Kanten — dünner, organischer
-function getNeuralEdgeStyle(sourceDepth: number): React.CSSProperties {
+function getNeuralEdgeStyle(
+  sourceDepth: number,
+  branchIndex: number = 0,
+): React.CSSProperties {
+  const color = sourceDepth === 0
+    ? BRANCH_COLORS[0]
+    : getBranchColor(branchIndex)
+
   const opacity = Math.max(0.15, 0.4 - sourceDepth * 0.08)
   return {
-    stroke: `rgba(0, 212, 255, ${opacity})`,
+    stroke: rgba(color, opacity),
     strokeWidth: Math.max(0.8, 2 - sourceDepth * 0.4),
-    filter: `drop-shadow(0 0 6px rgba(0, 212, 255, ${opacity * 0.8}))`,
+    filter: `drop-shadow(0 0 6px ${rgba(color, opacity * 0.8)})`,
   }
 }
 
 // ============================================
 // Layout 1: Tree (horizontale Baumstruktur)
+// branchIndex wird beim ersten Kind-Level vergeben und weitervererbt
 // ============================================
 
 export function treeLayout(
@@ -114,13 +171,19 @@ export function treeLayout(
   startY: number = 0,
   horizontalGap: number = 300,
   verticalGap: number = 90,
+  branchIndex: number = 0,
 ): { nodes: Node[]; edges: Edge[]; totalHeight: number } {
   const nodes: Node[] = []
   const edges: Edge[] = []
   let currentY = startY
 
-  for (const treeNode of treeNodes) {
+  for (let i = 0; i < treeNodes.length; i++) {
+    const treeNode = treeNodes[i]
     const nodeId = `node-${treeNode.id}`
+
+    // Ast-Index: Root-Kinder bekommen eigene Farbe (i),
+    // tiefere Knoten erben den branchIndex vom Eltern
+    const currentBranch = parentDepth === 0 ? i : branchIndex
 
     // Kinder zuerst berechnen für vertikale Zentrierung
     let childResult = { nodes: [] as Node[], edges: [] as Edge[], totalHeight: 0 }
@@ -133,6 +196,7 @@ export function treeLayout(
         currentY,
         horizontalGap,
         verticalGap,
+        currentBranch,
       )
     }
 
@@ -149,8 +213,9 @@ export function treeLayout(
         depth: treeNode.depth_level,
         backendId: treeNode.id,
         hasChildren: treeNode.children.length > 0,
+        branchIndex: currentBranch,
       },
-      style: getNodeStyle(treeNode.depth_level, treeNode.children.length > 0),
+      style: getNodeStyle(treeNode.depth_level, treeNode.children.length > 0, currentBranch),
     })
 
     if (parentId) {
@@ -158,7 +223,7 @@ export function treeLayout(
         id: `edge-${parentId}-${nodeId}`,
         source: parentId,
         target: nodeId,
-        style: getEdgeStyle(parentDepth),
+        style: getEdgeStyle(parentDepth, currentBranch),
         animated: true,
         type: 'smoothstep',
       })
@@ -180,30 +245,34 @@ export function treeLayout(
 // Layout 2: Neural (radial, organisch)
 // ============================================
 
-// Sammelt alle Knoten flach mit Parent-Referenz
 interface FlatNode {
   treeNode: MindmapTreeNode
   parentId: string | null
   parentDepth: number
+  branchIndex: number
 }
 
 function flattenTree(
   treeNodes: MindmapTreeNode[],
   parentId: string | null = null,
   parentDepth: number = 0,
+  branchIndex: number = 0,
 ): FlatNode[] {
   const flat: FlatNode[] = []
-  for (const node of treeNodes) {
-    flat.push({ treeNode: node, parentId, parentDepth })
+  for (let i = 0; i < treeNodes.length; i++) {
+    const node = treeNodes[i]
+    // Ast-Index: Root-Kinder bekommen eigene Farbe
+    const currentBranch = parentDepth === 0 ? i : branchIndex
+    flat.push({ treeNode: node, parentId, parentDepth, branchIndex: currentBranch })
     if (node.children.length > 0) {
-      flat.push(...flattenTree(node.children, `node-${node.id}`, node.depth_level))
+      flat.push(
+        ...flattenTree(node.children, `node-${node.id}`, node.depth_level, currentBranch),
+      )
     }
   }
   return flat
 }
 
-// Seeded Random — reproduzierbare "Zufallswerte" basierend auf Knoten-ID
-// Sorgt dafür dass das Layout bei jedem Rendern gleich aussieht
 function seededRandom(seed: number): number {
   const x = Math.sin(seed * 9301 + 49297) * 49297
   return x - Math.floor(x)
@@ -216,7 +285,6 @@ export function neuralLayout(
   const nodes: Node[] = []
   const edges: Edge[] = []
 
-  // Zentrum der Darstellung
   const centerX = 600
   const centerY = 500
 
@@ -228,12 +296,9 @@ export function neuralLayout(
     byDepth.get(depth)!.push(fn)
   }
 
-  // Positioniere Knoten radial: jede Tiefe auf einem eigenen Ring
-  // Radius wächst mit Tiefe, Knoten verteilen sich gleichmässig auf dem Ring
   for (const [depth, group] of byDepth) {
     const radius = depth === 0 ? 0 : 180 + (depth - 1) * 160
     const angleStep = (2 * Math.PI) / Math.max(group.length, 1)
-    // Startwinkel leicht versetzt pro Tiefe für organisches Gefühl
     const angleOffset = depth * 0.4
 
     for (let i = 0; i < group.length; i++) {
@@ -241,7 +306,6 @@ export function neuralLayout(
       const nodeId = `node-${fn.treeNode.id}`
       const angle = angleOffset + i * angleStep
 
-      // Zufälliger Offset für organische Positionierung
       const jitterX = (seededRandom(fn.treeNode.id * 3) - 0.5) * radius * 0.25
       const jitterY = (seededRandom(fn.treeNode.id * 7) - 0.5) * radius * 0.25
 
@@ -257,17 +321,17 @@ export function neuralLayout(
           depth: fn.treeNode.depth_level,
           backendId: fn.treeNode.id,
           hasChildren: fn.treeNode.children.length > 0,
+          branchIndex: fn.branchIndex,
         },
-        style: getNeuralNodeStyle(depth, fn.treeNode.children.length > 0),
+        style: getNeuralNodeStyle(depth, fn.treeNode.children.length > 0, fn.branchIndex),
       })
 
-      // Edge zum Elternknoten
       if (fn.parentId) {
         edges.push({
           id: `edge-${fn.parentId}-${nodeId}`,
           source: fn.parentId,
           target: nodeId,
-          style: getNeuralEdgeStyle(fn.parentDepth),
+          style: getNeuralEdgeStyle(fn.parentDepth, fn.branchIndex),
           animated: true,
           type: 'default',
         })
