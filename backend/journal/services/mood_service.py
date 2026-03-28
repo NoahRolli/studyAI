@@ -1,29 +1,65 @@
-# Mood Service — Stimmungsanalyse für Journal-Einträge
-# Nutzt JournalAIService (Ollama-only) für Sentiment-Analyse
-# Speichert Mood-Daten pro Eintrag in der Journal-DB
+# Mood Service — Stimmungsanalyse mit Cache
+# Prüft vor jeder Analyse ob ein gültiger Cache existiert
+# Cache wird invalidiert wenn: Inhalt geändert oder Sprache gewechselt
 #
-# Score-Skala: -1.0 (sehr negativ) bis 1.0 (sehr positiv)
-# Label: Freitext, z.B. "freudig", "nachdenklich", "traurig"
+# Ablauf: Hash berechnen → Cache prüfen → nur bei Miss analysieren
+# Ergebnisse werden in mood_cache Tabelle persistiert
 
+import hashlib
+from sqlalchemy.orm import Session
 from backend.journal.services.journal_ai_service import journal_ai
+from backend.journal.models.mood_cache import MoodCache
 
 
-# Mood-Daten werden als JSON-Feld im Entry gespeichert
-# Alternativ: eigene Tabelle (machen wir wenn nötig)
+def _compute_hash(title: str, content: str) -> str:
+    """SHA-256 Hash über Titel + Inhalt — für Cache-Invalidierung."""
+    combined = f"{title}|||{content}"
+    return hashlib.sha256(combined.encode("utf-8")).hexdigest()
+
+
+def _cache_to_dict(cache: MoodCache) -> dict:
+    """Konvertiert einen MoodCache-Eintrag in ein API-Response-Dict."""
+    return {
+        "entry_id": cache.entry_id,
+        "score": cache.score,
+        "label": cache.label,
+        "keywords": cache.keywords.split(",") if cache.keywords else [],
+    }
+
+
+def _clamp_score(score: float) -> float:
+    """Begrenzt den Score auf den Bereich -1.0 bis 1.0."""
+    try:
+        return max(-1.0, min(1.0, float(score)))
+    except (TypeError, ValueError):
+        return 0.0
 
 
 async def analyze_entry_mood(
     entry_id: int,
     title: str,
     content: str,
+    language: str,
+    db: Session,
 ) -> dict:
     """
-    Analysiert die Stimmung eines entschlüsselten Eintrags.
-    Wird NACH der Entschlüsselung aufgerufen — arbeitet nur mit Klartext.
-    
-    Gibt zurück: {"entry_id": int, "score": float, "label": str, "keywords": list}
+    Analysiert die Stimmung eines Eintrags — mit Cache.
+    1. Hash berechnen
+    2. Cache prüfen (gleicher Hash + gleiche Sprache = Hit)
+    3. Bei Miss: Ollama analysieren, Cache speichern
     """
-    # Prüfen ob Ollama verfügbar ist
+    content_hash = _compute_hash(title, content)
+
+    # Cache-Lookup
+    cached = db.query(MoodCache).filter(
+        MoodCache.entry_id == entry_id
+    ).first()
+
+    # Cache Hit — Hash und Sprache stimmen überein
+    if cached and cached.content_hash == content_hash and cached.language == language:
+        return _cache_to_dict(cached)
+
+    # Cache Miss — Ollama analysieren
     if not await journal_ai.is_available():
         return {
             "entry_id": entry_id,
@@ -33,25 +69,48 @@ async def analyze_entry_mood(
             "error": "Ollama nicht erreichbar",
         }
 
-    # AI-Analyse durchführen
-    result = await journal_ai.analyze_mood(title, content)
+    result = await journal_ai.analyze_mood(title, content, language)
+    score = _clamp_score(result.get("score", 0.0))
+    label = result.get("label", "unbekannt")
+    keywords = result.get("keywords", [])
+    keywords_str = ",".join(keywords) if keywords else ""
+
+    # Cache schreiben oder aktualisieren
+    if cached:
+        cached.content_hash = content_hash
+        cached.score = score
+        cached.label = label
+        cached.keywords = keywords_str
+        cached.language = language
+    else:
+        cached = MoodCache(
+            entry_id=entry_id,
+            content_hash=content_hash,
+            score=score,
+            label=label,
+            keywords=keywords_str,
+            language=language,
+        )
+        db.add(cached)
+
+    db.commit()
 
     return {
         "entry_id": entry_id,
-        "score": _clamp_score(result.get("score", 0.0)),
-        "label": result.get("label", "unbekannt"),
-        "keywords": result.get("keywords", []),
+        "score": score,
+        "label": label,
+        "keywords": keywords,
     }
 
 
 async def analyze_multiple_entries(
     entries: list[dict],
+    language: str,
+    db: Session,
 ) -> list[dict]:
     """
-    Analysiert die Stimmung mehrerer Einträge.
-    Nützlich für Zeitraum-Übersichten (Woche/Monat).
-    
-    entries: Liste von {"id": int, "title": str, "content": str}
+    Analysiert mehrere Einträge — gecachte werden übersprungen.
+    Nur Einträge mit neuem/geändertem Inhalt werden via Ollama analysiert.
     """
     results = []
     for entry in entries:
@@ -59,14 +118,8 @@ async def analyze_multiple_entries(
             entry_id=entry["id"],
             title=entry["title"],
             content=entry["content"],
+            language=language,
+            db=db,
         )
         results.append(mood)
     return results
-
-
-def _clamp_score(score: float) -> float:
-    """Begrenzt den Score auf den Bereich -1.0 bis 1.0."""
-    try:
-        return max(-1.0, min(1.0, float(score)))
-    except (TypeError, ValueError):
-        return 0.0
