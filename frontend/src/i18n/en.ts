@@ -30,6 +30,8 @@ const en = {
     title: 'Dashboard',
     newFolder: '+ Folder',
     newModule: '+ Module',
+    cancelFolder: 'Cancel',
+    cancelModule: 'Cancel',
     folderFormTitle: 'New Folder',
     moduleFormTitle: 'New Module',
     folderName: 'Name',
@@ -65,8 +67,7 @@ const en = {
   // Journal Setup
   journalSetup: {
     title: 'Set up Journal',
-    description:
-      'Set a password for your encrypted journal. This password cannot be reset.',
+    description: 'Set a password for your encrypted journal. This password cannot be reset.',
     passwordLabel: 'Password',
     passwordPlaceholder: 'At least 8 characters',
     submit: 'Set up Journal',
@@ -75,8 +76,7 @@ const en = {
   // Journal Unlock
   journalUnlock: {
     title: 'Unlock Journal',
-    description:
-      'Enter your password to access your entries.',
+    description: 'Enter your password to access your entries.',
     placeholder: 'Enter password',
     submit: 'Unlock',
   },
@@ -120,9 +120,9 @@ const en = {
   moodChart: {
     title: 'Mood Timeline',
     loading: 'Analyzing mood...',
-    empty:
-      'No mood data yet. Create entries to see your mood timeline.',
+    empty: 'No mood data yet. Create entries to see your mood timeline.',
     unknown: 'unknown',
+    confidence: 'Confidence',
   },
 
   // Cluster View
@@ -138,8 +138,7 @@ const en = {
   storylineView: {
     title: 'Storylines',
     loading: 'Detecting storylines...',
-    empty:
-      'No storylines detected yet. At least 3 entries needed.',
+    empty: 'No storylines detected yet. At least 3 entries needed.',
     confidence: 'Confidence',
     linkedEntries: 'linked entries',
     arcTypes: {
@@ -171,13 +170,21 @@ const en = {
     until: 'until',
   },
 
+  // Medication Reminder (Modal after unlock)
+  medReminder: {
+    title: 'Medication Reminder',
+    description: 'These medications have not been confirmed today:',
+    confirmAll: 'Mark all as taken',
+    confirming: 'Saving...',
+    later: 'Later',
+  },
+
   // Module Detail
   moduleDetail: {
     backToDashboard: '← Back to Dashboard',
     notFound: 'Module not found.',
     uploadTitle: 'Upload Document',
-    uploadHint:
-      'Supported formats: PDF, Word, PowerPoint, Excel, Markdown, TXT, Images (OCR)',
+    uploadHint: 'Supported formats: PDF, Word, PowerPoint, Excel, Markdown, TXT, Images (OCR)',
     uploadButton: 'Choose File',
     uploading: 'Uploading...',
     documentsTitle: 'Documents',
@@ -199,14 +206,13 @@ const en = {
     backToJournal: '← Journal',
     generating: 'Generating mindmap',
     generatingHint: 'Building neural network...',
-    journalGeneratingHint:
-      'Analyzing clusters and storylines...',
+    journalGeneratingHint: 'Analyzing clusters and storylines...',
     expanding: 'Expanding...',
     layoutTree: 'Tree',
     layoutNeural: 'Neural',
     minEntries: 'At least 2 entries needed for the mindmap.',
     themes: 'Topics',
-    storylinesLabel: 'Storylines',
+    storylines: 'Storylines',
     entry: 'Entry',
   },
 } as const
