@@ -1,7 +1,8 @@
 // MindmapPage — Fullscreen Mindmap mit zwei Darstellungsoptionen
 // Route: /mindmap/:summaryId
 // Layouts: Tree (horizontal) + Neural (radial)
-// Deep Dive: Klick auf Blatt-Knoten → AI generiert Unterknoten
+// Einzelklick: Knoten selektieren (Detail anzeigen)
+// Doppelklick: Deep Dive — AI generiert Unterknoten
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
@@ -88,12 +89,17 @@ function MindmapPage() {
     if (summaryId) loadMindmap()
   }, [summaryId])
 
-  // Deep Dive — Knoten anklicken → AI generiert Unterknoten
-  const onNodeClick = useCallback(
+  // Einzelklick — nur selektieren, Detail-Panel anzeigen
+  const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    setSelectedNode(node)
+  }, [])
+
+  // Doppelklick — Deep Dive, AI generiert Unterknoten
+  const onNodeDoubleClick = useCallback(
     async (_event: React.MouseEvent, node: Node) => {
       setSelectedNode(node)
 
-      // Knoten hat schon Kinder → nur selektieren, nicht expandieren
+      // Knoten hat schon Kinder → nichts tun
       if (node.data.hasChildren) return
 
       // Keine Backend-ID → kann nicht expandiert werden
@@ -128,7 +134,6 @@ function MindmapPage() {
           })
         }
 
-        // Backend gibt Knoten mit echten IDs zurück
         const childrenWithIds: MindmapTreeNode[] = data.children.map((c) => ({
           id: c.id,
           label: c.label || '',
@@ -253,6 +258,7 @@ function MindmapPage() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={onNodeClick}
+          onNodeDoubleClick={onNodeDoubleClick}
           fitView
           fitViewOptions={{ padding: 0.3 }}
           minZoom={0.1}
