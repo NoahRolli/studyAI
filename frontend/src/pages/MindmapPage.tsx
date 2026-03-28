@@ -88,47 +88,74 @@ function MindmapPage() {
     if (summaryId) loadMindmap()
   }, [summaryId])
 
-  const onNodeClick = useCallback(async (_event: React.MouseEvent, node: Node) => {
-    setSelectedNode(node)
-    if (node.data.hasChildren) return
-    try {
-      setExpanding(true)
-      setError(null)
-      const data = await post<ExpandResponse>(
-        `/api/mindmap/nodes/${node.data.backendId}/expand`
-      )
-      function insertChildren(
-        treeNodes: MindmapTreeNode[],
-        targetId: number,
-        children: MindmapTreeNode[],
-      ): MindmapTreeNode[] {
-        return treeNodes.map((n) => {
-          if (n.id === targetId) return { ...n, children }
-          if (n.children.length > 0) {
-            return { ...n, children: insertChildren(n.children, targetId, children) }
-          }
-          return n
-        })
-      }
-      const childrenWithIds: MindmapTreeNode[] = data.children.map((c, i) => ({
-        id: Date.now() + i,
-        label: c.label || '',
-        detail: c.detail || '',
-        depth_level: node.data.depth + 1,
-        position_x: 0,
-        position_y: 0,
-        children: [],
-      }))
-      const updatedTree = insertChildren(treeData, node.data.backendId, childrenWithIds)
-      setTreeData(updatedTree)
-      applyLayout(updatedTree, layoutMode)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.common.error)
-    } finally {
-      setExpanding(false)
-    }
-  }, [treeData, layoutMode, setNodes, setEdges])
+  // Deep Dive — Knoten anklicken → AI generiert Unterknoten
+  const onNodeClick = useCallback(
+    async (_event: React.MouseEvent, node: Node) => {
+      setSelectedNode(node)
 
+      // Knoten hat schon Kinder → nur selektieren, nicht expandieren
+      if (node.data.hasChildren) return
+
+      // Keine Backend-ID → kann nicht expandiert werden
+      if (!node.data.backendId) {
+        setError('Knoten hat keine gültige ID für Deep Dive')
+        return
+      }
+
+      try {
+        setExpanding(true)
+        setError(null)
+
+        const data = await post<ExpandResponse>(
+          `/api/mindmap/nodes/${node.data.backendId}/expand`
+        )
+
+        // Kinder in den Baum einfügen (mit echten DB-IDs vom Backend)
+        function insertChildren(
+          treeNodes: MindmapTreeNode[],
+          targetId: number,
+          children: MindmapTreeNode[],
+        ): MindmapTreeNode[] {
+          return treeNodes.map((n) => {
+            if (n.id === targetId) return { ...n, children }
+            if (n.children.length > 0) {
+              return {
+                ...n,
+                children: insertChildren(n.children, targetId, children),
+              }
+            }
+            return n
+          })
+        }
+
+        // Backend gibt Knoten mit echten IDs zurück
+        const childrenWithIds: MindmapTreeNode[] = data.children.map((c) => ({
+          id: c.id,
+          label: c.label || '',
+          detail: c.detail || '',
+          depth_level: c.depth_level ?? node.data.depth + 1,
+          position_x: 0,
+          position_y: 0,
+          children: c.children || [],
+        }))
+
+        const updatedTree = insertChildren(
+          treeData,
+          node.data.backendId,
+          childrenWithIds,
+        )
+        setTreeData(updatedTree)
+        applyLayout(updatedTree, layoutMode)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t.common.error)
+      } finally {
+        setExpanding(false)
+      }
+    },
+    [treeData, layoutMode, setNodes, setEdges],
+  )
+
+  // --- Loading Screen ---
   if (loading) {
     return (
       <div
@@ -136,7 +163,9 @@ function MindmapPage() {
         style={{ backgroundColor: 'var(--color-bg-deep)' }}
       >
         <div className="text-center animate-fade-in">
-          <p className="hud-title text-sm text-glow mb-2">{t.mindmap.generating}</p>
+          <p className="hud-title text-sm text-glow mb-2">
+            {t.mindmap.generating}
+          </p>
           <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
             {t.mindmap.generatingHint}
           </p>
@@ -146,7 +175,10 @@ function MindmapPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg-deep)' }}>
+    <div
+      className="h-screen flex flex-col"
+      style={{ backgroundColor: 'var(--color-bg-deep)' }}
+    >
       {/* Header */}
       <div
         className="flex items-center justify-between px-6 py-3 border-b"
@@ -184,7 +216,10 @@ function MindmapPage() {
             </button>
           </div>
           {expanding && (
-            <span className="text-xs animate-glow-pulse" style={{ color: 'var(--color-primary)' }}>
+            <span
+              className="text-xs animate-glow-pulse"
+              style={{ color: 'var(--color-primary)' }}
+            >
               {t.mindmap.expanding}
             </span>
           )}
@@ -196,6 +231,7 @@ function MindmapPage() {
         </div>
       </div>
 
+      {/* Fehler-Banner */}
       {error && (
         <div
           className="mx-6 mt-3 px-4 py-2 rounded-lg text-sm border"
@@ -209,6 +245,7 @@ function MindmapPage() {
         </div>
       )}
 
+      {/* React Flow Canvas */}
       <div className="flex-1">
         <ReactFlow
           nodes={nodes}
@@ -250,6 +287,7 @@ function MindmapPage() {
         </ReactFlow>
       </div>
 
+      {/* Detail-Panel unten */}
       {selectedNode && selectedNode.data.detail && (
         <div
           className="px-6 py-4 border-t"
@@ -258,10 +296,16 @@ function MindmapPage() {
             borderColor: 'var(--color-border)',
           }}
         >
-          <h3 className="text-xs font-semibold mb-1" style={{ color: 'var(--color-primary)' }}>
+          <h3
+            className="text-xs font-semibold mb-1"
+            style={{ color: 'var(--color-primary)' }}
+          >
             {selectedNode.data.label}
           </h3>
-          <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+          <p
+            className="text-sm leading-relaxed"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
             {selectedNode.data.detail}
           </p>
         </div>
