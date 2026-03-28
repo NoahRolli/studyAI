@@ -1,6 +1,9 @@
 # Mindmap-Service: Baut Mindmap-Strukturen aus AI-Daten
 # Speichert Knoten hierarchisch in der Datenbank
 # Ermöglicht Zoom-Levels: Übersicht → Kapitel → Detail
+#
+# Wichtig: expand_node gibt Knoten mit echten DB-IDs zurück,
+# damit das Frontend beim Deep Dive die richtige ID senden kann
 
 from sqlalchemy.orm import Session
 from backend.models.mindmap_node import MindmapNode
@@ -10,18 +13,18 @@ from backend.services.ai_service import generate_mindmap, deep_dive
 async def create_mindmap_from_summary(
     summary_id: int,
     text: str,
-    db: Session
+    db: Session,
 ) -> list[dict]:
     """
     Generiert eine komplette Mindmap aus einem Text via AI.
     Speichert alle Knoten in der Datenbank.
-    Gibt die Baumstruktur als Liste zurück.
+    Gibt die Baumstruktur mit DB-IDs als Liste zurück.
     """
     # AI generiert die Baumstruktur
     tree = await generate_mindmap(text)
 
     # Rekursiv alle Knoten in der DB speichern
-    saved_nodes = []
+    saved_nodes: list[MindmapNode] = []
     for node_data in tree:
         _save_node_recursive(
             node_data=node_data,
@@ -33,7 +36,9 @@ async def create_mindmap_from_summary(
         )
 
     db.commit()
-    return tree
+
+    # Baum mit echten DB-IDs zurückgeben
+    return get_mindmap_tree(summary_id, db)
 
 
 def _save_node_recursive(
@@ -76,11 +81,11 @@ def _save_node_recursive(
 async def expand_node(
     node_id: int,
     context: str,
-    db: Session
+    db: Session,
 ) -> list[dict]:
     """
     Generiert Unterknoten für einen bestehenden Knoten (Deep Dive).
-    Wird aufgerufen wenn der User in der Mindmap reinzoomt.
+    Gibt Knoten mit echten DB-IDs zurück — wichtig für weitere Deep Dives.
     """
     node = db.query(MindmapNode).filter(MindmapNode.id == node_id).first()
     if not node:
@@ -90,7 +95,7 @@ async def expand_node(
     children_data = await deep_dive(node.label, node.detail, context)
 
     # Neue Knoten in der DB speichern
-    saved = []
+    saved: list[MindmapNode] = []
     for child_data in children_data:
         _save_node_recursive(
             node_data=child_data,
@@ -102,7 +107,22 @@ async def expand_node(
         )
 
     db.commit()
-    return children_data
+
+    # Gespeicherte Knoten mit echten DB-IDs zurückgeben
+    return [_node_to_dict(n) for n in saved]
+
+
+def _node_to_dict(node: MindmapNode) -> dict:
+    """Konvertiert einen DB-Knoten in ein dict für die API-Response."""
+    return {
+        "id": node.id,
+        "label": node.label,
+        "detail": node.detail,
+        "depth_level": node.depth_level,
+        "position_x": node.position_x,
+        "position_y": node.position_y,
+        "children": [],
+    }
 
 
 def get_mindmap_tree(summary_id: int, db: Session) -> list[dict]:
@@ -110,7 +130,6 @@ def get_mindmap_tree(summary_id: int, db: Session) -> list[dict]:
     Lädt die komplette Mindmap als Baumstruktur aus der DB.
     Baut den Baum rekursiv aus den flachen DB-Einträgen auf.
     """
-    # Alle Knoten dieser Zusammenfassung laden
     nodes = db.query(MindmapNode).filter(
         MindmapNode.summary_id == summary_id
     ).all()
