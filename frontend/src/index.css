@@ -300,9 +300,12 @@ body {
     linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
   background-size: 40px 40px;
 }
-/* Professional: Kein Grid-Hintergrund */
+/* Professional: Grid-Hintergrund in Teal statt Cyan */
 [data-theme="professional"] .hud-grid-bg {
-  background-image: none;
+  background-image:
+    linear-gradient(rgba(91, 164, 181, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91, 164, 181, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
 /* ============================================
