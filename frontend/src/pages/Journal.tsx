@@ -18,6 +18,7 @@ import MoodChart from '../components/journal/MoodChart'
 import ClusterView from '../components/journal/ClusterView'
 import StorylineView from '../components/journal/StorylineView'
 import MedicationTracker from '../components/journal/MedicationTracker'
+import MedicationReminder from '../components/journal/MedicationReminder'
 import JournalSearch from '../components/journal/JournalSearch'
 
 function Journal() {
@@ -69,6 +70,13 @@ function Journal() {
 
   return (
     <div className="animate-fade-in">
+      {/* Medikamenten-Erinnerung (Modal nach Unlock) */}
+      <MedicationReminder
+        show={s.showMedReminder}
+        onDismiss={s.dismissMedReminder}
+        onReloadMedications={s.loadMedications}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="hud-title text-glow text-2xl">{t.journal.title}</h1>
