@@ -171,6 +171,15 @@ const de = {
     until: 'bis',
   },
 
+  // Medikamenten-Erinnerung (Modal nach Unlock)
+  medReminder: {
+    title: 'Medikamenten-Erinnerung',
+    description: 'Diese Medikamente wurden heute noch nicht bestätigt:',
+    confirmAll: 'Alle als genommen markieren',
+    confirming: 'Wird gespeichert...',
+    later: 'Später',
+  },
+
   // Modul-Detail
   moduleDetail: {
     backToDashboard: '← Zurück zum Dashboard',
