@@ -6,7 +6,9 @@
 # - GET/POST/PUT/DELETE für Medikamente
 # - POST/GET/DELETE für Einnahme-Logs
 # - GET/POST für Tracker-Aktivierung (Settings)
+# - GET für heute offene Medikamente (Erinnerung)
 
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.journal.models.journal_database import get_journal_db
@@ -87,7 +89,6 @@ def toggle_tracker(db: Session = Depends(get_journal_db)):
     require_unlocked()
     settings = db.query(MedicationSettings).first()
     if not settings:
-        # Erste Aktivierung — Zeile anlegen
         settings = MedicationSettings(id=1, is_enabled=1)
         db.add(settings)
     else:
@@ -111,7 +112,6 @@ def get_medications(db: Session = Depends(get_journal_db)):
         try:
             result.append(_decrypt_medication(med, key))
         except Exception:
-            # Entschlüsselung fehlgeschlagen — überspringen
             continue
     return result
 
@@ -158,11 +158,8 @@ def update_medication(
         raise HTTPException(status_code=404, detail="Medikament nicht gefunden.")
 
     key = session_manager.get_key()
-
-    # Aktuelle Werte entschlüsseln als Fallback
     current = _decrypt_medication(med, key)
 
-    # Neue Werte übernehmen oder alte behalten, dann neu verschlüsseln
     med.encrypted_name = encrypt_text(
         data.name if data.name is not None else current["name"], key
     )
@@ -175,11 +172,9 @@ def update_medication(
     med.encrypted_start_date = encrypt_text(
         data.start_date if data.start_date is not None else current["start_date"], key
     )
-    # End-Datum: kann explizit auf null gesetzt werden (Medikament wieder aktiv)
     new_end = data.end_date if data.end_date is not None else current["end_date"]
     med.encrypted_end_date = encrypt_text(new_end, key) if new_end else None
 
-    # Notizen: kann explizit auf null gesetzt werden
     new_notes = data.notes if data.notes is not None else current["notes"]
     med.encrypted_notes = encrypt_text(new_notes, key) if new_notes else None
 
@@ -214,7 +209,6 @@ def log_intake(
     """Einnahme protokollieren (genommen/übersprungen)."""
     require_unlocked()
 
-    # Prüfen ob Medikament existiert
     med = db.query(Medication).filter(
         Medication.id == data.medication_id, Medication.is_deleted == 0
     ).first()
@@ -224,7 +218,6 @@ def log_intake(
     key = session_manager.get_key()
 
     # Prüfen ob für dieses Datum schon ein Eintrag existiert
-    # Dafür müssen wir alle Logs entschlüsseln (verschlüsseltes Datum)
     existing_logs = db.query(IntakeLog).filter(
         IntakeLog.medication_id == data.medication_id
     ).all()
@@ -232,14 +225,12 @@ def log_intake(
         try:
             log_date = decrypt_text(log.encrypted_date, key)
             if log_date == data.date:
-                # Existiert schon — Status aktualisieren
                 log.encrypted_status = encrypt_text(data.status, key)
                 db.commit()
                 return {"id": log.id, "message": "Einnahme aktualisiert."}
         except Exception:
             continue
 
-    # Neuen Log-Eintrag erstellen
     log = IntakeLog(
         medication_id=data.medication_id,
         encrypted_date=encrypt_text(data.date, key),
@@ -268,6 +259,7 @@ def get_intake_logs(
             continue
     return result
 
+
 # ============================================
 # Kalender-Ansicht — Einnahmen pro Monat
 # ============================================
@@ -277,15 +269,10 @@ def get_intake_calendar(
     month: str,
     db: Session = Depends(get_journal_db),
 ):
-    """Alle Einnahme-Logs aller Medikamente für einen Monat.
-
-    Gibt pro Log: medication_id, med_name, date, status zurück.
-    Für die Kalender-Ansicht (Pill-Icons pro Tag).
-    """
+    """Alle Einnahme-Logs aller Medikamente für einen Monat."""
     require_unlocked()
     key = session_manager.get_key()
 
-    # Alle aktiven Medikamente laden
     meds = db.query(Medication).filter(Medication.is_deleted == 0).all()
     med_names: dict[int, str] = {}
     for med in meds:
@@ -294,7 +281,6 @@ def get_intake_calendar(
         except Exception:
             continue
 
-    # Alle Intake-Logs der aktiven Medikamente laden + filtern
     result = []
     for med_id in med_names:
         logs = db.query(IntakeLog).filter(
@@ -316,3 +302,62 @@ def get_intake_calendar(
                 continue
 
     return result
+
+
+# ============================================
+# Erinnerung — Heute offene Medikamente
+# ============================================
+
+@router.get("/pending-today")
+def get_pending_today(db: Session = Depends(get_journal_db)):
+    """
+    Prüft welche Medikamente heute noch nicht bestätigt wurden.
+    Gibt Liste von {id, name, dosage} zurück für die Erinnerung.
+    Leere Liste = alles erledigt oder Tracker deaktiviert.
+    """
+    require_unlocked()
+
+    # Prüfen ob Tracker aktiviert ist
+    settings = db.query(MedicationSettings).first()
+    if not settings or not settings.is_enabled:
+        return []
+
+    key = session_manager.get_key()
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    # Alle aktiven Medikamente laden
+    meds = db.query(Medication).filter(Medication.is_deleted == 0).all()
+    if not meds:
+        return []
+
+    # Für jedes Medikament prüfen ob heute schon ein Log existiert
+    pending = []
+    for med in meds:
+        try:
+            med_data = _decrypt_medication(med, key)
+        except Exception:
+            continue
+
+        # Alle Logs dieses Medikaments durchgehen
+        logs = db.query(IntakeLog).filter(
+            IntakeLog.medication_id == med.id
+        ).all()
+
+        has_today_log = False
+        for log in logs:
+            try:
+                log_date = decrypt_text(log.encrypted_date, key)
+                if log_date == today:
+                    has_today_log = True
+                    break
+            except Exception:
+                continue
+
+        if not has_today_log:
+            pending.append({
+                "id": med_data["id"],
+                "name": med_data["name"],
+                "dosage": med_data["dosage"],
+            })
+
+    return pending
