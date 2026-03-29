@@ -5,7 +5,7 @@
 // Doppelklick: Deep Dive — AI generiert Unterknoten
 // Hover (Neural): Ganzer Ast leuchtet auf, Rest wird gedimmt
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import type { Node } from 'reactflow'
 import ReactFlow, {
@@ -21,12 +21,14 @@ import { get, post } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import { useMindmapInteraction, type LayoutMode } from '../hooks/useMindmapInteraction'
 import { useMindmapDeepDive } from '../hooks/useMindmapDeepDive'
-import MindmapSphere from '../components/MindmapSphere'
 import {
   treeLayout,
   neuralLayout,
   type MindmapTreeNode,
 } from '../utils/mindmapLayouts'
+
+// Lazy-Load: Three.js wird nur geladen wenn 3D-Tab aktiv
+const MindmapSphere = lazy(() => import('../components/MindmapSphere'))
 
 interface MindmapResponse {
   summary_id: number
@@ -66,7 +68,6 @@ function MindmapPage() {
   useEffect(() => {
     if (layoutMode !== 'neural' || interaction.highlightedBranch === null) return
     const { nodes: hNodes, edges: hEdges } = interaction.applyHighlight(nodes, edges)
-    // Nur Styles updaten, Positionen beibehalten
     setNodes((prev) =>
       prev.map((n, i) => ({ ...n, style: hNodes[i]?.style ?? n.style })),
     )
@@ -78,10 +79,8 @@ function MindmapPage() {
   // Highlight zurücksetzen wenn kein Ast hervorgehoben
   useEffect(() => {
     if (layoutMode !== 'neural' || interaction.highlightedBranch !== null) return
-    // Styles auf Standard zurücksetzen via neuem Layout
     if (treeData.length > 0) {
       const result = neuralLayout(treeData)
-      // Nur Styles updaten, Drag-Positionen beibehalten
       setNodes((prev) =>
         prev.map((n) => {
           const fresh = result.nodes.find((r) => r.id === n.id)
@@ -224,14 +223,20 @@ function MindmapPage() {
         </div>
       )}
 
-      {/* Canvas: 2D (ReactFlow) oder 3D (Three.js) */}
+      {/* Canvas: 2D (ReactFlow) oder 3D (Three.js, lazy-loaded) */}
       <div className="flex-1">
         {layoutMode === 'sphere' ? (
-          <MindmapSphere
-            treeData={treeData}
-            onNodeSelect={onSphereSelect}
-            onNodeExpand={onSphereExpand}
-          />
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-full">
+              <p className="hud-title text-sm text-glow">3D wird geladen...</p>
+            </div>
+          }>
+            <MindmapSphere
+              treeData={treeData}
+              onNodeSelect={onSphereSelect}
+              onNodeExpand={onSphereExpand}
+            />
+          </Suspense>
         ) : (
           <ReactFlow
             nodes={nodes}
