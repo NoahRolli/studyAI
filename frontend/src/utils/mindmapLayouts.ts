@@ -140,9 +140,9 @@ function placeNodesInSector(
   const depth = node.depth_level
   const sectorMid = (sectorStart + sectorEnd) / 2
 
-  // Leichter Jitter für organisches Feeling (5% des Radius)
-  const jitterR = (seededRandom(node.id * 3) - 0.5) * radius * 0.05
-  const jitterA = (seededRandom(node.id * 7) - 0.5) * 0.08
+  // Minimaler Jitter für organisches Feeling (3% des Radius)
+  const jitterR = (seededRandom(node.id * 3) - 0.5) * radius * 0.03
+  const jitterA = (seededRandom(node.id * 7) - 0.5) * 0.05
   const x = centerX + Math.cos(sectorMid + jitterA) * (radius + jitterR)
   const y = centerY + Math.sin(sectorMid + jitterA) * (radius + jitterR)
 
@@ -219,10 +219,10 @@ export function neuralLayout(
   const branches = root.children
   if (branches.length === 0) return { nodes, edges }
 
-  // Dynamischer Radius — mehr Äste = grösserer Kreis
-  const baseRadius = Math.max(280, 200 + branches.length * 30)
+  // Grösserer Radius für mehr Abstand — verhindert Overlap
+  const baseRadius = Math.max(380, 280 + branches.length * 40)
   const totalNodes = countNodes(root)
-  const radiusStep = Math.max(160, 120 + Math.sqrt(totalNodes) * 10)
+  const radiusStep = Math.max(220, 160 + Math.sqrt(totalNodes) * 12)
 
   // Gewichtete Sektor-Aufteilung pro Ast
   const weights = branches.map((b) => countNodes(b))
