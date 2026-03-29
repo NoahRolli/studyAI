@@ -179,7 +179,7 @@ function MindmapPage() {
       <div className="flex items-center justify-between px-6 py-3 border-b"
         style={{ backgroundColor: 'var(--color-bg-base)', borderColor: 'var(--color-border)' }}>
         <div className="flex items-center gap-4">
-          <Link to="/" className="text-xs transition-colors"
+          <Link to="/dashboard" className="text-xs transition-colors"
             style={{ color: 'var(--color-text-muted)' }}>
             {t.mindmap.backToDashboard}
           </Link>
