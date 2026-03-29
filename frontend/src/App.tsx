@@ -1,7 +1,8 @@
 // Pallas Frontend — Router-Konfiguration
 // ThemeProvider + LanguageProvider wrappen alles
 // Routen:
-// - "/" → Dashboard
+// - "/" → Begrüssungsseite
+// - "/dashboard" → Dashboard (Module + Ordner)
 // - "/modules/:id" → Modul-Detailseite
 // - "/mindmap/:summaryId" → Fullscreen Study-Mindmap
 // - "/journal" → Verschlüsseltes Tagebuch
@@ -11,6 +12,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { LanguageProvider } from './hooks/useLanguage'
 import { ThemeProvider } from './hooks/useTheme'
 import Layout from './components/Layout'
+import WelcomePage from './pages/WelcomePage'
 import Dashboard from './pages/Dashboard'
 import ModuleDetail from './pages/ModuleDetail'
 import MindmapPage from './pages/MindmapPage'
@@ -24,7 +26,8 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Layout />}>
-              <Route index element={<Dashboard />} />
+              <Route index element={<WelcomePage />} />
+              <Route path="dashboard" element={<Dashboard />} />
               <Route path="modules/:id" element={<ModuleDetail />} />
               <Route path="journal" element={<Journal />} />
             </Route>
