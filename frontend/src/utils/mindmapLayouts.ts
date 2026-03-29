@@ -1,162 +1,25 @@
 // Mindmap Layout-Algorithmen
-// Zwei Darstellungsoptionen für die React Flow Mindmap:
 //
 // 1. Tree-Layout: Horizontale Baumstruktur, geordnet, übersichtlich
-// 2. Neural-Layout: Radial/organisch, wie ein neuronales Netz
+// 2. Neural-Layout: Radial mit Ast-basierten Sektoren
+//    — Jeder Hauptast bekommt einen eigenen Winkelbereich
+//    — Kinder werden innerhalb des Eltern-Sektors platziert
+//    — Dynamischer Radius passt sich an Knotenanzahl an
 //
-// Jeder Hauptast (depth 1) bekommt eine eigene Farbe
-// Kinder erben die Farbe ihres Astes für visuelle Zugehörigkeit
+// Styles und Farben kommen aus mindmapStyles.ts
 
 import type { Node, Edge } from 'reactflow'
+import {
+  type MindmapTreeNode,
+  getNodeStyle,
+  getEdgeStyle,
+  getNeuralNodeStyle,
+  getNeuralEdgeStyle,
+} from './mindmapStyles'
 
-// --- Typen ---
-
-export interface MindmapTreeNode {
-  id: number
-  label: string
-  detail: string
-  depth_level: number
-  position_x: number
-  position_y: number
-  children: MindmapTreeNode[]
-}
-
-// --- Farbpalette für Äste ---
-// Jeder Hauptast (Index 0-7) bekommt eine eigene Akzentfarbe
-// Kinder erben die Farbe über branchIndex
-
-const BRANCH_COLORS = [
-  { r: 0, g: 212, b: 255 },   // Cyan (Original)
-  { r: 168, g: 85, b: 247 },  // Violett
-  { r: 52, g: 211, b: 153 },  // Smaragd
-  { r: 251, g: 146, b: 60 },  // Orange
-  { r: 244, g: 114, b: 182 }, // Pink
-  { r: 250, g: 204, b: 21 },  // Gelb
-  { r: 56, g: 189, b: 248 },  // Himmelblau
-  { r: 163, g: 230, b: 53 },  // Lime
-]
-
-function getBranchColor(branchIndex: number) {
-  return BRANCH_COLORS[branchIndex % BRANCH_COLORS.length]
-}
-
-function rgba(c: { r: number; g: number; b: number }, a: number) {
-  return `rgba(${c.r}, ${c.g}, ${c.b}, ${a})`
-}
-
-// --- Tree-Layout Knoten-Style mit Ast-Farbe ---
-
-export function getNodeStyle(
-  depth: number,
-  hasChildren: boolean,
-  branchIndex: number = 0,
-): React.CSSProperties {
-  // Root-Knoten (depth 0) bleibt immer Cyan
-  const color = depth === 0
-    ? BRANCH_COLORS[0]
-    : getBranchColor(branchIndex)
-
-  const opacity = Math.max(0.6, 1 - depth * 0.15)
-  const glowSize = Math.max(8, 20 - depth * 4)
-  const fontSize = depth === 0 ? '13px' : depth === 1 ? '11px' : '10px'
-
-  return {
-    background: rgba(color, 0.08 + depth * 0.02),
-    border: `1px solid ${rgba(color, 0.3 * opacity)}`,
-    borderRadius: depth === 0 ? '50%' : '12px',
-    padding: depth === 0 ? '20px' : '10px 16px',
-    color: rgba(color, opacity),
-    fontSize,
-    fontFamily: depth === 0
-      ? "var(--font-heading)"
-      : "var(--font-body)",
-    fontWeight: depth === 0 ? '600' : depth === 1 ? '500' : '400',
-    letterSpacing: depth === 0 ? '0.08em' : '0',
-    textTransform: depth === 0 ? 'uppercase' as const : 'none' as const,
-    maxWidth: depth === 0 ? '160px' : '180px',
-    textAlign: 'center' as const,
-    cursor: hasChildren ? 'default' : 'pointer',
-    boxShadow: `0 0 ${glowSize}px ${rgba(color, 0.15 * opacity)}`,
-    backdropFilter: 'blur(8px)',
-    transition: 'all 0.3s ease',
-  }
-}
-
-// --- Neural-Layout Knoten-Style ---
-
-function getNeuralNodeStyle(
-  depth: number,
-  hasChildren: boolean,
-  branchIndex: number = 0,
-): React.CSSProperties {
-  const color = depth === 0
-    ? BRANCH_COLORS[0]
-    : getBranchColor(branchIndex)
-
-  const opacity = Math.max(0.6, 1 - depth * 0.12)
-  const glowSize = Math.max(10, 25 - depth * 4)
-  const fontSize = depth === 0 ? '12px' : depth === 1 ? '10px' : '9px'
-
-  return {
-    background: `radial-gradient(circle, ${rgba(color, 0.12 + depth * 0.02)}, ${rgba(color, 0.04)})`,
-    border: `1px solid ${rgba(color, 0.35 * opacity)}`,
-    borderRadius: '50%',
-    padding: depth === 0 ? '24px 18px' : depth === 1 ? '16px 14px' : '12px 10px',
-    color: rgba(color, opacity),
-    fontSize,
-    fontFamily: depth === 0
-      ? "var(--font-heading)"
-      : "var(--font-body)",
-    fontWeight: depth === 0 ? '600' : '400',
-    letterSpacing: depth === 0 ? '0.06em' : '0',
-    textTransform: depth === 0 ? 'uppercase' as const : 'none' as const,
-    maxWidth: depth === 0 ? '140px' : '120px',
-    minWidth: depth === 0 ? '140px' : depth === 1 ? '100px' : '80px',
-    minHeight: depth === 0 ? '140px' : depth === 1 ? '100px' : '80px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textAlign: 'center' as const,
-    cursor: hasChildren ? 'default' : 'pointer',
-    boxShadow: `0 0 ${glowSize}px ${rgba(color, 0.2 * opacity)}`,
-    backdropFilter: 'blur(10px)',
-    transition: 'all 0.4s ease',
-  }
-}
-
-// --- Kanten-Styles ---
-
-export function getEdgeStyle(
-  sourceDepth: number,
-  branchIndex: number = 0,
-): React.CSSProperties {
-  const color = sourceDepth === 0
-    ? BRANCH_COLORS[0]
-    : getBranchColor(branchIndex)
-
-  const opacity = Math.max(0.2, 0.5 - sourceDepth * 0.1)
-  return {
-    stroke: rgba(color, opacity),
-    strokeWidth: Math.max(1, 2.5 - sourceDepth * 0.5),
-    filter: `drop-shadow(0 0 4px ${rgba(color, opacity * 0.6)})`,
-  }
-}
-
-function getNeuralEdgeStyle(
-  sourceDepth: number,
-  branchIndex: number = 0,
-): React.CSSProperties {
-  const color = sourceDepth === 0
-    ? BRANCH_COLORS[0]
-    : getBranchColor(branchIndex)
-
-  const opacity = Math.max(0.15, 0.4 - sourceDepth * 0.08)
-  return {
-    stroke: rgba(color, opacity),
-    strokeWidth: Math.max(0.8, 2 - sourceDepth * 0.4),
-    filter: `drop-shadow(0 0 6px ${rgba(color, opacity * 0.8)})`,
-  }
-}
+// Re-Export damit bestehende Imports weiter funktionieren
+export type { MindmapTreeNode }
+export { getNodeStyle, getEdgeStyle, getNeuralNodeStyle, getNeuralEdgeStyle }
 
 // ============================================
 // Layout 1: Tree (horizontale Baumstruktur)
@@ -242,101 +105,139 @@ export function treeLayout(
 }
 
 // ============================================
-// Layout 2: Neural (radial, organisch)
+// Layout 2: Neural (radial, Ast-basierte Sektoren)
 // ============================================
 
-interface FlatNode {
-  treeNode: MindmapTreeNode
-  parentId: string | null
-  parentDepth: number
-  branchIndex: number
+// Hilfsfunktion: Zählt alle Knoten in einem Teilbaum
+function countNodes(node: MindmapTreeNode): number {
+  let count = 1
+  for (const child of node.children) count += countNodes(child)
+  return count
 }
 
-function flattenTree(
-  treeNodes: MindmapTreeNode[],
-  parentId: string | null = null,
-  parentDepth: number = 0,
-  branchIndex: number = 0,
-): FlatNode[] {
-  const flat: FlatNode[] = []
-  for (let i = 0; i < treeNodes.length; i++) {
-    const node = treeNodes[i]
-    // Ast-Index: Root-Kinder bekommen eigene Farbe
-    const currentBranch = parentDepth === 0 ? i : branchIndex
-    flat.push({ treeNode: node, parentId, parentDepth, branchIndex: currentBranch })
-    if (node.children.length > 0) {
-      flat.push(
-        ...flattenTree(node.children, `node-${node.id}`, node.depth_level, currentBranch),
-      )
-    }
-  }
-  return flat
-}
-
+// Deterministischer Pseudo-Zufall basierend auf Knoten-ID
 function seededRandom(seed: number): number {
   const x = Math.sin(seed * 9301 + 49297) * 49297
   return x - Math.floor(x)
 }
 
+// Rekursive Platzierung: Knoten innerhalb ihres Sektors positionieren
+function placeNodesInSector(
+  node: MindmapTreeNode,
+  parentId: string | null,
+  parentDepth: number,
+  branchIndex: number,
+  centerX: number,
+  centerY: number,
+  sectorStart: number,
+  sectorEnd: number,
+  radius: number,
+  radiusStep: number,
+  nodes: Node[],
+  edges: Edge[],
+): void {
+  const nodeId = `node-${node.id}`
+  const depth = node.depth_level
+  const sectorMid = (sectorStart + sectorEnd) / 2
+
+  // Leichter Jitter für organisches Feeling (5% des Radius)
+  const jitterR = (seededRandom(node.id * 3) - 0.5) * radius * 0.05
+  const jitterA = (seededRandom(node.id * 7) - 0.5) * 0.08
+  const x = centerX + Math.cos(sectorMid + jitterA) * (radius + jitterR)
+  const y = centerY + Math.sin(sectorMid + jitterA) * (radius + jitterR)
+
+  nodes.push({
+    id: nodeId,
+    position: { x, y },
+    data: {
+      label: node.label,
+      detail: node.detail,
+      depth,
+      backendId: node.id,
+      hasChildren: node.children.length > 0,
+      branchIndex,
+    },
+    style: getNeuralNodeStyle(depth, node.children.length > 0, branchIndex),
+  })
+
+  if (parentId) {
+    edges.push({
+      id: `edge-${parentId}-${nodeId}`,
+      source: parentId,
+      target: nodeId,
+      style: getNeuralEdgeStyle(parentDepth, branchIndex),
+      animated: true,
+      type: 'default',
+    })
+  }
+
+  // Kinder rekursiv — Sektor aufteilen nach Teilbaumgrösse
+  if (node.children.length > 0) {
+    const childRadius = radius + radiusStep
+    const sectorWidth = sectorEnd - sectorStart
+    const childWeights = node.children.map((c) => countNodes(c))
+    const totalWeight = childWeights.reduce((sum, w) => sum + w, 0)
+
+    let currentAngle = sectorStart
+    for (let i = 0; i < node.children.length; i++) {
+      const childWidth = (childWeights[i] / totalWeight) * sectorWidth
+      placeNodesInSector(
+        node.children[i], nodeId, depth, branchIndex,
+        centerX, centerY,
+        currentAngle, currentAngle + childWidth,
+        childRadius, radiusStep, nodes, edges,
+      )
+      currentAngle += childWidth
+    }
+  }
+}
+
 export function neuralLayout(
   treeNodes: MindmapTreeNode[],
 ): { nodes: Node[]; edges: Edge[] } {
-  const flatNodes = flattenTree(treeNodes)
   const nodes: Node[] = []
   const edges: Edge[] = []
+  if (treeNodes.length === 0) return { nodes, edges }
 
   const centerX = 600
   const centerY = 500
+  const root = treeNodes[0]
+  const rootId = `node-${root.id}`
 
-  // Gruppiere Knoten nach Tiefe
-  const byDepth: Map<number, FlatNode[]> = new Map()
-  for (const fn of flatNodes) {
-    const depth = fn.treeNode.depth_level
-    if (!byDepth.has(depth)) byDepth.set(depth, [])
-    byDepth.get(depth)!.push(fn)
-  }
+  // Root im Zentrum
+  nodes.push({
+    id: rootId,
+    position: { x: centerX, y: centerY },
+    data: {
+      label: root.label, detail: root.detail, depth: 0,
+      backendId: root.id, hasChildren: root.children.length > 0,
+      branchIndex: -1,
+    },
+    style: getNeuralNodeStyle(0, root.children.length > 0, 0),
+  })
 
-  for (const [depth, group] of byDepth) {
-    const radius = depth === 0 ? 0 : 180 + (depth - 1) * 160
-    const angleStep = (2 * Math.PI) / Math.max(group.length, 1)
-    const angleOffset = depth * 0.4
+  const branches = root.children
+  if (branches.length === 0) return { nodes, edges }
 
-    for (let i = 0; i < group.length; i++) {
-      const fn = group[i]
-      const nodeId = `node-${fn.treeNode.id}`
-      const angle = angleOffset + i * angleStep
+  // Dynamischer Radius — mehr Äste = grösserer Kreis
+  const baseRadius = Math.max(280, 200 + branches.length * 30)
+  const totalNodes = countNodes(root)
+  const radiusStep = Math.max(160, 120 + Math.sqrt(totalNodes) * 10)
 
-      const jitterX = (seededRandom(fn.treeNode.id * 3) - 0.5) * radius * 0.25
-      const jitterY = (seededRandom(fn.treeNode.id * 7) - 0.5) * radius * 0.25
+  // Gewichtete Sektor-Aufteilung pro Ast
+  const weights = branches.map((b) => countNodes(b))
+  const totalWeight = weights.reduce((s, w) => s + w, 0)
+  let angle = 0
 
-      const x = centerX + Math.cos(angle) * radius + jitterX
-      const y = centerY + Math.sin(angle) * radius + jitterY
-
-      nodes.push({
-        id: nodeId,
-        position: { x, y },
-        data: {
-          label: fn.treeNode.label,
-          detail: fn.treeNode.detail,
-          depth: fn.treeNode.depth_level,
-          backendId: fn.treeNode.id,
-          hasChildren: fn.treeNode.children.length > 0,
-          branchIndex: fn.branchIndex,
-        },
-        style: getNeuralNodeStyle(depth, fn.treeNode.children.length > 0, fn.branchIndex),
-      })
-
-      if (fn.parentId) {
-        edges.push({
-          id: `edge-${fn.parentId}-${nodeId}`,
-          source: fn.parentId,
-          target: nodeId,
-          style: getNeuralEdgeStyle(fn.parentDepth, fn.branchIndex),
-          animated: true,
-          type: 'default',
-        })
-      }
-    }
+  for (let i = 0; i < branches.length; i++) {
+    const sectorWidth = (weights[i] / totalWeight) * 2 * Math.PI
+    placeNodesInSector(
+      branches[i], rootId, 0, i,
+      centerX, centerY,
+      angle, angle + sectorWidth,
+      baseRadius, radiusStep, nodes, edges,
+    )
+    angle += sectorWidth
   }
 
   return { nodes, edges }
