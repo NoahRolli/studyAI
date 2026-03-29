@@ -1,13 +1,13 @@
 // MindmapPage — Fullscreen Mindmap mit drei Darstellungsoptionen
 // Route: /mindmap/:summaryId
-// Layouts: Tree (horizontal) + Neural (radial) + Sphere (3D-Kugel)
+// Layouts: Tree (horizontal) + Neural (radial) + 3D (Hologramm-Netzwerk)
 // Einzelklick: Selektieren + Zoom-to-Cluster (Neural, Depth 1)
 // Doppelklick: Deep Dive — AI generiert Unterknoten
 // Hover (Neural): Ganzer Ast leuchtet auf, Rest wird gedimmt
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import type { Node } from 'reactflow'
+import type { Node, NodeChange } from 'reactflow'
 import ReactFlow, {
   useNodesState,
   useEdgesState,
@@ -15,6 +15,7 @@ import ReactFlow, {
   Background,
   BackgroundVariant,
   MiniMap,
+  applyNodeChanges,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { get, post } from '../hooks/useAPI'
@@ -37,9 +38,7 @@ function MindmapPage() {
   const { summaryId } = useParams<{ summaryId: string }>()
   const { t } = useLanguage()
 
-  // Layout-Daten (für Tree + Neural)
-  const [rawNodes, setRawNodes] = useState<Node[]>([])
-  const [rawEdges, setRawEdges] = useState<import('reactflow').Edge[]>([])
+  // ReactFlow State — Nodes/Edges mit Drag-Unterstützung
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [loading, setLoading] = useState(true)
@@ -48,29 +47,51 @@ function MindmapPage() {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('tree')
   const [treeData, setTreeData] = useState<MindmapTreeNode[]>([])
 
+  // Ref um Layout-Neuberechnung von Drag zu unterscheiden
+  const layoutVersionRef = useRef(0)
+
   // Hooks für Interaktion und Deep Dive
   const interaction = useMindmapInteraction(layoutMode)
   const { expanding, expandNode } = useMindmapDeepDive(treeData, setTreeData, setError)
 
-  // Layout berechnen (nur für 2D-Modi)
+  // Layout berechnen und Nodes/Edges setzen (nur für 2D)
   function applyLayout(tree: MindmapTreeNode[], mode: LayoutMode) {
-    if (mode === 'sphere') return // 3D wird von MindmapSphere gehandhabt
+    if (mode === 'sphere') return
     const result = mode === 'neural' ? neuralLayout(tree) : treeLayout(tree)
-    setRawNodes(result.nodes)
-    setRawEdges(result.edges)
+    layoutVersionRef.current += 1
+    setNodes(result.nodes)
+    setEdges(result.edges)
   }
 
-  // Highlight anwenden → finale Display-Daten
-  const displayData = useMemo(() => {
-    const highlighted = interaction.applyHighlight(rawNodes, rawEdges)
-    return highlighted
-  }, [rawNodes, rawEdges, interaction.applyHighlight])
-
-  // Display-Daten an ReactFlow übergeben (inkl. Drag-Unterstützung)
+  // Highlight anwenden — nur Styles ändern, NICHT Positionen
   useEffect(() => {
-    setNodes(displayData.nodes)
-    setEdges(displayData.edges)
-  }, [displayData, setNodes, setEdges])
+    if (layoutMode !== 'neural' || interaction.highlightedBranch === null) return
+    const { nodes: hNodes, edges: hEdges } = interaction.applyHighlight(nodes, edges)
+    // Nur Styles updaten, Positionen beibehalten
+    setNodes((prev) =>
+      prev.map((n, i) => ({ ...n, style: hNodes[i]?.style ?? n.style })),
+    )
+    setEdges((prev) =>
+      prev.map((e, i) => ({ ...e, style: hEdges[i]?.style ?? e.style })),
+    )
+  }, [interaction.highlightedBranch])
+
+  // Highlight zurücksetzen wenn kein Ast hervorgehoben
+  useEffect(() => {
+    if (layoutMode !== 'neural' || interaction.highlightedBranch !== null) return
+    // Styles auf Standard zurücksetzen via neuem Layout
+    if (treeData.length > 0) {
+      const result = neuralLayout(treeData)
+      // Nur Styles updaten, Drag-Positionen beibehalten
+      setNodes((prev) =>
+        prev.map((n) => {
+          const fresh = result.nodes.find((r) => r.id === n.id)
+          return fresh ? { ...n, style: fresh.style } : n
+        }),
+      )
+      setEdges(result.edges)
+    }
+  }, [interaction.highlightedBranch])
 
   // Layout neu berechnen wenn sich treeData ändert (z.B. nach Deep Dive)
   useEffect(() => {
@@ -106,13 +127,13 @@ function MindmapPage() {
     if (summaryId) loadMindmap()
   }, [summaryId])
 
-  // Einzelklick — Selektion + Zoom-to-Cluster (2D)
+  // Einzelklick — Selektion + Zoom-to-Cluster
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setSelectedNode(node)
-    interaction.zoomToBranch(node, rawNodes)
-  }, [rawNodes, interaction.zoomToBranch])
+    interaction.zoomToBranch(node, nodes)
+  }, [nodes, interaction.zoomToBranch])
 
-  // Doppelklick — Deep Dive via Hook (2D)
+  // Doppelklick — Deep Dive via Hook
   const onNodeDoubleClick = useCallback(
     async (_event: React.MouseEvent, node: Node) => {
       setSelectedNode(node)
@@ -121,23 +142,18 @@ function MindmapPage() {
     [expandNode],
   )
 
-  // 3D-Sphere Callbacks: Klick → Detail anzeigen
+  // 3D Callbacks
   const onSphereSelect = useCallback((id: number, label: string, detail: string) => {
     setSelectedNode({
-      id: `node-${id}`,
-      position: { x: 0, y: 0 },
+      id: `node-${id}`, position: { x: 0, y: 0 },
       data: { label, detail, backendId: id, depth: 0, hasChildren: false, branchIndex: 0 },
     } as Node)
   }, [])
 
-  // 3D-Sphere Callbacks: Doppelklick → Deep Dive
   const onSphereExpand = useCallback(
     async (id: number, depth: number, hasChildren: boolean) => {
       if (hasChildren) return
-      // Simuliertes Node-Objekt für den Deep-Dive-Hook
-      const fakeNode = {
-        data: { backendId: id, depth, hasChildren },
-      } as Node
+      const fakeNode = { data: { backendId: id, depth, hasChildren } } as Node
       await expandNode(fakeNode)
     },
     [expandNode],
