@@ -3,7 +3,7 @@
 // Hover-Highlight: Maus über einen Knoten → ganzer Ast leuchtet auf,
 // alle anderen Äste werden gedimmt (nur im Neural Layout)
 //
-// Zoom-to-Cluster: Klick auf einen Hauptast (depth 1) im Neural Layout
+// Zoom-to-Cluster: Klick auf einen Depth-1-Knoten im Neural Layout
 // → ReactFlow zoomt auf den Bereich dieses Astes
 //
 // Der Hook gibt Callbacks und State zurück, die MindmapPage nutzt
@@ -14,6 +14,9 @@ import {
   getNeuralNodeStyle,
   getNeuralEdgeStyle,
 } from '../utils/mindmapStyles'
+
+// Unterstützte Layout-Modi (auch von MindmapPage genutzt)
+export type LayoutMode = 'tree' | 'neural' | 'sphere'
 
 // Welcher Ast ist aktuell hervorgehoben? null = keiner (alle normal)
 interface InteractionState {
@@ -32,7 +35,7 @@ function getNodesInBranch(nodes: Node[], branchIndex: number): Set<string> {
 }
 
 export function useMindmapInteraction(
-  layoutMode: 'tree' | 'neural',
+  layoutMode: LayoutMode,
 ) {
   const [state, setState] = useState<InteractionState>({
     highlightedBranch: null,
@@ -47,7 +50,7 @@ export function useMindmapInteraction(
   }, [])
 
   // Hover-Highlight: Maus betritt einen Knoten
-  // → Setze highlightedBranch auf den branchIndex dieses Knotens
+  // Nur im Neural Layout aktiv (nicht Tree, nicht Sphere)
   const onNodeMouseEnter = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       if (layoutMode !== 'neural') return
@@ -109,7 +112,7 @@ export function useMindmapInteraction(
             node.data.depth,
             node.data.hasChildren,
             node.data.branchIndex < 0 ? 0 : node.data.branchIndex,
-            !isActive, // dimmed = nicht im aktiven Ast
+            !isActive,
           ),
         }
       })
