@@ -1,6 +1,6 @@
-// MindmapPage — Fullscreen Mindmap mit zwei Darstellungsoptionen
+// MindmapPage — Fullscreen Mindmap mit drei Darstellungsoptionen
 // Route: /mindmap/:summaryId
-// Layouts: Tree (horizontal) + Neural (radial mit Ast-Sektoren)
+// Layouts: Tree (horizontal) + Neural (radial) + Sphere (3D-Kugel)
 // Einzelklick: Selektieren + Zoom-to-Cluster (Neural, Depth 1)
 // Doppelklick: Deep Dive — AI generiert Unterknoten
 // Hover (Neural): Ganzer Ast leuchtet auf, Rest wird gedimmt
@@ -9,6 +9,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import type { Node } from 'reactflow'
 import ReactFlow, {
+  useNodesState,
+  useEdgesState,
   Controls,
   Background,
   BackgroundVariant,
@@ -17,8 +19,9 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { get, post } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
-import { useMindmapInteraction } from '../hooks/useMindmapInteraction'
+import { useMindmapInteraction, type LayoutMode } from '../hooks/useMindmapInteraction'
 import { useMindmapDeepDive } from '../hooks/useMindmapDeepDive'
+import MindmapSphere from '../components/MindmapSphere'
 import {
   treeLayout,
   neuralLayout,
@@ -30,15 +33,15 @@ interface MindmapResponse {
   tree: MindmapTreeNode[]
 }
 
-type LayoutMode = 'tree' | 'neural'
-
 function MindmapPage() {
   const { summaryId } = useParams<{ summaryId: string }>()
   const { t } = useLanguage()
 
-  // Layout-Daten
+  // Layout-Daten (für Tree + Neural)
   const [rawNodes, setRawNodes] = useState<Node[]>([])
   const [rawEdges, setRawEdges] = useState<import('reactflow').Edge[]>([])
+  const [nodes, setNodes, onNodesChange] = useNodesState([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
@@ -49,18 +52,25 @@ function MindmapPage() {
   const interaction = useMindmapInteraction(layoutMode)
   const { expanding, expandNode } = useMindmapDeepDive(treeData, setTreeData, setError)
 
-  // Layout berechnen
+  // Layout berechnen (nur für 2D-Modi)
   function applyLayout(tree: MindmapTreeNode[], mode: LayoutMode) {
+    if (mode === 'sphere') return // 3D wird von MindmapSphere gehandhabt
     const result = mode === 'neural' ? neuralLayout(tree) : treeLayout(tree)
     setRawNodes(result.nodes)
     setRawEdges(result.edges)
   }
 
   // Highlight anwenden → finale Display-Daten
-  const displayData = useMemo(
-    () => interaction.applyHighlight(rawNodes, rawEdges),
-    [rawNodes, rawEdges, interaction.applyHighlight],
-  )
+  const displayData = useMemo(() => {
+    const highlighted = interaction.applyHighlight(rawNodes, rawEdges)
+    return highlighted
+  }, [rawNodes, rawEdges, interaction.applyHighlight])
+
+  // Display-Daten an ReactFlow übergeben (inkl. Drag-Unterstützung)
+  useEffect(() => {
+    setNodes(displayData.nodes)
+    setEdges(displayData.edges)
+  }, [displayData, setNodes, setEdges])
 
   // Layout neu berechnen wenn sich treeData ändert (z.B. nach Deep Dive)
   useEffect(() => {
@@ -96,17 +106,39 @@ function MindmapPage() {
     if (summaryId) loadMindmap()
   }, [summaryId])
 
-  // Einzelklick — Selektion + Zoom-to-Cluster
+  // Einzelklick — Selektion + Zoom-to-Cluster (2D)
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setSelectedNode(node)
     interaction.zoomToBranch(node, rawNodes)
   }, [rawNodes, interaction.zoomToBranch])
 
-  // Doppelklick — Deep Dive via Hook
+  // Doppelklick — Deep Dive via Hook (2D)
   const onNodeDoubleClick = useCallback(
     async (_event: React.MouseEvent, node: Node) => {
       setSelectedNode(node)
       await expandNode(node)
+    },
+    [expandNode],
+  )
+
+  // 3D-Sphere Callbacks: Klick → Detail anzeigen
+  const onSphereSelect = useCallback((id: number, label: string, detail: string) => {
+    setSelectedNode({
+      id: `node-${id}`,
+      position: { x: 0, y: 0 },
+      data: { label, detail, backendId: id, depth: 0, hasChildren: false, branchIndex: 0 },
+    } as Node)
+  }, [])
+
+  // 3D-Sphere Callbacks: Doppelklick → Deep Dive
+  const onSphereExpand = useCallback(
+    async (id: number, depth: number, hasChildren: boolean) => {
+      if (hasChildren) return
+      // Simuliertes Node-Objekt für den Deep-Dive-Hook
+      const fakeNode = {
+        data: { backendId: id, depth, hasChildren },
+      } as Node
+      await expandNode(fakeNode)
     },
     [expandNode],
   )
@@ -149,6 +181,10 @@ function MindmapPage() {
               className={`hud-tab ${layoutMode === 'neural' ? 'hud-tab-active' : ''}`}>
               {t.mindmap.layoutNeural}
             </button>
+            <button onClick={() => switchLayout('sphere')}
+              className={`hud-tab ${layoutMode === 'sphere' ? 'hud-tab-active' : ''}`}>
+              3D
+            </button>
           </div>
           {expanding && (
             <span className="text-xs animate-glow-pulse"
@@ -173,33 +209,43 @@ function MindmapPage() {
         </div>
       )}
 
-      {/* React Flow Canvas */}
+      {/* Canvas: 2D (ReactFlow) oder 3D (Three.js) */}
       <div className="flex-1">
-        <ReactFlow
-          nodes={displayData.nodes}
-          edges={displayData.edges}
-          onNodeClick={onNodeClick}
-          onNodeDoubleClick={onNodeDoubleClick}
-          onNodeMouseEnter={interaction.onNodeMouseEnter}
-          onNodeMouseLeave={interaction.onNodeMouseLeave}
-          onInit={interaction.onInit}
-          fitView
-          fitViewOptions={{ padding: 0.3 }}
-          minZoom={0.1}
-          maxZoom={2}
-          style={{ backgroundColor: 'var(--color-bg-deep)' }}>
-          <Controls position="bottom-left"
-            style={{ background: 'var(--color-bg-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px', boxShadow: '0 0 15px rgba(0,212,255,0.1)' }} />
-          <MiniMap position="bottom-right"
-            nodeColor={() => 'rgba(0, 212, 255, 0.6)'}
-            maskColor="rgba(10, 14, 23, 0.8)"
-            style={{ background: 'var(--color-bg-base)',
-              border: '1px solid var(--color-border)', borderRadius: '8px' }} />
-          <Background variant={BackgroundVariant.Dots}
-            color="rgba(0, 212, 255, 0.1)" gap={25} size={1} />
-        </ReactFlow>
+        {layoutMode === 'sphere' ? (
+          <MindmapSphere
+            treeData={treeData}
+            onNodeSelect={onSphereSelect}
+            onNodeExpand={onSphereExpand}
+          />
+        ) : (
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={onNodeClick}
+            onNodeDoubleClick={onNodeDoubleClick}
+            onNodeMouseEnter={interaction.onNodeMouseEnter}
+            onNodeMouseLeave={interaction.onNodeMouseLeave}
+            onInit={interaction.onInit}
+            fitView
+            fitViewOptions={{ padding: 0.3 }}
+            minZoom={0.1}
+            maxZoom={2}
+            style={{ backgroundColor: 'var(--color-bg-deep)' }}>
+            <Controls position="bottom-left"
+              style={{ background: 'var(--color-bg-surface)',
+                border: '1px solid var(--color-border)',
+                borderRadius: '8px', boxShadow: '0 0 15px rgba(0,212,255,0.1)' }} />
+            <MiniMap position="bottom-right"
+              nodeColor={() => 'rgba(0, 212, 255, 0.6)'}
+              maskColor="rgba(10, 14, 23, 0.8)"
+              style={{ background: 'var(--color-bg-base)',
+                border: '1px solid var(--color-border)', borderRadius: '8px' }} />
+            <Background variant={BackgroundVariant.Dots}
+              color="rgba(0, 212, 255, 0.1)" gap={25} size={1} />
+          </ReactFlow>
+        )}
       </div>
 
       {/* Detail-Panel unten */}
