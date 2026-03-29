@@ -140,7 +140,7 @@ function ModuleDetail() {
         <p className="text-lg mb-4" style={{ color: 'var(--color-text-muted)' }}>
           {t.moduleDetail.notFound}
         </p>
-        <Link to="/" className="text-sm" style={{ color: 'var(--color-primary)' }}>
+        <Link to="/dashboard" className="text-sm" style={{ color: 'var(--color-primary)' }}>
           {t.moduleDetail.backToDashboard}
         </Link>
       </div>
@@ -150,7 +150,7 @@ function ModuleDetail() {
   return (
     <div className="animate-fade-in">
       <Link
-        to="/"
+        to="/dashboard"
         className="text-xs mb-4 inline-block transition-colors"
         style={{ color: 'var(--color-text-muted)' }}
       >
