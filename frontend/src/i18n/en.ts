@@ -25,6 +25,16 @@ const en = {
     version: 'v0.1.0 — ONLINE',
   },
 
+  // Welcome Page
+  welcome: {
+    subtitle: 'Your personal knowledge & productivity system',
+    dashboardTitle: 'Dashboard',
+    dashboardDesc: 'Manage modules, documents and summaries.',
+    journalTitle: 'Journal',
+    journalDesc: 'Encrypted diary with mood analysis and mindmaps.',
+    hint: 'Choose an area or use the sidebar to navigate.',
+  },
+
   // Dashboard
   dashboard: {
     title: 'Dashboard',

@@ -26,6 +26,16 @@ const de = {
     version: 'v0.1.0 — ONLINE',
   },
 
+  // Begrüssungsseite
+  welcome: {
+    subtitle: 'Dein persönliches Wissens- & Produktivitätssystem',
+    dashboardTitle: 'Dashboard',
+    dashboardDesc: 'Module, Dokumente und Zusammenfassungen verwalten.',
+    journalTitle: 'Journal',
+    journalDesc: 'Verschlüsseltes Tagebuch mit Stimmungsanalyse und Mindmaps.',
+    hint: 'Wähle einen Bereich oder nutze die Sidebar zur Navigation.',
+  },
+
   // Dashboard
   dashboard: {
     title: 'Dashboard',
