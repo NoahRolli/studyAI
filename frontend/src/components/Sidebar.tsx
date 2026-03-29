@@ -1,10 +1,10 @@
 // Sidebar — Hauptnavigation der Pallas App
 // Wird links auf jeder Seite angezeigt (via Layout.tsx)
-// Enthält Links zu allen Hauptbereichen: Dashboard, Journal
+// Pallas-Logo klickbar → Begrüssungsseite (/)
+// Nav-Links: Dashboard, Journal
 // Language-Toggle und Theme-Selector unten
-// Design passt sich dem aktiven Theme an (CSS-Variablen)
 
-import { NavLink } from 'react-router-dom'
+import { NavLink, Link } from 'react-router-dom'
 import { useLanguage } from '../hooks/useLanguage'
 import LanguageToggle from './LanguageToggle'
 import ThemeSelector from './ThemeSelector'
@@ -30,14 +30,19 @@ function Sidebar() {
         borderColor: 'var(--color-border)',
       }}
     >
-      {/* Logo / App-Name */}
-      <h1 className="hud-title text-glow text-2xl font-bold mb-8">
-        Pallas
-      </h1>
+      {/* Logo — klickbar, führt zur Begrüssungsseite */}
+      <Link to="/" className="block mb-8 group">
+        <h1
+          className="hud-title text-glow text-2xl font-bold tracking-widest
+            transition-all duration-300 group-hover:opacity-80"
+        >
+          Pallas
+        </h1>
+      </Link>
 
-      {/* Navigation — NavLink für Client-Side Routing */}
+      {/* Navigation — Dashboard + Journal als eigene Links */}
       <nav className="flex flex-col gap-2">
-        <NavLink to="/" className={linkStyle} end>
+        <NavLink to="/dashboard" className={linkStyle}>
           {t.sidebar.dashboard}
         </NavLink>
         <NavLink to="/journal" className={linkStyle}>
