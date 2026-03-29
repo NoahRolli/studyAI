@@ -1,255 +1,262 @@
-// MindmapSphere — 3D-Kugel-Darstellung der Mindmap
+// MindmapSphere — 3D Hologramm-Netzwerk (JARVIS-Style)
 //
-// Knoten werden auf konzentrischen Kugeln platziert:
-// - Root im Zentrum
-// - Depth 1 auf innerer Kugel
-// - Depth 2+ auf äusseren Kugeln
+// Freischwebendes Netzwerk mit leuchtenden Knoten und Glow-Kanten
+// Knoten schweben im Raum, verbunden durch pulsierende Linien
+// Keine Kugeloberfläche — offenes, organisches 3D-Netzwerk
 //
-// Features: Frei drehen (OrbitControls), Zoom, Klick → Detail,
-// Doppelklick → Deep Dive, Ast-Farben wie bei 2D-Layouts
-//
-// Verwendet @react-three/fiber + @react-three/drei
+// Features: Frei drehen, Zoom, Klick → Detail, Doppelklick → Deep Dive
+// Ast-Farben konsistent mit 2D-Layouts
 
 import { useRef, useState, useMemo, useCallback } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Text, Line } from '@react-three/drei'
+import { OrbitControls, Text } from '@react-three/drei'
 import * as THREE from 'three'
 import type { MindmapTreeNode } from '../utils/mindmapStyles'
 
-// --- Farbpalette (gleich wie in mindmapStyles.ts) ---
-const BRANCH_COLORS = [
-  '#00d4ff', // Cyan
-  '#a855f7', // Violett
-  '#34d399', // Smaragd
-  '#fb923c', // Orange
-  '#f472b6', // Pink
-  '#facc15', // Gelb
-  '#38bdf8', // Himmelblau
-  '#a3e635', // Lime
+// --- Ast-Farben (identisch mit mindmapStyles.ts) ---
+const BRANCH_HEX = [
+  '#00d4ff', '#a855f7', '#34d399', '#fb923c',
+  '#f472b6', '#facc15', '#38bdf8', '#a3e635',
 ]
 
-// --- Typen für 3D-Knoten ---
-interface SphereNode {
+// --- Typen ---
+interface HoloNode {
   id: number
   label: string
   detail: string
   depth: number
   hasChildren: boolean
   branchIndex: number
-  position: [number, number, number]
+  pos: THREE.Vector3
   parentId: number | null
 }
 
-// --- Props ---
 interface MindmapSphereProps {
   treeData: MindmapTreeNode[]
   onNodeSelect: (id: number, label: string, detail: string) => void
   onNodeExpand: (id: number, depth: number, hasChildren: boolean) => void
 }
 
-// --- Hilfsfunktion: Baum in flache 3D-Knotenliste umwandeln ---
-function flattenToSphere(
+// --- Deterministischer Zufall ---
+function sRand(seed: number): number {
+  const x = Math.sin(seed * 9301 + 49297) * 49297
+  return x - Math.floor(x)
+}
+
+// --- Baum → flache Liste ---
+function flattenTree(
   nodes: MindmapTreeNode[],
   parentId: number | null = null,
   parentDepth: number = 0,
   branchIndex: number = 0,
-): SphereNode[] {
-  const flat: SphereNode[] = []
+): HoloNode[] {
+  const flat: HoloNode[] = []
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i]
-    const currentBranch = parentDepth === 0 ? i : branchIndex
+    const branch = parentDepth === 0 ? i : branchIndex
     flat.push({
       id: node.id,
       label: node.label,
       detail: node.detail,
       depth: node.depth_level,
       hasChildren: node.children.length > 0,
-      branchIndex: currentBranch,
-      position: [0, 0, 0], // Wird später berechnet
+      branchIndex: branch,
+      pos: new THREE.Vector3(),
       parentId,
     })
     if (node.children.length > 0) {
-      flat.push(
-        ...flattenToSphere(node.children, node.id, node.depth_level, currentBranch),
-      )
+      flat.push(...flattenTree(node.children, node.id, node.depth_level, branch))
     }
   }
   return flat
 }
 
-// Deterministischer Pseudo-Zufall
-function seededRand(seed: number): number {
-  const x = Math.sin(seed * 9301 + 49297) * 49297
-  return x - Math.floor(x)
-}
+// --- Positionen zuweisen: Netzwerk-Layout ---
+// Jeder Ast bekommt eine Richtung vom Zentrum weg
+// Kinder folgen ihrem Eltern-Ast mit Streuung
+function assignPositions(nodes: HoloNode[]): HoloNode[] {
+  const branches = new Set(nodes.map((n) => n.branchIndex))
+  const branchDirs = new Map<number, THREE.Vector3>()
+  let idx = 0
+  const branchCount = branches.size || 1
 
-// 3D-Positionen auf konzentrischen Kugeln berechnen
-function assignPositions(flatNodes: SphereNode[]): SphereNode[] {
-  // Gruppiere nach Tiefe
-  const byDepth = new Map<number, SphereNode[]>()
-  for (const node of flatNodes) {
-    if (!byDepth.has(node.depth)) byDepth.set(node.depth, [])
-    byDepth.get(node.depth)!.push(node)
+  for (const b of branches) {
+    // Fibonacci-Kugel für gleichmässige Ast-Richtungen
+    const golden = Math.PI * (3 - Math.sqrt(5))
+    const y = 1 - (2 * idx + 1) / branchCount
+    const radius = Math.sqrt(1 - y * y)
+    const theta = golden * idx
+    branchDirs.set(b, new THREE.Vector3(
+      Math.cos(theta) * radius,
+      y * 0.6,
+      Math.sin(theta) * radius,
+    ).normalize())
+    idx++
   }
 
-  for (const [depth, group] of byDepth) {
-    if (depth === 0) {
-      // Root im Zentrum
-      group[0].position = [0, 0, 0]
+  for (const node of nodes) {
+    if (node.depth === 0) {
+      node.pos.set(0, 0, 0)
       continue
     }
 
-    // Kugelradius pro Tiefe — genug Abstand
-    const radius = 3 + (depth - 1) * 3.5
+    const dir = branchDirs.get(node.branchIndex) ?? new THREE.Vector3(1, 0, 0)
+    const dist = 2.5 + (node.depth - 1) * 2.2
+    const spread = 0.4 + node.depth * 0.2
+    const oX = (sRand(node.id * 3) - 0.5) * spread
+    const oY = (sRand(node.id * 7) - 0.5) * spread
+    const oZ = (sRand(node.id * 11) - 0.5) * spread
 
-    for (let i = 0; i < group.length; i++) {
-      const node = group[i]
-      // Fibonacci-Kugel-Verteilung für gleichmässige Abstände
-      const goldenAngle = Math.PI * (3 - Math.sqrt(5))
-      const theta = goldenAngle * (i + node.branchIndex * 5)
-      // y gleichmässig von -1 bis +1 verteilen
-      const y = 1 - (2 * i + 1) / group.length
-      const radiusAtY = Math.sqrt(1 - y * y)
-
-      // Leichter Jitter für natürliches Feeling
-      const jitter = (seededRand(node.id) - 0.5) * 0.3
-
-      node.position = [
-        Math.cos(theta) * radiusAtY * radius + jitter,
-        y * radius + jitter,
-        Math.sin(theta) * radiusAtY * radius + jitter,
-      ]
-    }
+    node.pos.set(dir.x * dist + oX, dir.y * dist + oY, dir.z * dist + oZ)
   }
 
-  return flatNodes
+  return nodes
 }
 
-// --- Einzelner 3D-Knoten ---
-interface NodeMeshProps {
-  node: SphereNode
+// --- Einzelner leuchtender Knoten ---
+interface GlowNodeProps {
+  node: HoloNode
   onSelect: (id: number, label: string, detail: string) => void
   onExpand: (id: number, depth: number, hasChildren: boolean) => void
 }
 
-function NodeMesh({ node, onSelect, onExpand }: NodeMeshProps) {
+function GlowNode({ node, onSelect, onExpand }: GlowNodeProps) {
   const meshRef = useRef<THREE.Mesh>(null)
+  const glowRef = useRef<THREE.Mesh>(null)
   const [hovered, setHovered] = useState(false)
+  const lastClickRef = useRef(0)
 
-  // Farbe basierend auf Ast-Index
   const color = node.depth === 0
-    ? BRANCH_COLORS[0]
-    : BRANCH_COLORS[node.branchIndex % BRANCH_COLORS.length]
+    ? BRANCH_HEX[0]
+    : BRANCH_HEX[node.branchIndex % BRANCH_HEX.length]
 
-  // Knotengrösse nach Tiefe
-  const size = node.depth === 0 ? 0.6 : node.depth === 1 ? 0.4 : 0.3
+  const size = node.depth === 0 ? 0.25 : node.depth === 1 ? 0.18 : 0.12
 
-  // Sanfte Pulsation bei Hover
-  useFrame(() => {
-    if (!meshRef.current) return
-    const scale = hovered ? 1.3 : 1.0
+  // Sanfte Animation: Pulsieren + Hover-Skalierung
+  useFrame(({ clock }) => {
+    if (!meshRef.current || !glowRef.current) return
+    const pulse = 1 + Math.sin(clock.elapsedTime * 2 + node.id) * 0.05
+    const scale = (hovered ? 1.6 : 1.0) * pulse
     meshRef.current.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.1)
+    const gs = scale * 2.5
+    glowRef.current.scale.lerp(new THREE.Vector3(gs, gs, gs), 0.1)
+    const glowMat = glowRef.current.material as THREE.MeshBasicMaterial
+    glowMat.opacity = hovered ? 0.15 : 0.06
   })
-
-  // Doppelklick-Erkennung via Timer
-  const lastClickRef = useRef<number>(0)
 
   const handleClick = useCallback(() => {
     const now = Date.now()
     if (now - lastClickRef.current < 400) {
-      // Doppelklick → Deep Dive
       onExpand(node.id, node.depth, node.hasChildren)
     } else {
-      // Einzelklick → Detail anzeigen
       onSelect(node.id, node.label, node.detail)
     }
     lastClickRef.current = now
   }, [node, onSelect, onExpand])
 
   return (
-    <group position={node.position}>
-      {/* Kugel-Knoten */}
+    <group position={node.pos}>
+      {/* Äusserer Glow */}
+      <mesh ref={glowRef}>
+        <sphereGeometry args={[size, 16, 16]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.06}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* Innerer Kern */}
       <mesh
         ref={meshRef}
         onClick={handleClick}
         onPointerOver={() => { setHovered(true); document.body.style.cursor = 'pointer' }}
         onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default' }}
       >
-        <sphereGeometry args={[size, 24, 24]} />
+        <sphereGeometry args={[size, 20, 20]} />
         <meshStandardMaterial
           color={color}
           emissive={color}
-          emissiveIntensity={hovered ? 0.8 : 0.3}
+          emissiveIntensity={hovered ? 1.5 : 0.8}
           transparent
-          opacity={hovered ? 0.95 : 0.75}
-          roughness={0.3}
-          metalness={0.1}
+          opacity={hovered ? 1.0 : 0.85}
+          roughness={0.2}
+          metalness={0.3}
         />
       </mesh>
 
-      {/* Label — schwebt über dem Knoten */}
-      <Text
-        position={[0, size + 0.3, 0]}
-        fontSize={node.depth === 0 ? 0.35 : 0.22}
-        color={color}
-        anchorX="center"
-        anchorY="bottom"
-        maxWidth={3}
-        outlineWidth={0.02}
-        outlineColor="#000000"
-      >
-        {node.label}
-      </Text>
+      {/* Label — nur bei Hover oder depth <= 1 */}
+      {(hovered || node.depth <= 1) && (
+        <Text
+          position={[0, size + 0.25, 0]}
+          fontSize={node.depth === 0 ? 0.28 : 0.18}
+          color={color}
+          anchorX="center"
+          anchorY="bottom"
+          maxWidth={2.5}
+          outlineWidth={0.015}
+          outlineColor="#000000"
+          fillOpacity={hovered ? 1.0 : 0.7}
+        >
+          {node.label}
+        </Text>
+      )}
     </group>
   )
 }
 
-// --- Kanten zwischen Knoten ---
-interface EdgeLinesProps {
-  nodes: SphereNode[]
-}
+// --- Leuchtende Verbindungslinien ---
+function HoloEdges({ nodes }: { nodes: HoloNode[] }) {
+  const linesRef = useRef<THREE.Group>(null)
 
-function EdgeLines({ nodes }: EdgeLinesProps) {
-  // Lookup: id → position
-  const posMap = useMemo(() => {
-    const map = new Map<number, [number, number, number]>()
-    for (const node of nodes) map.set(node.id, node.position)
-    return map
-  }, [nodes])
-
-  // Kanten: Jeder Knoten mit parentId → Linie zum Eltern
   const edges = useMemo(() => {
-    const lines: { points: [number, number, number][]; color: string }[] = []
+    const posMap = new Map<number, THREE.Vector3>()
+    for (const n of nodes) posMap.set(n.id, n.pos)
+
+    const result: { start: THREE.Vector3; end: THREE.Vector3; color: string }[] = []
     for (const node of nodes) {
       if (node.parentId === null) continue
       const parentPos = posMap.get(node.parentId)
       if (!parentPos) continue
-
       const color = node.depth <= 1
-        ? BRANCH_COLORS[0]
-        : BRANCH_COLORS[node.branchIndex % BRANCH_COLORS.length]
-
-      lines.push({
-        points: [parentPos, node.position],
-        color,
-      })
+        ? BRANCH_HEX[0]
+        : BRANCH_HEX[node.branchIndex % BRANCH_HEX.length]
+      result.push({ start: parentPos, end: node.pos, color })
     }
-    return lines
-  }, [nodes, posMap])
+    return result
+  }, [nodes])
+
+  // Sanftes Pulsieren der Kanten
+  useFrame(({ clock }) => {
+    if (!linesRef.current) return
+    const pulse = 0.3 + Math.sin(clock.elapsedTime * 1.5) * 0.1
+    linesRef.current.children.forEach((child) => {
+      const mat = (child as THREE.Line).material
+      if (mat instanceof THREE.LineBasicMaterial) {
+        mat.opacity = pulse
+      }
+    })
+  })
 
   return (
-    <>
+    <group ref={linesRef}>
       {edges.map((edge, i) => (
-        <Line
+        <primitive
           key={i}
-          points={edge.points}
-          color={edge.color}
-          lineWidth={1}
-          transparent
-          opacity={0.25}
+          object={(() => {
+            const geo = new THREE.BufferGeometry().setFromPoints([edge.start, edge.end])
+            const mat = new THREE.LineBasicMaterial({
+              color: edge.color,
+              transparent: true,
+              opacity: 0.3,
+              depthWrite: false,
+            })
+            return new THREE.Line(geo, mat)
+          })()}
         />
       ))}
-    </>
+    </group>
   )
 }
 
@@ -259,41 +266,42 @@ export default function MindmapSphere({
   onNodeSelect,
   onNodeExpand,
 }: MindmapSphereProps) {
-  // Baum flach machen und 3D-Positionen zuweisen
-  const sphereNodes = useMemo(() => {
+  const holoNodes = useMemo(() => {
     if (treeData.length === 0) return []
-    const flat = flattenToSphere(treeData)
-    return assignPositions(flat)
+    return assignPositions(flattenTree(treeData))
   }, [treeData])
 
-  if (sphereNodes.length === 0) return null
+  if (holoNodes.length === 0) return null
 
   return (
     <Canvas
-      camera={{ position: [0, 0, 14], fov: 60 }}
+      camera={{ position: [0, 2, 10], fov: 55 }}
       style={{ background: 'transparent' }}
+      gl={{ antialias: true, alpha: true }}
     >
-      {/* Beleuchtung */}
-      <ambientLight intensity={0.4} />
-      <pointLight position={[10, 10, 10]} intensity={0.8} />
-      <pointLight position={[-10, -10, -5]} intensity={0.3} color="#00d4ff" />
+      {/* Dunkle Beleuchtung — Hologramm-Feeling */}
+      <ambientLight intensity={0.15} />
+      <pointLight position={[5, 5, 5]} intensity={0.4} color="#00d4ff" />
+      <pointLight position={[-5, -3, -5]} intensity={0.2} color="#a855f7" />
 
-      {/* Steuerung: Frei drehen + Zoom */}
+      {/* Steuerung */}
       <OrbitControls
         enableDamping
-        dampingFactor={0.08}
-        rotateSpeed={0.6}
-        zoomSpeed={0.8}
-        minDistance={5}
-        maxDistance={30}
+        dampingFactor={0.06}
+        rotateSpeed={0.5}
+        zoomSpeed={0.7}
+        minDistance={3}
+        maxDistance={25}
+        autoRotate
+        autoRotateSpeed={0.3}
       />
 
-      {/* Kanten zuerst (hinter den Knoten) */}
-      <EdgeLines nodes={sphereNodes} />
+      {/* Kanten */}
+      <HoloEdges nodes={holoNodes} />
 
       {/* Knoten */}
-      {sphereNodes.map((node) => (
-        <NodeMesh
+      {holoNodes.map((node) => (
+        <GlowNode
           key={node.id}
           node={node}
           onSelect={onNodeSelect}

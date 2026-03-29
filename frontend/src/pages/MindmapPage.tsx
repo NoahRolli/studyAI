@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import type { Node, NodeChange } from 'reactflow'
+import type { Node } from 'reactflow'
 import ReactFlow, {
   useNodesState,
   useEdgesState,
@@ -15,7 +15,6 @@ import ReactFlow, {
   Background,
   BackgroundVariant,
   MiniMap,
-  applyNodeChanges,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { get, post } from '../hooks/useAPI'
