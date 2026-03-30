@@ -22,7 +22,10 @@ const en = {
   sidebar: {
     dashboard: 'Dashboard',
     journal: 'Journal',
+    calendar: 'Calendar',
     version: 'v0.1.0 — ONLINE',
+    collapse: 'Collapse sidebar',
+    expand: 'Expand sidebar',
   },
 
   // Welcome Page
@@ -32,7 +35,9 @@ const en = {
     dashboardDesc: 'Manage modules, documents and summaries.',
     journalTitle: 'Journal',
     journalDesc: 'Encrypted diary with mood analysis and mindmaps.',
-    hint: 'Choose an area or use the sidebar to navigate.',
+    calendarTitle: 'Calendar',
+    calendarDesc: 'Plan and manage appointments and events.',
+    hint: 'Choose an area to get started.',
   },
 
   // Dashboard
@@ -56,6 +61,51 @@ const en = {
     emptyFolder: 'Folder is empty.',
     emptyHint: 'Create a folder or module to get started.',
     moveFailed: 'Move failed',
+  },
+
+  // Main Calendar
+  mainCalendar: {
+    title: 'Calendar',
+    newEvent: '+ New Event',
+    editEvent: 'Edit Event',
+    deleteEvent: 'Delete Event',
+    deleteConfirm: 'Really delete this event?',
+    eventTitle: 'Title',
+    eventTitlePlaceholder: 'e.g. Doctor appointment',
+    description: 'Description',
+    descriptionPlaceholder: 'Optional note...',
+    startTime: 'Start time',
+    endTime: 'End time',
+    allDay: 'All day',
+    color: 'Color',
+    recurrence: 'Recurrence',
+    recurrenceEnd: 'Repeat until',
+    recurrenceTypes: {
+      none: 'None',
+      daily: 'Daily',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+      yearly: 'Yearly',
+    },
+    colors: {
+      cyan: 'Cyan',
+      violet: 'Violet',
+      emerald: 'Emerald',
+      orange: 'Orange',
+      pink: 'Pink',
+      yellow: 'Yellow',
+    },
+    emptyTitle: 'No events yet.',
+    emptyHint: 'Create an event to get started.',
+    today: 'Today',
+    agenda: 'Next 7 days',
+    agendaEmpty: 'No events in the next 7 days.',
+    recurring: 'Recurring',
+    months: [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ],
+    weekdays: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
   },
 
   // Journal — Main
@@ -114,7 +164,7 @@ const en = {
     emptyHint: 'Click "+ New Entry" to get started.',
   },
 
-  // Calendar
+  // Calendar (Journal)
   calendar: {
     moodGlow: 'Mood Glow',
     loading: 'Loading calendar...',
