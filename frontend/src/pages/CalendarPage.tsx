@@ -1,7 +1,7 @@
 // CalendarPage — Hauptkalender mit Monatsansicht
 // Route: /calendar (innerhalb Layout mit Sidebar)
-// Einzelklick → Tag selektieren, Doppelklick → Event-Formular als Modal
-// Hover-Glow wie im Journal-Kalender
+// Einzelklick → Event-Liste unterhalb, Doppelklick → Event-Formular als Modal
+// Hover-Glow wie im Journal-Kalender (kein persistenter Selektions-Style)
 
 import { useState, useEffect, useCallback } from 'react'
 import { useLanguage } from '../hooks/useLanguage'
@@ -24,7 +24,7 @@ interface CalendarEvent {
   updated_at: string
 }
 
-// Farb-Map für Event-Punkte
+// Farb-Map für Event-Punkte (Pastell-Neon)
 const COLOR_MAP: Record<string, string> = {
   cyan: '#7dd8e8',
   violet: '#a78bda',
@@ -75,7 +75,7 @@ function CalendarPage() {
     return events.filter((e) => e.start_time.startsWith(dateStr))
   }
 
-  // Einzelklick → Tag selektieren
+  // Einzelklick → Tag selektieren (Event-Liste unterhalb)
   const handleDayClick = (dateStr: string) => {
     setSelectedDate(selectedDate === dateStr ? null : dateStr)
   }
@@ -167,7 +167,6 @@ function CalendarPage() {
           const day = i + 1
           const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
           const dayEvts = eventsForDay(day)
-          const selected = selectedDate === dateStr
           const today = isToday(dateStr)
 
           return (
@@ -177,35 +176,31 @@ function CalendarPage() {
               onDoubleClick={() => handleDayDoubleClick(dateStr)}
               className="h-20 rounded-lg p-1.5 relative transition-all duration-200 cursor-pointer"
               style={{
-                backgroundColor: selected
-                  ? 'rgba(0, 255, 255, 0.12)'
-                  : today
-                    ? 'rgba(0, 255, 255, 0.06)'
-                    : 'rgba(13, 17, 23, 0.3)',
-                border: selected
-                  ? '1px solid rgba(0, 255, 255, 0.5)'
-                  : today
-                    ? '1px solid rgba(0, 255, 255, 0.3)'
-                    : '1px solid transparent',
+                backgroundColor: today
+                  ? 'rgba(0, 255, 255, 0.06)'
+                  : 'rgba(13, 17, 23, 0.3)',
+                border: today
+                  ? '1px solid rgba(0, 255, 255, 0.3)'
+                  : '1px solid transparent',
               }}
               onMouseEnter={(e) => {
-                if (!selected) {
-                  e.currentTarget.style.backgroundColor = 'rgba(0, 255, 255, 0.05)'
-                  e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 255, 255, 0.1)'
-                }
+                e.currentTarget.style.backgroundColor = 'rgba(0, 255, 255, 0.05)'
+                e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 255, 255, 0.1)'
+                e.currentTarget.style.border = '1px solid rgba(0, 255, 255, 0.3)'
               }}
               onMouseLeave={(e) => {
-                if (!selected) {
-                  e.currentTarget.style.backgroundColor = today
-                    ? 'rgba(0, 255, 255, 0.06)'
-                    : 'rgba(13, 17, 23, 0.3)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }
+                e.currentTarget.style.backgroundColor = today
+                  ? 'rgba(0, 255, 255, 0.06)'
+                  : 'rgba(13, 17, 23, 0.3)'
+                e.currentTarget.style.boxShadow = 'none'
+                e.currentTarget.style.border = today
+                  ? '1px solid rgba(0, 255, 255, 0.3)'
+                  : '1px solid transparent'
               }}
             >
               {/* Tag-Nummer */}
               <span className="text-xs font-medium" style={{
-                color: selected || today ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                color: today ? 'var(--color-primary)' : 'var(--color-text-muted)',
               }}>
                 {day}
               </span>
