@@ -1,5 +1,6 @@
 // Sidebar — Hauptnavigation der Pallas App
 // Einklappbar (Toggle), resizable (Drag am rechten Rand)
+// Collapsed-State wird in localStorage gespeichert
 // Pallas-Logo klickbar → Begrüssungsseite (/)
 // Nav-Links: Dashboard, Journal, Kalender
 // Language-Toggle und Theme-Selector unten (nur wenn ausgeklappt)
@@ -15,12 +16,15 @@ const MIN_WIDTH = 180
 const MAX_WIDTH = 400
 const DEFAULT_WIDTH = 256
 const COLLAPSED_WIDTH = 56
+const STORAGE_KEY = 'pallas-sidebar-collapsed'
 
 function Sidebar() {
   const { t } = useLanguage()
 
-  // Sidebar ein-/ausgeklappt
-  const [collapsed, setCollapsed] = useState(false)
+  // Sidebar ein-/ausgeklappt (aus localStorage lesen)
+  const [collapsed, setCollapsed] = useState(() => {
+    return localStorage.getItem(STORAGE_KEY) === 'true'
+  })
 
   // Aktuelle Breite (nur relevant wenn ausgeklappt)
   const [width, setWidth] = useState(DEFAULT_WIDTH)
@@ -28,6 +32,13 @@ function Sidebar() {
   // Drag-State für Resize
   const [isDragging, setIsDragging] = useState(false)
   const sidebarRef = useRef<HTMLElement>(null)
+
+  // Toggle mit localStorage-Persistenz
+  const toggleCollapsed = () => {
+    const next = !collapsed
+    setCollapsed(next)
+    localStorage.setItem(STORAGE_KEY, String(next))
+  }
 
   // Resize-Handler: Mausbewegung setzt neue Breite
   const handleMouseMove = useCallback(
@@ -99,7 +110,7 @@ function Sidebar() {
 
           {/* Toggle-Button: Ein-/Ausklappen */}
           <button
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={toggleCollapsed}
             className="p-1.5 rounded-md transition-all duration-300
               hover:bg-[rgba(0,212,255,0.1)]"
             style={{ color: 'var(--color-text-muted)' }}
@@ -107,10 +118,8 @@ function Sidebar() {
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
               {collapsed ? (
-                // Pfeil nach rechts (ausklappen)
                 <path d="M7 4l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               ) : (
-                // Pfeil nach links (einklappen)
                 <path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               )}
             </svg>
