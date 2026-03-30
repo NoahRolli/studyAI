@@ -23,7 +23,10 @@ const de = {
   sidebar: {
     dashboard: 'Dashboard',
     journal: 'Journal',
+    calendar: 'Kalender',
     version: 'v0.1.0 — ONLINE',
+    collapse: 'Sidebar einklappen',
+    expand: 'Sidebar ausklappen',
   },
 
   // Begrüssungsseite
@@ -33,7 +36,9 @@ const de = {
     dashboardDesc: 'Module, Dokumente und Zusammenfassungen verwalten.',
     journalTitle: 'Journal',
     journalDesc: 'Verschlüsseltes Tagebuch mit Stimmungsanalyse und Mindmaps.',
-    hint: 'Wähle einen Bereich oder nutze die Sidebar zur Navigation.',
+    calendarTitle: 'Kalender',
+    calendarDesc: 'Termine und Events planen und verwalten.',
+    hint: 'Wähle einen Bereich um loszulegen.',
   },
 
   // Dashboard
@@ -57,6 +62,51 @@ const de = {
     emptyFolder: 'Ordner ist leer.',
     emptyHint: 'Erstelle einen Ordner oder ein Modul um loszulegen.',
     moveFailed: 'Verschieben fehlgeschlagen',
+  },
+
+  // Hauptkalender
+  mainCalendar: {
+    title: 'Kalender',
+    newEvent: '+ Neues Event',
+    editEvent: 'Event bearbeiten',
+    deleteEvent: 'Event löschen',
+    deleteConfirm: 'Event wirklich löschen?',
+    eventTitle: 'Titel',
+    eventTitlePlaceholder: 'z.B. Arzttermin',
+    description: 'Beschreibung',
+    descriptionPlaceholder: 'Optionale Notiz...',
+    startTime: 'Startzeit',
+    endTime: 'Endzeit',
+    allDay: 'Ganztägig',
+    color: 'Farbe',
+    recurrence: 'Wiederholung',
+    recurrenceEnd: 'Wiederholen bis',
+    recurrenceTypes: {
+      none: 'Keine',
+      daily: 'Täglich',
+      weekly: 'Wöchentlich',
+      monthly: 'Monatlich',
+      yearly: 'Jährlich',
+    },
+    colors: {
+      cyan: 'Cyan',
+      violet: 'Violett',
+      emerald: 'Smaragd',
+      orange: 'Orange',
+      pink: 'Pink',
+      yellow: 'Gelb',
+    },
+    emptyTitle: 'Noch keine Termine.',
+    emptyHint: 'Erstelle ein Event um loszulegen.',
+    today: 'Heute',
+    agenda: 'Nächste 7 Tage',
+    agendaEmpty: 'Keine Termine in den nächsten 7 Tagen.',
+    recurring: 'Wiederkehrend',
+    months: [
+      'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+      'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+    ],
+    weekdays: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'],
   },
 
   // Journal — Haupt
@@ -115,7 +165,7 @@ const de = {
     emptyHint: 'Klicke auf "+ Neuer Eintrag" um zu beginnen.',
   },
 
-  // Kalender
+  // Kalender (Journal)
   calendar: {
     moodGlow: 'Mood-Glow',
     loading: 'Kalender wird geladen...',
