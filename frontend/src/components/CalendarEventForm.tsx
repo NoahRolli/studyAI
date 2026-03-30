@@ -33,14 +33,14 @@ export function emptyFormData(date?: string): EventFormData {
   }
 }
 
-// Neon-Farben im JARVIS/Iron-Man-Style
+// Pastell-Neon: Gedämpfte Hologramm-Farben im JARVIS-Style
 const COLORS = [
-  { key: 'cyan', value: '#00e5ff', glow: '0 0 10px rgba(0, 229, 255, 0.5)' },
-  { key: 'violet', value: '#b44dff', glow: '0 0 10px rgba(180, 77, 255, 0.5)' },
-  { key: 'emerald', value: '#00ff9d', glow: '0 0 10px rgba(0, 255, 157, 0.5)' },
-  { key: 'orange', value: '#ff6b00', glow: '0 0 10px rgba(255, 107, 0, 0.5)' },
-  { key: 'pink', value: '#ff2d78', glow: '0 0 10px rgba(255, 45, 120, 0.5)' },
-  { key: 'yellow', value: '#ffe600', glow: '0 0 10px rgba(255, 230, 0, 0.5)' },
+  { key: 'cyan', value: '#7dd8e8', glow: '0 0 12px rgba(125, 216, 232, 0.3)' },
+  { key: 'violet', value: '#a78bda', glow: '0 0 12px rgba(167, 139, 218, 0.3)' },
+  { key: 'emerald', value: '#7dd4a3', glow: '0 0 12px rgba(125, 212, 163, 0.3)' },
+  { key: 'orange', value: '#d4a574', glow: '0 0 12px rgba(212, 165, 116, 0.3)' },
+  { key: 'pink', value: '#d47d9a', glow: '0 0 12px rgba(212, 125, 154, 0.3)' },
+  { key: 'yellow', value: '#d4cc7d', glow: '0 0 12px rgba(212, 204, 125, 0.3)' },
 ]
 
 interface Props {

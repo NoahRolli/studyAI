@@ -26,12 +26,12 @@ interface CalendarEvent {
 
 // Farb-Map für Event-Punkte
 const COLOR_MAP: Record<string, string> = {
-  cyan: 'var(--color-primary)',
-  violet: '#8b5cf6',
-  emerald: '#10b981',
-  orange: '#f59e0b',
-  pink: '#ec4899',
-  yellow: '#eab308',
+  cyan: '#7dd8e8',
+  violet: '#a78bda',
+  emerald: '#7dd4a3',
+  orange: '#d4a574',
+  pink: '#d47d9a',
+  yellow: '#d4cc7d',
 }
 
 function CalendarPage() {
