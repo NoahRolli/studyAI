@@ -1,6 +1,7 @@
 // CalendarPage — Hauptkalender mit Monatsansicht
 // Route: /calendar (innerhalb Layout mit Sidebar)
-// Zeigt Monatsraster mit Events, Navigation und Event-Formular
+// Einzelklick → Tag selektieren, Doppelklick → Event-Formular als Modal
+// Hover-Glow wie im Journal-Kalender
 
 import { useState, useEffect, useCallback } from 'react'
 import { useLanguage } from '../hooks/useLanguage'
@@ -36,12 +37,13 @@ const COLOR_MAP: Record<string, string> = {
 function CalendarPage() {
   const { t } = useLanguage()
   const now = new Date()
+  const todayStr = now.toISOString().split('T')[0]
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [editEvent, setEditEvent] = useState<CalendarEvent | null>(null)
-  const [showForm, setShowForm] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
 
   // Events für aktuellen Monat laden
   const loadEvents = useCallback(() => {
@@ -52,7 +54,7 @@ function CalendarPage() {
 
   useEffect(() => { loadEvents() }, [loadEvents])
 
-  // Monat vor/zurück navigieren
+  // Monat vor/zurück
   const prevMonth = () => {
     if (month === 1) { setMonth(12); setYear(year - 1) }
     else setMonth(month - 1)
@@ -62,44 +64,43 @@ function CalendarPage() {
     else setMonth(month + 1)
   }
 
-  // Tage im Monat berechnen
+  // Tage im Monat + Offset berechnen
   const daysInMonth = new Date(year, month, 0).getDate()
   const firstWeekday = new Date(year, month - 1, 1).getDay()
-  // Montag = 0, Sonntag = 6 (europäisches Format)
   const startOffset = firstWeekday === 0 ? 6 : firstWeekday - 1
 
-  // Events für einen bestimmten Tag filtern
+  // Events für einen Tag
   const eventsForDay = (day: number) => {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     return events.filter((e) => e.start_time.startsWith(dateStr))
   }
 
-  // Tag klicken → Events anzeigen / Formular öffnen
-  const handleDayClick = (day: number) => {
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  // Einzelklick → Tag selektieren
+  const handleDayClick = (dateStr: string) => {
+    setSelectedDate(selectedDate === dateStr ? null : dateStr)
+  }
+
+  // Doppelklick → Modal öffnen (neues Event)
+  const handleDayDoubleClick = (dateStr: string) => {
     setSelectedDate(dateStr)
     setEditEvent(null)
-    setShowForm(false)
+    setModalOpen(true)
   }
 
-  // Neues Event erstellen
-  const handleCreate = () => {
-    setEditEvent(null)
-    setShowForm(true)
-  }
-
-  // Event bearbeiten
-  const handleEdit = (event: CalendarEvent) => {
+  // Event klicken → bearbeiten
+  const handleEditEvent = (event: CalendarEvent) => {
     setEditEvent(event)
-    setShowForm(true)
+    setModalOpen(true)
   }
 
-  // Formular speichern (Erstellen oder Update)
+  // Formular speichern
   const handleSave = async (data: EventFormData) => {
     const body = {
       ...data,
       start_time: data.all_day ? `${data.start_time.slice(0, 10)}T00:00:00` : data.start_time,
-      end_time: data.end_time ? (data.all_day ? `${data.end_time.slice(0, 10)}T23:59:59` : data.end_time) : null,
+      end_time: data.end_time
+        ? (data.all_day ? `${data.end_time.slice(0, 10)}T23:59:59` : data.end_time)
+        : null,
       description: data.description || null,
       recurrence_end: data.recurrence_end || null,
     }
@@ -108,7 +109,7 @@ function CalendarPage() {
     } else {
       await post('/api/calendar/events', body)
     }
-    setShowForm(false)
+    setModalOpen(false)
     setEditEvent(null)
     loadEvents()
   }
@@ -117,100 +118,174 @@ function CalendarPage() {
   const handleDelete = async () => {
     if (!editEvent) return
     await del(`/api/calendar/events/${editEvent.id}`)
-    setShowForm(false)
+    setModalOpen(false)
     setEditEvent(null)
     loadEvents()
   }
 
-  // Heute-Marker prüfen
-  const isToday = (day: number) =>
-    year === now.getFullYear() && month === now.getMonth() + 1 && day === now.getDate()
+  // Heute-Check
+  const isToday = (dateStr: string) => dateStr === todayStr
 
-  // Events des ausgewählten Tages
+  // Events des selektierten Tages
   const dayEvents = selectedDate
     ? events.filter((e) => e.start_time.startsWith(selectedDate))
     : []
 
   return (
     <div className="animate-fade-in">
-      {/* Header: Titel + Monat-Navigation */}
+      {/* Header: Titel + Navigation */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="hud-title text-glow text-lg" style={{ color: 'var(--color-primary)' }}>
           {t.mainCalendar.title}
         </h1>
         <div className="flex items-center gap-3">
-          <button className="hud-btn text-xs px-3 py-1.5" onClick={prevMonth}>←</button>
-          <span className="text-sm font-medium min-w-[140px] text-center"
-            style={{ color: 'var(--color-text-primary)' }}>
+          <button className="hud-btn px-3 py-1" onClick={prevMonth}>‹</button>
+          <span className="hud-title text-base" style={{ minWidth: '160px', textAlign: 'center' }}>
             {t.mainCalendar.months[month - 1]} {year}
           </span>
-          <button className="hud-btn text-xs px-3 py-1.5" onClick={nextMonth}>→</button>
+          <button className="hud-btn px-3 py-1" onClick={nextMonth}>›</button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Monatsraster (2 Spalten breit) */}
-        <div className="lg:col-span-2">
-          {/* Wochentag-Header */}
-          <div className="grid grid-cols-7 gap-1 mb-1">
-            {t.mainCalendar.weekdays.map((wd) => (
-              <div key={wd} className="text-center text-xs py-1"
-                style={{ color: 'var(--color-text-muted)' }}>
-                {wd}
-              </div>
-            ))}
+      {/* Wochentag-Header */}
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {t.mainCalendar.weekdays.map((wd) => (
+          <div key={wd} className="text-center text-xs py-2"
+            style={{ color: 'var(--color-text-muted)' }}>
+            {wd}
           </div>
+        ))}
+      </div>
 
-          {/* Tagesraster */}
-          <div className="grid grid-cols-7 gap-1">
-            {/* Leere Zellen vor dem 1. */}
-            {Array.from({ length: startOffset }).map((_, i) => (
-              <div key={`empty-${i}`} className="h-16" />
-            ))}
+      {/* Kalender-Grid */}
+      <div className="grid grid-cols-7 gap-1">
+        {Array.from({ length: startOffset }).map((_, i) => (
+          <div key={`empty-${i}`} className="h-20 rounded-lg" />
+        ))}
 
-            {/* Tage des Monats */}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1
-              const dayEvts = eventsForDay(day)
-              const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-              const isSelected = selectedDate === dateStr
+        {Array.from({ length: daysInMonth }).map((_, i) => {
+          const day = i + 1
+          const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+          const dayEvts = eventsForDay(day)
+          const selected = selectedDate === dateStr
+          const today = isToday(dateStr)
 
-              return (
-                <button
-                  key={day}
-                  onClick={() => handleDayClick(day)}
-                  className="h-16 rounded-md border p-1 flex flex-col items-start
-                    transition-all duration-200 hover:border-[var(--color-primary)]"
-                  style={{
-                    borderColor: isSelected ? 'var(--color-primary)' : 'var(--color-border)',
-                    backgroundColor: isSelected ? 'rgba(0,212,255,0.05)' : 'transparent',
-                  }}
-                >
-                  <span className={`text-xs font-medium ${isToday(day) ? 'text-glow' : ''}`}
-                    style={{ color: isToday(day) ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}>
-                    {day}
-                  </span>
-                  {/* Event-Punkte (max. 3 sichtbar) */}
-                  <div className="flex gap-0.5 mt-auto flex-wrap">
-                    {dayEvts.slice(0, 3).map((evt) => (
-                      <div key={evt.id} className="w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: COLOR_MAP[evt.color] || COLOR_MAP.cyan }} />
-                    ))}
-                    {dayEvts.length > 3 && (
-                      <span className="text-xs" style={{ color: 'var(--color-text-muted)', fontSize: '0.5rem' }}>
-                        +{dayEvts.length - 3}
+          return (
+            <div
+              key={day}
+              onClick={() => handleDayClick(dateStr)}
+              onDoubleClick={() => handleDayDoubleClick(dateStr)}
+              className="h-20 rounded-lg p-1.5 relative transition-all duration-200 cursor-pointer"
+              style={{
+                backgroundColor: selected
+                  ? 'rgba(0, 255, 255, 0.12)'
+                  : today
+                    ? 'rgba(0, 255, 255, 0.06)'
+                    : 'rgba(13, 17, 23, 0.3)',
+                border: selected
+                  ? '1px solid rgba(0, 255, 255, 0.5)'
+                  : today
+                    ? '1px solid rgba(0, 255, 255, 0.3)'
+                    : '1px solid transparent',
+              }}
+              onMouseEnter={(e) => {
+                if (!selected) {
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 255, 255, 0.05)'
+                  e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 255, 255, 0.1)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!selected) {
+                  e.currentTarget.style.backgroundColor = today
+                    ? 'rgba(0, 255, 255, 0.06)'
+                    : 'rgba(13, 17, 23, 0.3)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }
+              }}
+            >
+              {/* Tag-Nummer */}
+              <span className="text-xs font-medium" style={{
+                color: selected || today ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              }}>
+                {day}
+              </span>
+
+              {/* Event-Punkte */}
+              {dayEvts.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {dayEvts.slice(0, 4).map((evt) => (
+                    <div key={evt.id} className="w-2 h-2 rounded-full"
+                      style={{
+                        backgroundColor: COLOR_MAP[evt.color] || COLOR_MAP.cyan,
+                        boxShadow: `0 0 6px ${COLOR_MAP[evt.color] || COLOR_MAP.cyan}`,
+                      }} />
+                  ))}
+                  {dayEvts.length > 4 && (
+                    <span className="text-xs" style={{ color: 'var(--color-text-muted)', fontSize: '0.5rem' }}>
+                      +{dayEvts.length - 4}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Selektierter Tag: Event-Liste unterhalb */}
+      {selectedDate && (
+        <div className="mt-6 hud-card p-4 rounded-lg border animate-fade-in"
+          style={{ borderColor: 'var(--color-border)' }}>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+              {new Date(selectedDate + 'T00:00').toLocaleDateString('de-CH', {
+                weekday: 'long', day: 'numeric', month: 'long',
+              })}
+            </span>
+            <button className="hud-btn hud-btn-primary text-xs px-3 py-1"
+              onClick={() => { setEditEvent(null); setModalOpen(true) }}>
+              {t.mainCalendar.newEvent}
+            </button>
+          </div>
+          {dayEvents.length === 0 ? (
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              {t.mainCalendar.emptyTitle}
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {dayEvents.map((evt) => (
+                <button key={evt.id} onClick={() => handleEditEvent(evt)}
+                  className="flex items-center gap-2 p-2 rounded-md text-left w-full
+                    transition-all duration-200 hover:bg-[rgba(0,212,255,0.05)]">
+                  <div className="w-1.5 h-8 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: COLOR_MAP[evt.color] || COLOR_MAP.cyan }} />
+                  <div className="min-w-0">
+                    <span className="text-xs block truncate"
+                      style={{ color: 'var(--color-text-primary)' }}>{evt.title}</span>
+                    {!evt.all_day && (
+                      <span className="text-xs" style={{ color: 'var(--color-text-muted)', fontSize: '0.65rem' }}>
+                        {new Date(evt.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     )}
                   </div>
+                  {evt.recurrence !== 'none' && (
+                    <span className="ml-auto text-xs px-1.5 py-0.5 rounded" style={{
+                      color: 'var(--color-text-muted)', backgroundColor: 'rgba(0,212,255,0.08)', fontSize: '0.6rem',
+                    }}>↻</span>
+                  )}
                 </button>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
+      )}
 
-        {/* Seitenpanel: Tages-Events oder Formular */}
-        <div className="flex flex-col gap-4">
-          {showForm ? (
+      {/* Modal-Overlay für Event-Formular */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+          onClick={() => { setModalOpen(false); setEditEvent(null) }}>
+          <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <CalendarEventForm
               data={editEvent ? {
                 title: editEvent.title,
@@ -224,59 +299,12 @@ function CalendarPage() {
               } : emptyFormData(selectedDate || undefined)}
               isEdit={!!editEvent}
               onSave={handleSave}
-              onCancel={() => { setShowForm(false); setEditEvent(null) }}
+              onCancel={() => { setModalOpen(false); setEditEvent(null) }}
               onDelete={editEvent ? handleDelete : undefined}
             />
-          ) : (
-            <div className="hud-card p-4 rounded-lg border" style={{ borderColor: 'var(--color-border)' }}>
-              {selectedDate ? (
-                <>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                      {new Date(selectedDate + 'T00:00').toLocaleDateString('de-CH', {
-                        weekday: 'long', day: 'numeric', month: 'long',
-                      })}
-                    </span>
-                    <button className="hud-btn hud-btn-primary text-xs px-3 py-1" onClick={handleCreate}>
-                      +
-                    </button>
-                  </div>
-                  {dayEvents.length === 0 ? (
-                    <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                      {t.mainCalendar.emptyTitle}
-                    </p>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      {dayEvents.map((evt) => (
-                        <button key={evt.id} onClick={() => handleEdit(evt)}
-                          className="flex items-center gap-2 p-2 rounded-md text-left w-full
-                            transition-all duration-200 hover:bg-[rgba(0,212,255,0.05)]">
-                          <div className="w-1.5 h-8 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: COLOR_MAP[evt.color] || COLOR_MAP.cyan }} />
-                          <div className="min-w-0">
-                            <span className="text-xs block truncate" style={{ color: 'var(--color-text-primary)' }}>
-                              {evt.title}
-                            </span>
-                            {!evt.all_day && (
-                              <span className="text-xs" style={{ color: 'var(--color-text-muted)', fontSize: '0.65rem' }}>
-                                {new Date(evt.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-xs text-center py-4" style={{ color: 'var(--color-text-muted)' }}>
-                  {t.mainCalendar.emptyHint}
-                </p>
-              )}
-            </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
