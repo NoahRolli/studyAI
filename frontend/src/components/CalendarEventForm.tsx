@@ -1,8 +1,9 @@
 // CalendarEventForm — Formular zum Erstellen/Bearbeiten von Kalender-Events
 // Wird als Modal in CalendarPage eingeblendet
 // Unterstützt: Titel, Beschreibung, Start/End, ganztägig, Farbe, Wiederholung
+// Farben: Neon-HUD-Style Kästchen. Dropdown: Custom wie ThemeSelector.
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLanguage } from '../hooks/useLanguage'
 
 // Event-Daten für Erstellen/Bearbeiten
@@ -32,14 +33,14 @@ export function emptyFormData(date?: string): EventFormData {
   }
 }
 
-// Verfügbare Farben mit CSS-Werten
+// Neon-Farben im JARVIS/Iron-Man-Style
 const COLORS = [
-  { key: 'cyan', value: 'var(--color-primary)' },
-  { key: 'violet', value: '#8b5cf6' },
-  { key: 'emerald', value: '#10b981' },
-  { key: 'orange', value: '#f59e0b' },
-  { key: 'pink', value: '#ec4899' },
-  { key: 'yellow', value: '#eab308' },
+  { key: 'cyan', value: '#00e5ff', glow: '0 0 10px rgba(0, 229, 255, 0.5)' },
+  { key: 'violet', value: '#b44dff', glow: '0 0 10px rgba(180, 77, 255, 0.5)' },
+  { key: 'emerald', value: '#00ff9d', glow: '0 0 10px rgba(0, 255, 157, 0.5)' },
+  { key: 'orange', value: '#ff6b00', glow: '0 0 10px rgba(255, 107, 0, 0.5)' },
+  { key: 'pink', value: '#ff2d78', glow: '0 0 10px rgba(255, 45, 120, 0.5)' },
+  { key: 'yellow', value: '#ffe600', glow: '0 0 10px rgba(255, 230, 0, 0.5)' },
 ]
 
 interface Props {
@@ -53,9 +54,22 @@ interface Props {
 function CalendarEventForm({ data, isEdit, onSave, onCancel, onDelete }: Props) {
   const { t } = useLanguage()
   const [form, setForm] = useState<EventFormData>(data)
+  const [recOpen, setRecOpen] = useState(false)
+  const recRef = useRef<HTMLDivElement>(null)
 
-  // Formular aktualisieren wenn sich die Props ändern (z.B. anderes Event)
+  // Formular aktualisieren wenn sich Props ändern
   useEffect(() => setForm(data), [data])
+
+  // Dropdown schliessen bei Klick ausserhalb
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (recRef.current && !recRef.current.contains(e.target as Node)) {
+        setRecOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   // Feld-Update Helfer
   const set = (key: keyof EventFormData, val: string | boolean) =>
@@ -66,6 +80,9 @@ function CalendarEventForm({ data, isEdit, onSave, onCancel, onDelete }: Props) 
     if (!form.title.trim()) return
     onSave(form)
   }
+
+  // Aktuelle Wiederholungs-Optionen
+  const recOptions = Object.entries(t.mainCalendar.recurrenceTypes) as [string, string][]
 
   return (
     <div
@@ -136,9 +153,9 @@ function CalendarEventForm({ data, isEdit, onSave, onCancel, onDelete }: Props) 
           </div>
         </div>
 
-        {/* Farb-Auswahl */}
+        {/* Neon-Farbauswahl: Abgerundete Kästchen mit Glow */}
         <div>
-          <label className="text-xs mb-1 block" style={{ color: 'var(--color-text-muted)' }}>
+          <label className="text-xs mb-2 block" style={{ color: 'var(--color-text-muted)' }}>
             {t.mainCalendar.color}
           </label>
           <div className="flex gap-2">
@@ -146,12 +163,18 @@ function CalendarEventForm({ data, isEdit, onSave, onCancel, onDelete }: Props) 
               <button
                 key={c.key}
                 onClick={() => set('color', c.key)}
-                className="w-6 h-6 rounded-full transition-all duration-200"
+                className="w-8 h-8 rounded-md transition-all duration-200"
                 style={{
                   backgroundColor: c.value,
-                  outline: form.color === c.key ? '2px solid var(--color-primary)' : 'none',
+                  opacity: form.color === c.key ? 1 : 0.4,
+                  boxShadow: form.color === c.key ? c.glow : 'none',
+                  border: form.color === c.key
+                    ? `2px solid ${c.value}`
+                    : '2px solid transparent',
+                  outline: form.color === c.key
+                    ? `1px solid ${c.value}`
+                    : 'none',
                   outlineOffset: '2px',
-                  opacity: form.color === c.key ? 1 : 0.5,
                 }}
                 title={t.mainCalendar.colors[c.key as keyof typeof t.mainCalendar.colors]}
               />
@@ -159,21 +182,62 @@ function CalendarEventForm({ data, isEdit, onSave, onCancel, onDelete }: Props) 
           </div>
         </div>
 
-        {/* Wiederholung */}
+        {/* Wiederholung: Custom HUD-Dropdown */}
         <div className="grid grid-cols-2 gap-3">
-          <div>
+          <div ref={recRef} className="relative">
             <label className="text-xs mb-1 block" style={{ color: 'var(--color-text-muted)' }}>
               {t.mainCalendar.recurrence}
             </label>
-            <select
-              className="hud-input text-xs px-3 py-2 rounded w-full"
-              value={form.recurrence}
-              onChange={(e) => set('recurrence', e.target.value)}
+            <button
+              onClick={() => setRecOpen(!recOpen)}
+              className="w-full px-3 py-2 rounded text-left text-xs transition-all duration-300 border"
+              style={{
+                fontFamily: 'var(--font-heading)',
+                fontSize: '0.65rem',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                color: 'var(--color-text-secondary)',
+                borderColor: recOpen ? 'var(--color-border-glow)' : 'var(--color-border)',
+                background: recOpen ? 'rgba(0, 212, 255, 0.05)' : 'var(--color-bg-surface)',
+              }}
             >
-              {Object.entries(t.mainCalendar.recurrenceTypes).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
+              {t.mainCalendar.recurrenceTypes[form.recurrence as keyof typeof t.mainCalendar.recurrenceTypes]}
+            </button>
+            {recOpen && (
+              <div
+                className="absolute top-full left-0 mt-1 w-full rounded-md border overflow-hidden animate-fade-in z-50"
+                style={{
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  borderColor: 'var(--color-border-glow)',
+                  boxShadow: '0 0 15px rgba(0, 212, 255, 0.15)',
+                }}
+              >
+                {recOptions.map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => { set('recurrence', key); setRecOpen(false) }}
+                    className="w-full px-3 py-2 text-left transition-all duration-200"
+                    style={{
+                      fontFamily: 'var(--font-heading)',
+                      fontSize: '0.65rem',
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                      color: key === form.recurrence ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                      background: key === form.recurrence ? 'rgba(0, 212, 255, 0.1)' : 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (key !== form.recurrence) e.currentTarget.style.background = 'rgba(0, 212, 255, 0.05)'
+                    }}
+                    onMouseLeave={(e) => {
+                      if (key !== form.recurrence) e.currentTarget.style.background = 'transparent'
+                    }}
+                  >
+                    {key === form.recurrence && <span style={{ color: 'var(--color-primary)' }}>● </span>}
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           {form.recurrence !== 'none' && (
             <div>
