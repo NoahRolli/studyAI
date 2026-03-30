@@ -1,7 +1,7 @@
 // CalendarPage — Hauptkalender mit Monatsansicht
 // Route: /calendar (innerhalb Layout mit Sidebar)
-// Einzelklick → Event-Liste unterhalb, Doppelklick → Event-Formular als Modal
-// Hover-Glow wie im Journal-Kalender (kein persistenter Selektions-Style)
+// Einzelklick → Tag selektieren (persistent), Doppelklick → Event-Formular
+// Hover-Glow wie im Journal-Kalender
 
 import { useState, useEffect, useCallback } from 'react'
 import { useLanguage } from '../hooks/useLanguage'
@@ -42,6 +42,7 @@ function CalendarPage() {
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [hoveredDate, setHoveredDate] = useState<string | null>(null)
   const [editEvent, setEditEvent] = useState<CalendarEvent | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -64,7 +65,7 @@ function CalendarPage() {
     else setMonth(month + 1)
   }
 
-  // Tage im Monat + Offset berechnen
+  // Tage im Monat + Offset
   const daysInMonth = new Date(year, month, 0).getDate()
   const firstWeekday = new Date(year, month - 1, 1).getDay()
   const startOffset = firstWeekday === 0 ? 6 : firstWeekday - 1
@@ -75,22 +76,28 @@ function CalendarPage() {
     return events.filter((e) => e.start_time.startsWith(dateStr))
   }
 
-  // Einzelklick → Tag selektieren (Event-Liste unterhalb)
+  // Einzelklick → Tag selektieren (toggle)
   const handleDayClick = (dateStr: string) => {
     setSelectedDate(selectedDate === dateStr ? null : dateStr)
   }
 
-  // Doppelklick → Modal öffnen (neues Event)
+  // Doppelklick → Modal öffnen
   const handleDayDoubleClick = (dateStr: string) => {
     setSelectedDate(dateStr)
     setEditEvent(null)
     setModalOpen(true)
   }
 
-  // Event klicken → bearbeiten
+  // Event bearbeiten
   const handleEditEvent = (event: CalendarEvent) => {
     setEditEvent(event)
     setModalOpen(true)
+  }
+
+  // Einzelnes Event direkt löschen (aus der Liste)
+  const handleQuickDelete = async (event: CalendarEvent) => {
+    await del(`/api/calendar/events/${event.id}`)
+    loadEvents()
   }
 
   // Formular speichern
@@ -114,7 +121,7 @@ function CalendarPage() {
     loadEvents()
   }
 
-  // Event löschen
+  // Event löschen (aus Modal)
   const handleDelete = async () => {
     if (!editEvent) return
     await del(`/api/calendar/events/${editEvent.id}`)
@@ -130,6 +137,40 @@ function CalendarPage() {
   const dayEvents = selectedDate
     ? events.filter((e) => e.start_time.startsWith(selectedDate))
     : []
+
+  // Zellen-Style basierend auf State (kein DOM-Manipulation)
+  const getCellStyle = (dateStr: string) => {
+    const selected = dateStr === selectedDate
+    const hovered = dateStr === hoveredDate
+    const today = isToday(dateStr)
+
+    if (selected) {
+      return {
+        backgroundColor: 'rgba(0, 255, 255, 0.12)',
+        border: '1px solid rgba(0, 255, 255, 0.5)',
+        boxShadow: '0 0 15px rgba(0, 255, 255, 0.15)',
+      }
+    }
+    if (hovered) {
+      return {
+        backgroundColor: 'rgba(0, 255, 255, 0.05)',
+        border: '1px solid rgba(0, 255, 255, 0.3)',
+        boxShadow: '0 0 15px rgba(0, 255, 255, 0.1)',
+      }
+    }
+    if (today) {
+      return {
+        backgroundColor: 'rgba(0, 255, 255, 0.06)',
+        border: '1px solid rgba(0, 255, 255, 0.3)',
+        boxShadow: 'none',
+      }
+    }
+    return {
+      backgroundColor: 'rgba(13, 17, 23, 0.3)',
+      border: '1px solid transparent',
+      boxShadow: 'none',
+    }
+  }
 
   return (
     <div className="animate-fade-in">
@@ -168,44 +209,24 @@ function CalendarPage() {
           const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
           const dayEvts = eventsForDay(day)
           const today = isToday(dateStr)
+          const selected = dateStr === selectedDate
 
           return (
             <div
               key={day}
               onClick={() => handleDayClick(dateStr)}
               onDoubleClick={() => handleDayDoubleClick(dateStr)}
+              onMouseEnter={() => setHoveredDate(dateStr)}
+              onMouseLeave={() => setHoveredDate(null)}
               className="h-20 rounded-lg p-1.5 relative transition-all duration-200 cursor-pointer"
-              style={{
-                backgroundColor: today
-                  ? 'rgba(0, 255, 255, 0.06)'
-                  : 'rgba(13, 17, 23, 0.3)',
-                border: today
-                  ? '1px solid rgba(0, 255, 255, 0.3)'
-                  : '1px solid transparent',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(0, 255, 255, 0.05)'
-                e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 255, 255, 0.1)'
-                e.currentTarget.style.border = '1px solid rgba(0, 255, 255, 0.3)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = today
-                  ? 'rgba(0, 255, 255, 0.06)'
-                  : 'rgba(13, 17, 23, 0.3)'
-                e.currentTarget.style.boxShadow = 'none'
-                e.currentTarget.style.border = today
-                  ? '1px solid rgba(0, 255, 255, 0.3)'
-                  : '1px solid transparent'
-              }}
+              style={getCellStyle(dateStr)}
             >
-              {/* Tag-Nummer */}
               <span className="text-xs font-medium" style={{
-                color: today ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                color: selected || today ? 'var(--color-primary)' : 'var(--color-text-muted)',
               }}>
                 {day}
               </span>
 
-              {/* Event-Punkte */}
               {dayEvts.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {dayEvts.slice(0, 4).map((evt) => (
@@ -249,12 +270,16 @@ function CalendarPage() {
           ) : (
             <div className="flex flex-col gap-2">
               {dayEvents.map((evt) => (
-                <button key={evt.id} onClick={() => handleEditEvent(evt)}
-                  className="flex items-center gap-2 p-2 rounded-md text-left w-full
+                <div key={evt.id}
+                  className="flex items-center gap-2 p-2 rounded-md
                     transition-all duration-200 hover:bg-[rgba(0,212,255,0.05)]">
+                  {/* Farb-Indikator */}
                   <div className="w-1.5 h-8 rounded-full flex-shrink-0"
                     style={{ backgroundColor: COLOR_MAP[evt.color] || COLOR_MAP.cyan }} />
-                  <div className="min-w-0">
+
+                  {/* Event-Info (klickbar → bearbeiten) */}
+                  <button onClick={() => handleEditEvent(evt)}
+                    className="flex-1 min-w-0 text-left">
                     <span className="text-xs block truncate"
                       style={{ color: 'var(--color-text-primary)' }}>{evt.title}</span>
                     {!evt.all_day && (
@@ -262,13 +287,28 @@ function CalendarPage() {
                         {new Date(evt.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     )}
-                  </div>
+                  </button>
+
+                  {/* Wiederkehrend-Badge */}
                   {evt.recurrence !== 'none' && (
-                    <span className="ml-auto text-xs px-1.5 py-0.5 rounded" style={{
+                    <span className="text-xs px-1.5 py-0.5 rounded" style={{
                       color: 'var(--color-text-muted)', backgroundColor: 'rgba(0,212,255,0.08)', fontSize: '0.6rem',
                     }}>↻</span>
                   )}
-                </button>
+
+                  {/* Löschen-Button */}
+                  <button
+                    onClick={() => handleQuickDelete(evt)}
+                    className="flex-shrink-0 p-1 rounded transition-all duration-200
+                      hover:bg-[rgba(255,59,92,0.1)]"
+                    title={t.mainCalendar.deleteEvent}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M3 3l8 8M11 3l-8 8" stroke="var(--color-danger)"
+                        strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
               ))}
             </div>
           )}
