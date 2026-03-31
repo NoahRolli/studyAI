@@ -217,6 +217,7 @@ function Journal() {
               autoTitle={s.autoTitle}
               onAutoTitleChange={s.setAutoTitle}
               medEnabled={s.medEnabled}
+              medications={s.medications}
             />
           )}
 
@@ -247,5 +248,4 @@ function Journal() {
     </div>
   )
 }
-
 export default Journal
