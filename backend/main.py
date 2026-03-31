@@ -25,6 +25,7 @@ from backend.models.calendar_event import CalendarEvent  # noqa: F401
 from backend.journal.models.journal_entry import JournalEntry  # noqa: F401
 from backend.journal.models.medication import Medication, IntakeLog, MedicationSettings  # noqa: F401
 from backend.journal.models.mood_cache import MoodCache  # noqa: F401
+from backend.journal.models.storyline import StorylineCache  # noqa: F401
 
 # Erstellt alle Tabellen in beiden Datenbanken beim Server-Start
 Base.metadata.create_all(bind=engine)
