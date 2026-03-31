@@ -1,5 +1,6 @@
 // MedicationTracker — Medikamenten-Liste mit Einnahme-Tracking
 // Zeigt alle aktiven Medikamente mit täglicher Checkbox (taken/skipped)
+// NEU: Einnahmen können auch für vergangene Tage nachgetragen werden
 // HUD-Design mit Glow-Effekten und Status-Farben
 
 import { useState, useEffect } from 'react'
@@ -19,6 +20,10 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [intakeLogs, setIntakeLogs] = useState<Record<number, IntakeLog[]>>({})
+  // NEU: State für Nachtragen-UI
+  const [backfillId, setBackfillId] = useState<number | null>(null)
+  const [backfillDate, setBackfillDate] = useState('')
+
   const today = new Date().toISOString().split('T')[0]
 
   // --- Einnahme-Logs laden ---
@@ -72,7 +77,7 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
     }
   }
 
-  // --- Einnahme toggling ---
+  // --- Einnahme toggling (heute) ---
   async function toggleIntake(medId: number) {
     try {
       setError(null)
@@ -83,6 +88,24 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
         date: today,
         status: newStatus,
       })
+      await loadIntakeLogs()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.common.error)
+    }
+  }
+
+  // --- Einnahme nachtragen (vergangene Tage) ---
+  async function submitBackfill(medId: number, status: string) {
+    if (!backfillDate) return
+    try {
+      setError(null)
+      await post('/api/journal/medications/intake', {
+        medication_id: medId,
+        date: backfillDate,
+        status,
+      })
+      setBackfillId(null)
+      setBackfillDate('')
       await loadIntakeLogs()
     } catch (err) {
       setError(err instanceof Error ? err.message : t.common.error)
@@ -154,6 +177,7 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
               />
             ) : (
               <div>
+                {/* Header: Checkbox + Name + Buttons */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <button
@@ -195,6 +219,21 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
                     </h3>
                   </div>
                   <div className="flex items-center gap-3">
+                    {/* Nachtragen-Button */}
+                    <button
+                      onClick={() => {
+                        setBackfillId(backfillId === med.id ? null : med.id)
+                        setBackfillDate('')
+                      }}
+                      className="text-xs transition-colors"
+                      style={{
+                        color: backfillId === med.id
+                          ? 'var(--color-primary)'
+                          : 'var(--color-text-muted)',
+                      }}
+                    >
+                      {t.medication.backfill}
+                    </button>
                     <button
                       onClick={() => { setEditingId(med.id); setShowForm(false) }}
                       className="text-xs transition-colors"
@@ -213,6 +252,8 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
                     </button>
                   </div>
                 </div>
+
+                {/* Medikament-Details */}
                 <div className="flex gap-4 text-xs mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                   <span>{med.dosage}</span>
                   <span style={{ color: 'var(--color-border)' }}>·</span>
@@ -226,10 +267,50 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
                     </>
                   )}
                 </div>
+
                 {med.notes && (
                   <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>
                     {med.notes}
                   </p>
+                )}
+
+                {/* Nachtragen-UI (aufklappbar) */}
+                {backfillId === med.id && (
+                  <div
+                    className="mt-4 pt-4 flex items-center gap-3 animate-fade-in"
+                    style={{ borderTop: '1px solid var(--color-border)' }}
+                  >
+                    <input
+                      type="date"
+                      value={backfillDate}
+                      max={today}
+                      onChange={(e) => setBackfillDate(e.target.value)}
+                      className="hud-input text-xs"
+                      style={{ width: '160px' }}
+                    />
+                    <button
+                      onClick={() => submitBackfill(med.id, 'taken')}
+                      disabled={!backfillDate}
+                      className="hud-btn text-xs px-3 py-1"
+                      style={{
+                        color: backfillDate ? 'var(--color-success)' : 'var(--color-text-muted)',
+                        borderColor: backfillDate ? 'var(--color-success)' : 'var(--color-border)',
+                      }}
+                    >
+                      ✓ {t.medication.taken}
+                    </button>
+                    <button
+                      onClick={() => submitBackfill(med.id, 'skipped')}
+                      disabled={!backfillDate}
+                      className="hud-btn text-xs px-3 py-1"
+                      style={{
+                        color: backfillDate ? 'var(--color-danger)' : 'var(--color-text-muted)',
+                        borderColor: backfillDate ? 'var(--color-danger)' : 'var(--color-border)',
+                      }}
+                    >
+                      ✕ {t.medication.skipped}
+                    </button>
+                  </div>
                 )}
               </div>
             )}
