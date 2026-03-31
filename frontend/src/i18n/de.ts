@@ -232,6 +232,7 @@ const de = {
     backfill: 'Nachtragen',
     taken: 'Genommen',
     skipped: 'Übersprungen',
+    saved: 'Gespeichert',
   },
 
   // Medikamenten-Erinnerung (Modal nach Unlock)

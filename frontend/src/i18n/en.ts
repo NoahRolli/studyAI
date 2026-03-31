@@ -231,6 +231,7 @@ const en = {
     backfill: 'Backfill',
     taken: 'Taken',
     skipped: 'Skipped',
+    saved: 'Saved',
   },
 
   // Medication Reminder (Modal after unlock)
