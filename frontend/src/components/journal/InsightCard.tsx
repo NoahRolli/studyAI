@@ -61,7 +61,6 @@ function InsightCard({ type, data }: InsightCardProps) {
                 {item.difference > 0 ? '+' : ''}{item.difference}
               </span>
             </div>
-            {/* Balken: mit vs. ohne */}
             <div className="space-y-1">
               <MoodBar
                 label={`${t.insights.withMed} (${item.days_with} ${t.insights.days})`}
@@ -134,7 +133,6 @@ function InsightCard({ type, data }: InsightCardProps) {
     if (!items || items.length === 0) {
       return <EmptyState text={t.insights.noData} />
     }
-    // Top 10 anzeigen
     const top = items.slice(0, 10)
     return (
       <div className="hud-card p-4">
