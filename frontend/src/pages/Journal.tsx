@@ -1,6 +1,6 @@
 // Journal — Orchestrator für das verschlüsselte Tagebuch
 // Delegiert alles an Sub-Komponenten und useJournalState Hook
-// Drei Zustände: Setup → Unlock → Tabs (Einträge, Kalender, Analytics, Meds)
+// Drei Zustände: Setup → Unlock → Tabs (Einträge, Kalender, Analytics, Meds, Insights)
 // Globale Suche im Header über alle Einträge
 
 import { useRef } from 'react'
@@ -17,6 +17,7 @@ import CalendarView from '../components/journal/CalendarView'
 import MoodChart from '../components/journal/MoodChart'
 import ClusterView from '../components/journal/ClusterView'
 import StorylineView from '../components/journal/StorylineView'
+import InsightsView from '../components/journal/InsightsView'
 import MedicationTracker from '../components/journal/MedicationTracker'
 import MedicationReminder from '../components/journal/MedicationReminder'
 import JournalSearch from '../components/journal/JournalSearch'
@@ -63,6 +64,7 @@ function Journal() {
     { key: 'mood', label: t.journal.tabs.mood },
     { key: 'clusters', label: t.journal.tabs.clusters },
     { key: 'storylines', label: t.journal.tabs.storylines },
+    { key: 'insights' as JournalTab, label: t.journal.tabs.insights },
     ...(s.medEnabled
       ? [{ key: 'medications' as JournalTab, label: t.journal.tabs.medications }]
       : []),
@@ -236,6 +238,9 @@ function Journal() {
           {/* Tab: Storylines */}
           {s.activeTab === 'storylines' && <StorylineView />}
 
+          {/* Tab: Insights */}
+          {s.activeTab === 'insights' && <InsightsView />}
+
           {/* Tab: Medikamente */}
           {s.activeTab === 'medications' && s.medEnabled && (
             <MedicationTracker
@@ -248,4 +253,5 @@ function Journal() {
     </div>
   )
 }
+
 export default Journal
