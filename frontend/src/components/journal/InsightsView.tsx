@@ -47,7 +47,8 @@ function InsightsView() {
   const { t, language } = useLanguage()
 
   // State pro Analyse-Modul
-  const [results, setResults] = useState<Record<string, unknown>>({})
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [results, setResults] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -185,7 +186,7 @@ function InsightsView() {
             {/* Ergebnis-Anzeige */}
             {results[mod.key] && !loading[mod.key] && (
               <div className="mt-2 animate-fade-in">
-                <InsightCard type={mod.key} data={results[mod.key]} />
+                <InsightCard type={mod.key} data={results[mod.key] as any} />
               </div>
             )}
           </div>
