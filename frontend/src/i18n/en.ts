@@ -228,6 +228,9 @@ const en = {
     emptyHint: 'Click "+ New Medication" to get started.',
     since: 'since',
     until: 'until',
+    backfill: 'Backfill',
+    taken: 'Taken',
+    skipped: 'Skipped',
   },
 
   // Medication Reminder (Modal after unlock)

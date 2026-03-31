@@ -229,6 +229,9 @@ const de = {
     emptyHint: 'Klicke auf "+ Neues Medikament" um zu beginnen.',
     since: 'seit',
     until: 'bis',
+    backfill: 'Nachtragen',
+    taken: 'Genommen',
+    skipped: 'Übersprungen',
   },
 
   // Medikamenten-Erinnerung (Modal nach Unlock)
