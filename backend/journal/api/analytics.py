@@ -7,9 +7,12 @@
 # WICHTIG: Soft-gelöschte Einträge (is_deleted=1) werden überall gefiltert
 #
 # Mood-Caching: Ergebnisse werden in mood_cache Tabelle gespeichert
+# Storyline-Caching: Ergebnisse werden in storyline_cache gespeichert
 # Nur neue/geänderte Einträge werden via Ollama analysiert
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+
 from backend.journal.api.dependencies import require_unlocked
 from backend.journal.services.session_service import session_manager
 from backend.journal.services.crypto_service import decrypt_text
@@ -22,7 +25,6 @@ from backend.journal.services.clustering_service import cluster_entries, label_c
 from backend.journal.services.storyline_service import detect_storylines
 from backend.journal.models.journal_database import get_journal_db
 from backend.journal.models.journal_entry import JournalEntry
-from sqlalchemy.orm import Session
 
 # Router — wird in main.py registriert
 router = APIRouter(
@@ -59,7 +61,6 @@ async def get_entry_mood(
 
     key = session_manager.get_key()
     decrypted = _decrypt_entry(entry, key)
-
     return await analyze_entry_mood(
         entry_id=decrypted["id"],
         title=decrypted["title"],
@@ -86,7 +87,6 @@ async def get_all_moods(
 
     key = session_manager.get_key()
     decrypted = [_decrypt_entry(e, key) for e in entries]
-
     return await analyze_multiple_entries(decrypted, language, db)
 
 
@@ -108,8 +108,6 @@ async def get_clusters(
         )
 
     key = session_manager.get_key()
-
-    # Einträge entschlüsseln und Embeddings generieren
     entries_with_embeddings = []
     for entry in entries:
         decrypted = _decrypt_entry(entry, key)
@@ -118,24 +116,23 @@ async def get_clusters(
         )
         entries_with_embeddings.append({**decrypted, "embedding": embedding})
 
-    # Clustering durchführen
     clusters = cluster_entries(entries_with_embeddings)
-
-    # Labels für jeden Cluster via AI generieren
     for c in clusters:
         c["label"] = await label_cluster(c["titles"], language)
-
     return clusters
 
 
-# --- Storyline Endpunkte ---
+# --- Storyline Endpunkte (mit Cache) ---
 
 @router.post("/storylines")
 async def get_storylines(
     language: str = Query(default="de"),
     db: Session = Depends(get_journal_db),
 ):
-    """Erkennt narrative Bögen über mehrere Einträge."""
+    """
+    Erkennt narrative Bögen über mehrere Einträge.
+    Nutzt DB-Cache — nur bei neuen/geänderten Einträgen wird Ollama gefragt.
+    """
     entries = db.query(JournalEntry).filter(
         JournalEntry.is_deleted == 0
     ).order_by(JournalEntry.created_at).all()
@@ -147,5 +144,5 @@ async def get_storylines(
 
     key = session_manager.get_key()
     decrypted = [_decrypt_entry(e, key) for e in entries]
-
-    return await detect_storylines(decrypted, language)
+    # DB-Session wird durchgereicht für Caching
+    return await detect_storylines(decrypted, language, db=db)
