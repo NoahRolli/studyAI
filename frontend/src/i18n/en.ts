@@ -121,6 +121,7 @@ const en = {
       clusters: 'Topics',
       storylines: 'Storylines',
       medications: 'Medications',
+      insights: 'Insights',
     },
   },
 
@@ -278,7 +279,33 @@ const en = {
     themes: 'Topics',
     storylines: 'Storylines',
     entry: 'Entry',
+},
+  // Insights — Journal data analysis
+  insights: {
+    title: 'Insights',
+    subtitle: 'Choose an analysis to discover patterns in your data.',
+    analyzing: 'Analyzing...',
+    noData: 'Not enough data for this analysis.',
+    medMood: 'Medication ↔ Mood',
+    medMoodDesc: 'How do your medications affect your mood?',
+    weekdayMood: 'Weekday ↔ Mood',
+    weekdayMoodDesc: 'Which days do you feel best?',
+    writingPatterns: 'Writing Patterns',
+    writingPatternsDesc: 'How does regular writing affect your mood?',
+    keywordMood: 'Keywords ↔ Mood',
+    keywordMoodDesc: 'Which topics correlate with good or bad mood?',
+    aiSummary: 'AI Summary',
+    aiSummaryDesc: 'Ollama summarizes all detected patterns.',
+    withMed: 'With medication',
+    withoutMed: 'Without medication',
+    days: 'days',
+    totalEntries: 'Total entries',
+    writingDays: 'Days with entries',
+    avgLength: 'Avg. length',
+    chars: 'characters',
+    moodWriting: 'Avg. mood (writing days)',
+    moodSilent: 'Avg. mood (silent days)',
+    weekdays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
   },
 } as const
-
 export default en
