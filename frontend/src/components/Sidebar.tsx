@@ -129,13 +129,13 @@ function Sidebar() {
         {/* Navigation — Dashboard, Journal, Kalender */}
         <nav className="flex flex-col gap-2">
           <NavLink to="/dashboard" className={linkStyle} title={t.sidebar.dashboard}>
-            {collapsed ? '📊' : t.sidebar.dashboard}
+            {collapsed ? 'D' : t.sidebar.dashboard}
           </NavLink>
           <NavLink to="/journal" className={linkStyle} title={t.sidebar.journal}>
-            {collapsed ? '📓' : t.sidebar.journal}
+            {collapsed ? 'J' : t.sidebar.journal}
           </NavLink>
           <NavLink to="/calendar" className={linkStyle} title={t.sidebar.calendar}>
-            {collapsed ? '📅' : t.sidebar.calendar}
+            {collapsed ? 'C' : t.sidebar.calendar}
           </NavLink>
         </nav>
 
