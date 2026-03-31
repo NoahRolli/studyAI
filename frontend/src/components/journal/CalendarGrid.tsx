@@ -3,7 +3,6 @@
 // Zeigt Tage mit Entry-Dots (Mood-Glow) und Medikamenten-Pillen
 
 import { useLanguage } from '../../hooks/useLanguage'
-import type { MoodResult } from '../../types/models'
 
 // Typen für Kalender-Daten
 interface CalendarEntry {
