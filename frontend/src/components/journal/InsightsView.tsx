@@ -83,35 +83,35 @@ function InsightsView() {
     }
   }
 
-  // Analyse-Module Konfiguration
+  // Analyse-Module Konfiguration (keine Emojis — geometrische Symbole)
   const modules: { key: InsightKey; icon: string; title: string; desc: string }[] = [
     {
       key: 'medication-mood',
-      icon: '💊',
+      icon: '⊕',
       title: t.insights.medMood,
       desc: t.insights.medMoodDesc,
     },
     {
       key: 'weekday-mood',
-      icon: '📅',
+      icon: '▦',
       title: t.insights.weekdayMood,
       desc: t.insights.weekdayMoodDesc,
     },
     {
       key: 'writing-patterns',
-      icon: '✍',
+      icon: '≡',
       title: t.insights.writingPatterns,
       desc: t.insights.writingPatternsDesc,
     },
     {
       key: 'keyword-mood',
-      icon: '🏷',
+      icon: '◈',
       title: t.insights.keywordMood,
       desc: t.insights.keywordMoodDesc,
     },
     {
       key: 'ai-summary',
-      icon: '🧠',
+      icon: '⟁',
       title: t.insights.aiSummary,
       desc: t.insights.aiSummaryDesc,
     },
@@ -150,7 +150,12 @@ function InsightsView() {
               }}
             >
               <div className="flex items-center gap-3">
-                <span className="text-lg">{mod.icon}</span>
+                <span
+                  className="text-lg"
+                  style={{ color: 'var(--color-primary)' }}
+                >
+                  {mod.icon}
+                </span>
                 <div className="flex-1">
                   <h4 className="text-sm font-semibold"
                     style={{ color: 'var(--color-text-primary)' }}>
@@ -186,7 +191,7 @@ function InsightsView() {
             {/* Ergebnis-Anzeige */}
             {results[mod.key] && !loading[mod.key] && (
               <div className="mt-2 animate-fade-in">
-                <InsightCard type={mod.key} data={results[mod.key] as any} />
+                <InsightCard type={mod.key} data={results[mod.key]} />
               </div>
             )}
           </div>
