@@ -22,6 +22,7 @@ export type JournalTab =
   | 'mood'
   | 'clusters'
   | 'storylines'
+  | 'insights'
   | 'medications'
 
 export default function useJournalState() {
