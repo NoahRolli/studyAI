@@ -26,6 +26,7 @@ const en = {
     version: 'v0.1.0 — ONLINE',
     collapse: 'Collapse sidebar',
     expand: 'Expand sidebar',
+    logout: 'Log out',
   },
 
   // Welcome Page

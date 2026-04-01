@@ -3,11 +3,13 @@
 // Collapsed-State wird in localStorage gespeichert
 // Pallas-Logo klickbar → Begrüssungsseite (/)
 // Nav-Links: Dashboard, Journal, Kalender
+// Logout-Button (nur wenn Auth aktiv auf Olymp-Server)
 // Language-Toggle und Theme-Selector unten (nur wenn ausgeklappt)
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { NavLink, Link } from 'react-router-dom'
+import { NavLink, Link, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../hooks/useLanguage'
+import { get, post } from '../hooks/useAPI'
 import LanguageToggle from './LanguageToggle'
 import ThemeSelector from './ThemeSelector'
 
@@ -20,6 +22,7 @@ const STORAGE_KEY = 'pallas-sidebar-collapsed'
 
 function Sidebar() {
   const { t } = useLanguage()
+  const navigate = useNavigate()
 
   // Sidebar ein-/ausgeklappt (aus localStorage lesen)
   const [collapsed, setCollapsed] = useState(() => {
@@ -32,6 +35,24 @@ function Sidebar() {
   // Drag-State für Resize
   const [isDragging, setIsDragging] = useState(false)
   const sidebarRef = useRef<HTMLElement>(null)
+
+  // Auth aktiv? (nur auf Olymp-Server mit /etc/olymp/auth.json)
+  const [authActive, setAuthActive] = useState(false)
+
+  // Beim Mount prüfen ob Auth aktiv ist
+  useEffect(() => {
+    get('/api/auth/check')
+      .then(() => setAuthActive(true))
+      .catch(() => setAuthActive(false))
+  }, [])
+
+  // Pallas Logout — Cookie löschen, zur Login-Seite
+  async function handleLogout() {
+    try {
+      await post('/api/auth/logout')
+    } catch { /* Ignorieren */ }
+    navigate('/login')
+  }
 
   // Toggle mit localStorage-Persistenz
   const toggleCollapsed = () => {
@@ -154,6 +175,25 @@ function Sidebar() {
               style={{ backgroundColor: 'var(--color-border)' }}
             />
           </>
+        )}
+
+        {/* Logout-Button (nur wenn Auth aktiv) */}
+        {authActive && (
+          <button
+            onClick={handleLogout}
+            className={`flex items-center gap-2 rounded-md transition-all duration-300
+              text-[var(--color-text-muted)] hover:text-[var(--color-danger)]
+              hover:bg-[rgba(255,59,92,0.1)] mb-3
+              ${collapsed ? 'justify-center p-2' : 'px-3 py-2 text-sm'}`}
+            title={t.sidebar.logout}
+          >
+            {/* Power-Icon SVG */}
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
+              <path d="M8 1v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M4.5 3.5a6 6 0 1 0 7 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            {!collapsed && <span>{t.sidebar.logout}</span>}
+          </button>
         )}
 
         {/* Footer: Versionsnummer + Status */}

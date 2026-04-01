@@ -27,6 +27,7 @@ const de = {
     version: 'v0.1.0 — ONLINE',
     collapse: 'Sidebar einklappen',
     expand: 'Sidebar ausklappen',
+    logout: 'Abmelden',
   },
 
   // Begrüssungsseite
