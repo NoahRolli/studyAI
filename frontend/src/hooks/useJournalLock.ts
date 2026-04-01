@@ -1,17 +1,23 @@
 // useJournalLock — Automatische Sperrung des Journals
 // Sperrt das Journal automatisch wenn:
 // 1. Der User die Journal-Seite verlässt (aber NICHT zur Journal-Mindmap)
-// 2. Der Laptop geschlossen / Bildschirm gesperrt wird (visibilitychange)
-// 3. Der User einen anderen Browser-Tab öffnet (visibilitychange)
+// 2. Der User 15 Minuten inaktiv ist (Tab-Wechsel, anderes Programm)
 //
 // WICHTIG: Navigation zu /journal/mindmap sperrt NICHT —
 // das ist ein Journal-Feature und die Session bleibt offen
+//
+// Tab-Wechsel / anderes Programm → 15-Min-Timer
+// Rückkehr vor Ablauf → Timer wird gecancelt
+// Navigation weg vom Journal-Bereich → sofortige Sperrung
 
 import { useEffect, useRef } from 'react'
 import { post } from './useAPI'
 
 // Routen die zum Journal gehören — hier wird NICHT gesperrt
 const JOURNAL_ROUTES = ['/journal', '/journal/mindmap']
+
+// Inaktivitäts-Timeout in Millisekunden (15 Minuten)
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000
 
 function isJournalRoute(): boolean {
   return JOURNAL_ROUTES.some((route) =>
@@ -36,10 +42,21 @@ function useJournalLock({
   const isUnlockedRef = useRef(isUnlocked)
   const onLockedRef = useRef(onLocked)
   const isLocking = useRef(false)
+  // Timer-Ref für Inaktivitäts-Sperrung
+  const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Refs synchron halten mit aktuellen Props
   useEffect(() => { isUnlockedRef.current = isUnlocked }, [isUnlocked])
   useEffect(() => { onLockedRef.current = onLocked }, [onLocked])
+
+  // Timer aufräumen beim Unmount
+  useEffect(() => {
+    return () => {
+      if (inactivityTimer.current) {
+        clearTimeout(inactivityTimer.current)
+      }
+    }
+  }, [])
 
   // Lock-Funktion — ruft Backend auf und benachrichtigt Parent
   async function lockJournal() {
@@ -56,7 +73,6 @@ function useJournalLock({
   }
 
   // --- 1. Unmount: Sperren wenn Journal-Bereich verlassen wird ---
-  // Prüft ob die neue Route noch im Journal-Bereich ist
   // /journal → /journal/mindmap = NICHT sperren
   // /journal → /dashboard = SPERREN
   useEffect(() => {
@@ -73,19 +89,35 @@ function useJournalLock({
     }
   }, [lockOnNavigateAway])
 
-  // --- 2. Visibility-Change: Laptop zu, Tab-Wechsel, Bildschirm sperren ---
+  // --- 2. Visibility-Change: Tab-Wechsel / anderes Programm ---
+  // Hidden → 15-Min-Timer starten
+  // Visible → Timer canceln, Journal bleibt offen
   useEffect(() => {
     if (!lockOnVisibilityChange || !isUnlocked) return
 
     function handleVisibilityChange() {
       if (document.hidden) {
-        lockJournal()
+        // Tab wurde versteckt → Timer starten
+        inactivityTimer.current = setTimeout(() => {
+          lockJournal()
+        }, INACTIVITY_TIMEOUT_MS)
+      } else {
+        // Tab ist wieder sichtbar → Timer canceln
+        if (inactivityTimer.current) {
+          clearTimeout(inactivityTimer.current)
+          inactivityTimer.current = null
+        }
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      // Timer aufräumen wenn Effekt neu läuft
+      if (inactivityTimer.current) {
+        clearTimeout(inactivityTimer.current)
+        inactivityTimer.current = null
+      }
     }
   }, [isUnlocked, lockOnVisibilityChange])
 }
