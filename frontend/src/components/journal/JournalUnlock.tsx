@@ -13,7 +13,7 @@ function JournalUnlock({ password, onPasswordChange, onUnlock }: JournalUnlockPr
   const { t } = useLanguage()
 
   return (
-    <div className="max-w-md">
+    <div className="max-w-md mx-auto mt-[20vh]">
       <div className="hud-card p-6 animate-glow-pulse">
         <h2
           className="hud-title text-lg mb-2"
