@@ -7,7 +7,7 @@
 // getNeuralNodeStyle/getNeuralEdgeStyle unterstützen ein dimmed-Flag
 // für Hover-Highlight (gedimmte Knoten werden transparent)
 
-import type { Node, Edge } from 'reactflow'
+// Typen aus reactflow werden in den Layout-Dateien verwendet
 
 // --- Typen ---
 
@@ -79,7 +79,7 @@ export function getNodeStyle(
 
 export function getNeuralNodeStyle(
   depth: number,
-  hasChildren: boolean,
+  _hasChildren: boolean,
   branchIndex: number = 0,
   dimmed: boolean = false,
 ): React.CSSProperties {
