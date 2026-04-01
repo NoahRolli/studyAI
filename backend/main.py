@@ -66,7 +66,9 @@ app.add_middleware(
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
     """Auth für alle API-Routen erzwingen (Production-Modus)"""
-    await require_auth(request)
+    auth_response = await require_auth(request)
+    if auth_response is not None:
+        return auth_response
     return await call_next(request)
 
 

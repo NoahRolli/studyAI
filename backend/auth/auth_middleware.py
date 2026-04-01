@@ -9,7 +9,8 @@ import time
 import hashlib
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Request, Response, HTTPException, Depends
+from fastapi import APIRouter, Request, Response, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 # Auth-Config Pfad — im Docker gemountet als /etc/olymp/auth.json
@@ -37,10 +38,7 @@ def _load_auth_config() -> dict:
     """Auth-Config aus JSON laden"""
     path = Path(AUTH_CONFIG_PATH)
     if not path.exists():
-        raise HTTPException(
-            status_code=500,
-            detail="Auth-Konfiguration nicht gefunden"
-        )
+        return {}
     with open(path) as f:
         return json.load(f)
 
@@ -52,7 +50,6 @@ def _check_rate_limit(client_ip: str, config: dict) -> None:
     now = time.time()
     cutoff = now - (lockout_min * 60)
 
-    # Alte Einträge aufräumen
     if client_ip in _failed_attempts:
         _failed_attempts[client_ip] = [
             t for t in _failed_attempts[client_ip] if t > cutoff
@@ -73,12 +70,10 @@ def _record_failed_attempt(client_ip: str) -> None:
 
 def _create_token(secret: str) -> str:
     """Einfaches JWT-ähnliches Token erstellen (HMAC-SHA256)"""
-    # Payload: Ablaufzeit als Unix-Timestamp
     expires = int((
         datetime.now(timezone.utc) + timedelta(seconds=COOKIE_MAX_AGE)
     ).timestamp())
     payload = f"{expires}"
-    # Signatur: HMAC mit dem JWT-Secret
     signature = hashlib.sha256(
         f"{payload}.{secret}".encode()
     ).hexdigest()
@@ -92,13 +87,11 @@ def _verify_token(token: str, secret: str) -> bool:
         if len(parts) != 2:
             return False
         payload, signature = parts
-        # Signatur prüfen
         expected = hashlib.sha256(
             f"{payload}.{secret}".encode()
         ).hexdigest()
         if signature != expected:
             return False
-        # Ablauf prüfen
         expires = int(payload)
         if time.time() > expires:
             return False
@@ -114,11 +107,8 @@ async def login(req: LoginRequest, request: Request, response: Response):
 
     config = _load_auth_config()
     client_ip = request.client.host if request.client else "unknown"
-
-    # Rate-Limiting prüfen
     _check_rate_limit(client_ip, config)
 
-    # Passwort gegen Dashboard-Hash prüfen
     stored_hash = config["dashboard"]["password_hash"]
     if not bcrypt.checkpw(
         req.password.encode(), stored_hash.encode()
@@ -126,7 +116,6 @@ async def login(req: LoginRequest, request: Request, response: Response):
         _record_failed_attempt(client_ip)
         raise HTTPException(status_code=401, detail="Falsches Passwort")
 
-    # Token erstellen und als Cookie setzen
     token = _create_token(config["jwt_secret"])
     response.set_cookie(
         key=COOKIE_NAME,
@@ -134,7 +123,7 @@ async def login(req: LoginRequest, request: Request, response: Response):
         max_age=COOKIE_MAX_AGE,
         httponly=True,
         samesite="strict",
-        secure=False,  # LAN-only, kein HTTPS
+        secure=False,
     )
     return {"status": "ok"}
 
@@ -156,19 +145,22 @@ async def check_auth(request: Request):
     return {"status": "ok"}
 
 
-async def require_auth(request: Request) -> None:
-    """Dependency für geschützte Routen — prüft JWT-Cookie"""
-    # Nur im Production-Modus (wenn AUTH_CONFIG_PATH existiert)
-    if not Path(AUTH_CONFIG_PATH).exists():
-        return  # Dev-Modus: kein Auth nötig
-    # Login-Routen und Health-Check ausnehmen
-    exempt = ["/api/auth/login", "/api/auth/check", "/health", "/"]
-    if request.url.path in exempt:
-        return
-    # Statische Dateien ausnehmen (Frontend)
-    if not request.url.path.startswith("/api/"):
-        return
+async def require_auth(request: Request):
+    """Middleware-kompatible Auth-Prüfung
+    Gibt None zurück wenn OK, oder eine JSONResponse bei 401"""
     config = _load_auth_config()
+    if not config:
+        return None
+    path = request.url.path
+    exempt = ["/api/auth/login", "/api/auth/check", "/health"]
+    if path in exempt:
+        return None
+    if not path.startswith("/api/"):
+        return None
     token = request.cookies.get(COOKIE_NAME)
     if not token or not _verify_token(token, config["jwt_secret"]):
-        raise HTTPException(status_code=401, detail="Nicht eingeloggt")
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Nicht eingeloggt"}
+        )
+    return None
