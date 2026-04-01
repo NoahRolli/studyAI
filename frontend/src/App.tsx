@@ -18,6 +18,7 @@ import WelcomePage from './pages/WelcomePage'
 import Dashboard from './pages/Dashboard'
 import ModuleDetail from './pages/ModuleDetail'
 import CalendarPage from './pages/CalendarPage'
+import NotesPage from './pages/NotesPage'
 import MindmapPage from './pages/MindmapPage'
 import JournalMindmapPage from './pages/JournalMindmapPage'
 import Journal from './pages/Journal'
@@ -36,6 +37,7 @@ function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="modules/:id" element={<ModuleDetail />} />
               <Route path="calendar" element={<CalendarPage />} />
+              <Route path="notes" element={<NotesPage />} />
               <Route path="journal" element={<Journal />} />
             </Route>
             {/* Mindmaps ausserhalb von Layout — Fullscreen ohne Sidebar */}

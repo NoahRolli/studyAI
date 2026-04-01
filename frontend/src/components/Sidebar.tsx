@@ -158,6 +158,12 @@ function Sidebar() {
           <NavLink to="/calendar" className={linkStyle} title={t.sidebar.calendar}>
             {collapsed ? 'C' : t.sidebar.calendar}
           </NavLink>
+          <NavLink to="/notes" className={linkStyle} title={t.sidebar.notes}>
+            {collapsed ? 'N' : t.sidebar.notes}
+          </NavLink>
+          <NavLink to="/metis" className={linkStyle} title={t.sidebar.metis}>
+            {collapsed ? 'M' : t.sidebar.metis}
+          </NavLink>
         </nav>
 
         {/* Spacer — drückt alles Folgende nach unten */}
