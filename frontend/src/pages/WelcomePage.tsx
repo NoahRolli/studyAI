@@ -82,9 +82,9 @@ function WelcomePage() {
 
         {/* Dashboard-Karte */}
         {/* Erste Reihe: 3 Karten */}
-        <Link to="/dashboard" className="group w-64">
+        <Link to="/dashboard" className="group w-56">
           <div
-            className="hud-card p-6 rounded-lg border transition-all duration-300 h-full
+            className="hud-card p-6 rounded-lg border transition-all duration-300 h-36
               group-hover:border-[var(--color-primary)] group-hover:shadow-[0_0_20px_rgba(0,212,255,0.15)]"
             style={{ borderColor: 'var(--color-border)' }}
           >
@@ -104,9 +104,9 @@ function WelcomePage() {
         </Link>
 
         {/* Journal-Karte */}
-        <Link to="/journal" className="group w-64">
+        <Link to="/journal" className="group w-56">
           <div
-            className="hud-card p-6 rounded-lg border transition-all duration-300 h-full
+            className="hud-card p-6 rounded-lg border transition-all duration-300 h-36
               group-hover:border-[var(--color-primary)] group-hover:shadow-[0_0_20px_rgba(0,212,255,0.15)]"
             style={{ borderColor: 'var(--color-border)' }}
           >
@@ -126,9 +126,9 @@ function WelcomePage() {
         </Link>
 
         {/* Kalender-Karte */}
-        <Link to="/calendar" className="group w-64">
+        <Link to="/calendar" className="group w-56">
           <div
-            className="hud-card p-6 rounded-lg border transition-all duration-300 h-full
+            className="hud-card p-6 rounded-lg border transition-all duration-300 h-36
               group-hover:border-[var(--color-primary)] group-hover:shadow-[0_0_20px_rgba(0,212,255,0.15)]"
             style={{ borderColor: 'var(--color-border)' }}
           >
@@ -153,9 +153,9 @@ function WelcomePage() {
       <div className="flex justify-center gap-6 w-full max-w-2xl mt-6">
 
         {/* Notes-Karte */}
-        <Link to="/notes" className="group w-64">
+        <Link to="/notes" className="group w-56">
           <div
-            className="hud-card p-6 rounded-lg border transition-all duration-300 h-full
+            className="hud-card p-6 rounded-lg border transition-all duration-300 h-36
               group-hover:border-[var(--color-primary)] group-hover:shadow-[0_0_20px_rgba(0,212,255,0.15)]"
             style={{ borderColor: 'var(--color-border)' }}
           >
@@ -175,9 +175,9 @@ function WelcomePage() {
         </Link>
 
         {/* Metis-Karte */}
-        <Link to="/metis" className="group w-64">
+        <Link to="/metis" className="group w-56">
           <div
-            className="hud-card p-6 rounded-lg border transition-all duration-300 h-full
+            className="hud-card p-6 rounded-lg border transition-all duration-300 h-36
               group-hover:border-[var(--color-primary)] group-hover:shadow-[0_0_20px_rgba(0,212,255,0.15)]"
             style={{ borderColor: 'var(--color-border)' }}
           >
