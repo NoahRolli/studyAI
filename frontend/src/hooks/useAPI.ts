@@ -6,8 +6,9 @@
 //   const api = useApi()
 //   const modules = await api.get('/api/modules/')
 
-// Backend-URL — läuft auf Port 8000 (FastAPI/Uvicorn)
-const API_BASE = 'http://localhost:8000'
+// Backend-URL — im Production-Modus relativ (gleicher Host),
+// im Dev-Modus auf localhost:8000 (FastAPI/Uvicorn separat)
+const API_BASE = import.meta.env.DEV ? 'http://localhost:8000' : ''
 
 // Generische Fetch-Funktion mit Fehlerbehandlung
 // T = der erwartete Rückgabetyp (TypeScript Generics)
@@ -16,15 +17,24 @@ async function fetchApi<T>(
   options?: RequestInit
 ): Promise<T> {
   // Anfrage an das Backend senden
+  // credentials: 'include' für Auth-Cookie (JWT)
   const response = await fetch(`${API_BASE}${endpoint}`, {
     // Headers setzen — JSON als Standard
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,
     },
+    // Cookie mitschicken (für Auth auf dem Server)
+    credentials: 'include',
     // Restliche Optionen (method, body, etc.) durchreichen
     ...options,
   })
+
+  // Bei 401 (nicht eingeloggt) auf Login-Seite weiterleiten
+  if (response.status === 401) {
+    window.location.href = '/login'
+    throw new Error('Nicht eingeloggt')
+  }
 
   // Fehlerbehandlung — wirft einen Fehler wenn Status nicht 2xx
   if (!response.ok) {
