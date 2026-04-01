@@ -1,5 +1,6 @@
 # Zentrale Konfiguration für das pallas Backend
 # Enthält Pfade, Datenbank-URL und AI-Provider Einstellungen
+# Env-Variablen überschreiben Defaults (für Docker-Deployment)
 import os
 from pathlib import Path
 
@@ -10,25 +11,31 @@ BASE_DIR = Path(__file__).parent.parent.parent
 
 # Storage: SSD-Symlink bevorzugt, lokaler Fallback wenn SSD nicht angeschlossen
 # resolve() folgt dem Symlink — wenn das Ziel nicht existiert, nehmen wir den Fallback
-STORAGE_DIR = BASE_DIR / "backend_storage"
-try:
-    STORAGE_DIR.resolve(strict=True)
-except (OSError, FileNotFoundError):
-    STORAGE_DIR = BASE_DIR / "local_storage"
+# Im Docker-Modus wird STORAGE_DIR via Env-Variable gesetzt
+STORAGE_DIR_ENV = os.environ.get("PALLAS_STORAGE_DIR")
+if STORAGE_DIR_ENV:
+    STORAGE_DIR = Path(STORAGE_DIR_ENV)
+else:
+    STORAGE_DIR = BASE_DIR / "backend_storage"
+    try:
+        STORAGE_DIR.resolve(strict=True)
+    except (OSError, FileNotFoundError):
+        STORAGE_DIR = BASE_DIR / "local_storage"
 
 # Ordner erstellen falls er noch nicht existiert
 os.makedirs(STORAGE_DIR, exist_ok=True)
 
-# Datenbank
-DATABASE_URL = f"sqlite:///{BASE_DIR}/pallas.db"
+# Datenbank — Env-Variable überschreibt Default (für Docker: /data/pallas.db)
+DB_PATH = os.environ.get("PALLAS_DB_PATH", str(BASE_DIR / "pallas.db"))
+DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 # AI Provider: "claude" oder "ollama"
-AI_PROVIDER = "ollama"
+AI_PROVIDER = os.environ.get("PALLAS_AI_PROVIDER", "ollama")
 
 # Claude API
-CLAUDE_API_KEY = ""  # Später in .env auslagern
+CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY", "")
 CLAUDE_MODEL = "claude-sonnet-4-20250514"
 
-# Ollama
-OLLAMA_BASE_URL = "http://localhost:11434"
+# Ollama — Env-Variable erlaubt Umschalten zwischen lokal und remote
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = "llama3.2"
