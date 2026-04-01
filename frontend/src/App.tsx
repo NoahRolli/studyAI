@@ -1,6 +1,7 @@
 // Pallas Frontend — Router-Konfiguration
 // ThemeProvider + LanguageProvider wrappen alles
 // Routen:
+// - "/login" → Login-Seite (nur für Olymp-Server)
 // - "/" → Begrüssungsseite
 // - "/dashboard" → Dashboard (Module + Ordner)
 // - "/modules/:id" → Modul-Detailseite
@@ -20,6 +21,7 @@ import CalendarPage from './pages/CalendarPage'
 import MindmapPage from './pages/MindmapPage'
 import JournalMindmapPage from './pages/JournalMindmapPage'
 import Journal from './pages/Journal'
+import LoginPage from './pages/LoginPage'
 
 function App() {
   return (
@@ -27,6 +29,8 @@ function App() {
       <LanguageProvider>
         <BrowserRouter>
           <Routes>
+            {/* Login-Route — ausserhalb von Layout, kein Sidebar */}
+            <Route path="login" element={<LoginPage />} />
             <Route path="/" element={<Layout />}>
               <Route index element={<WelcomePage />} />
               <Route path="dashboard" element={<Dashboard />} />

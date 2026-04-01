@@ -307,5 +307,10 @@ const en = {
     moodSilent: 'Avg. mood (silent days)',
     weekdays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
   },
+  login: {
+    placeholder: 'Password',
+    button: 'Sign in',
+    error: 'Login failed',
+  },
 } as const
 export default en

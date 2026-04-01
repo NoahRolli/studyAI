@@ -122,6 +122,7 @@ const de = {
       clusters: 'Themen',
       storylines: 'Storylines',
       medications: 'Medikamente',
+      insights: 'Insights',
     },
   },
 
@@ -306,6 +307,11 @@ const de = {
     moodWriting: 'Ø Stimmung (Schreibtage)',
     moodSilent: 'Ø Stimmung (stille Tage)',
     weekdays: ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'],
+  },
+  login: {
+    placeholder: 'Passwort',
+    button: 'Anmelden',
+    error: 'Anmeldung fehlgeschlagen',
   },
 } as const
 export default de
