@@ -70,9 +70,19 @@ async def auth_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-# Einfacher Test-Endpunkt — zeigt ob die API läuft
+# Prüfe ob Frontend vorhanden ist (Production-Modus)
+FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+_HAS_FRONTEND = (
+    (FRONTEND_DIR / "index.html").exists()
+    and (FRONTEND_DIR / "assets").exists()
+)
+
+
+# Root-Endpunkt — Frontend in Production, API-Info in Dev
 @app.get("/")
 def root():
+    if _HAS_FRONTEND:
+        return FileResponse(str(FRONTEND_DIR / "index.html"))
     return {"message": "Pallas API läuft!", "version": "0.1.0"}
 
 
@@ -98,9 +108,7 @@ app.include_router(journal_calendar_router)
 app.include_router(journal_insights_router)
 
 # Static Files — gebautes Frontend servieren (nur in Production)
-# Im Docker wird das Frontend nach /app/frontend/ kopiert
-FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
-if (FRONTEND_DIR / "index.html").exists() and (FRONTEND_DIR / "assets").exists():
+if _HAS_FRONTEND:
     # Statische Assets (JS, CSS, Bilder) direkt servieren
     app.mount(
         "/assets",
