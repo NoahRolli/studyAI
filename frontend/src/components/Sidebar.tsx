@@ -2,14 +2,14 @@
 // Einklappbar (Toggle), resizable (Drag am rechten Rand)
 // Collapsed-State wird in localStorage gespeichert
 // Pallas-Logo klickbar → Begrüssungsseite (/)
-// Nav-Links: Dashboard, Journal, Kalender
+// Nav-Links: Dashboard, Journal, Kalender, Notes, Metis
 // Logout-Button (nur wenn Auth aktiv auf Olymp-Server)
 // Language-Toggle und Theme-Selector unten (nur wenn ausgeklappt)
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { NavLink, Link, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../hooks/useLanguage'
-import { get, post } from '../hooks/useAPI'
+import { post } from '../hooks/useAPI'
 import LanguageToggle from './LanguageToggle'
 import ThemeSelector from './ThemeSelector'
 
@@ -19,6 +19,9 @@ const MAX_WIDTH = 400
 const DEFAULT_WIDTH = 256
 const COLLAPSED_WIDTH = 56
 const STORAGE_KEY = 'pallas-sidebar-collapsed'
+
+// API-URL für Auth-Check (direkter fetch, kein useAPI wegen 401-Redirect)
+const API_BASE = import.meta.env.DEV ? 'http://localhost:8000' : ''
 
 function Sidebar() {
   const { t } = useLanguage()
@@ -40,9 +43,10 @@ function Sidebar() {
   const [authActive, setAuthActive] = useState(false)
 
   // Beim Mount prüfen ob Auth aktiv ist
+  // Direkter fetch statt useAPI — useAPI redirectet bei 401 auf /login
   useEffect(() => {
-    get('/api/auth/check')
-      .then(() => setAuthActive(true))
+    fetch(API_BASE + '/api/auth/check', { credentials: 'include' })
+      .then((r) => setAuthActive(r.ok))
       .catch(() => setAuthActive(false))
   }, [])
 
@@ -128,8 +132,6 @@ function Sidebar() {
               </h1>
             </Link>
           )}
-
-          {/* Toggle-Button: Ein-/Ausklappen */}
           <button
             onClick={toggleCollapsed}
             className="p-1.5 rounded-md transition-all duration-300
@@ -147,7 +149,7 @@ function Sidebar() {
           </button>
         </div>
 
-        {/* Navigation — Dashboard, Journal, Kalender */}
+        {/* Navigation */}
         <nav className="flex flex-col gap-2">
           <NavLink to="/dashboard" className={linkStyle} title={t.sidebar.dashboard}>
             {collapsed ? 'D' : t.sidebar.dashboard}
@@ -166,7 +168,7 @@ function Sidebar() {
           </NavLink>
         </nav>
 
-        {/* Spacer — drückt alles Folgende nach unten */}
+        {/* Spacer */}
         <div className="mt-auto" />
 
         {/* Theme + Language nur wenn ausgeklappt */}
@@ -193,7 +195,6 @@ function Sidebar() {
               ${collapsed ? 'justify-center p-2' : 'px-3 py-2 text-sm'}`}
             title={t.sidebar.logout}
           >
-            {/* Power-Icon SVG */}
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
               <path d="M8 1v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               <path d="M4.5 3.5a6 6 0 1 0 7 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
