@@ -1,0 +1,33 @@
+# Pallas Docker Compose — Olymp-Server Deployment
+# SQLite-Datenbanken liegen auf dem LUKS-verschlüsselten Tresor
+# Auth-Config wird read-only gemountet
+
+services:
+  pallas:
+    build: .
+    container_name: pallas
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    volumes:
+      # SQLite-Datenbanken auf dem verschlüsselten Tresor
+      - /mnt/tresor/pallas/data:/data
+      # Auth-Config (read-only, gleiches System wie Olymp Dashboard)
+      - /etc/olymp:/etc/olymp:ro
+    environment:
+      # Datenbank-Pfade zeigen auf das gemountete Volume
+      - PALLAS_DB_PATH=/data/pallas.db
+      - JOURNAL_DB_PATH=/data/journal.db
+      # Storage für Uploads (Dokumente, etc.)
+      - PALLAS_STORAGE_DIR=/data/storage
+      # Ollama — Default: lokal auf dem M920q
+      # Umschalten auf MacBook: http://192.168.0.XXX:11434
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      # CORS — Server-IP + VPN
+      - CORS_ORIGINS=http://192.168.0.10:8001,http://192.168.2.1:8001
+      # Auth-Config Pfad (im Container)
+      - AUTH_CONFIG_PATH=/etc/olymp/auth.json
+    extra_hosts:
+      # host.docker.internal zeigt auf den Host (M920q)
+      # Damit kann der Container auf Ollama zugreifen
+      - "host.docker.internal:host-gateway"
