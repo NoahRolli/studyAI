@@ -78,10 +78,11 @@ function WelcomePage() {
       </p>
 
       {/* Schnellzugriff-Karten: 3 Spalten */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-2xl">
+      <div className="flex flex-wrap justify-center gap-6 w-full max-w-3xl">
 
         {/* Dashboard-Karte */}
-        <Link to="/dashboard" className="group">
+        {/* Erste Reihe: 3 Karten */}
+        <Link to="/dashboard" className="group w-56">
           <div
             className="hud-card p-6 rounded-lg border transition-all duration-300
               group-hover:border-[var(--color-primary)] group-hover:shadow-[0_0_20px_rgba(0,212,255,0.15)]"
@@ -103,7 +104,7 @@ function WelcomePage() {
         </Link>
 
         {/* Journal-Karte */}
-        <Link to="/journal" className="group">
+        <Link to="/journal" className="group w-56">
           <div
             className="hud-card p-6 rounded-lg border transition-all duration-300
               group-hover:border-[var(--color-primary)] group-hover:shadow-[0_0_20px_rgba(0,212,255,0.15)]"
@@ -125,7 +126,7 @@ function WelcomePage() {
         </Link>
 
         {/* Kalender-Karte */}
-        <Link to="/calendar" className="group">
+        <Link to="/calendar" className="group w-56">
           <div
             className="hud-card p-6 rounded-lg border transition-all duration-300
               group-hover:border-[var(--color-primary)] group-hover:shadow-[0_0_20px_rgba(0,212,255,0.15)]"
@@ -142,6 +143,55 @@ function WelcomePage() {
               style={{ color: 'var(--color-text-secondary)' }}
             >
               {t.welcome.calendarDesc}
+            </p>
+          </div>
+        </Link>
+
+      </div>
+
+      {/* Zweite Reihe: Notes + Metis (zentriert) */}
+      <div className="flex justify-center gap-6 w-full max-w-2xl mt-6">
+
+        {/* Notes-Karte */}
+        <Link to="/notes" className="group w-56">
+          <div
+            className="hud-card p-6 rounded-lg border transition-all duration-300
+              group-hover:border-[var(--color-primary)] group-hover:shadow-[0_0_20px_rgba(0,212,255,0.15)]"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
+            <h2
+              className="hud-title text-sm text-glow mb-2"
+              style={{ color: 'var(--color-primary)' }}
+            >
+              {t.welcome.notesTitle}
+            </h2>
+            <p
+              className="text-xs leading-relaxed"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              {t.welcome.notesDesc}
+            </p>
+          </div>
+        </Link>
+
+        {/* Metis-Karte */}
+        <Link to="/metis" className="group w-56">
+          <div
+            className="hud-card p-6 rounded-lg border transition-all duration-300
+              group-hover:border-[var(--color-primary)] group-hover:shadow-[0_0_20px_rgba(0,212,255,0.15)]"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
+            <h2
+              className="hud-title text-sm text-glow mb-2"
+              style={{ color: 'var(--color-primary)' }}
+            >
+              {t.welcome.metisTitle}
+            </h2>
+            <p
+              className="text-xs leading-relaxed"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              {t.welcome.metisDesc}
             </p>
           </div>
         </Link>
