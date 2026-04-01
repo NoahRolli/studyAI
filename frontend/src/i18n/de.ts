@@ -24,6 +24,8 @@ const de = {
     dashboard: 'Dashboard',
     journal: 'Journal',
     calendar: 'Kalender',
+    notes: 'Notizen',
+    metis: 'Metis',
     version: 'v0.1.0 — ONLINE',
     collapse: 'Sidebar einklappen',
     expand: 'Sidebar ausklappen',
@@ -119,6 +121,8 @@ const de = {
     tabs: {
       entries: 'Einträge',
       calendar: 'Kalender',
+    notes: 'Notizen',
+    metis: 'Metis',
       mood: 'Stimmung',
       clusters: 'Themen',
       storylines: 'Storylines',
@@ -313,6 +317,20 @@ const de = {
     placeholder: 'Passwort',
     button: 'Anmelden',
     error: 'Anmeldung fehlgeschlagen',
+  },
+
+  // Notizen
+  notes: {
+    title: 'Notizen',
+    newNote: 'Neue Notiz',
+    untitled: 'Ohne Titel',
+    searchPlaceholder: 'Notizen durchsuchen...',
+    noNotes: 'Noch keine Notizen vorhanden',
+    noNoteSelected: 'Notiz auswählen oder neue erstellen',
+    deleteConfirm: 'Notiz wirklich löschen?',
+    saved: 'Gespeichert',
+    links: 'Verlinkte Notizen',
+    noLinks: 'Keine Links gefunden',
   },
 } as const
 export default de

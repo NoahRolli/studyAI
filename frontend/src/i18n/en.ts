@@ -23,6 +23,8 @@ const en = {
     dashboard: 'Dashboard',
     journal: 'Journal',
     calendar: 'Calendar',
+    notes: 'Notes',
+    metis: 'Metis',
     version: 'v0.1.0 — ONLINE',
     collapse: 'Collapse sidebar',
     expand: 'Expand sidebar',
@@ -118,6 +120,8 @@ const en = {
     tabs: {
       entries: 'Entries',
       calendar: 'Calendar',
+    notes: 'Notes',
+    metis: 'Metis',
       mood: 'Mood',
       clusters: 'Topics',
       storylines: 'Storylines',
@@ -312,6 +316,20 @@ const en = {
     placeholder: 'Password',
     button: 'Sign in',
     error: 'Login failed',
+  },
+
+  // Notes
+  notes: {
+    title: 'Notes',
+    newNote: 'New Note',
+    untitled: 'Untitled',
+    searchPlaceholder: 'Search notes...',
+    noNotes: 'No notes yet',
+    noNoteSelected: 'Select a note or create a new one',
+    deleteConfirm: 'Really delete this note?',
+    saved: 'Saved',
+    links: 'Linked Notes',
+    noLinks: 'No links found',
   },
 } as const
 export default en
