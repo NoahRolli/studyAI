@@ -100,7 +100,7 @@ app.include_router(journal_insights_router)
 # Static Files — gebautes Frontend servieren (nur in Production)
 # Im Docker wird das Frontend nach /app/frontend/ kopiert
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
-if FRONTEND_DIR.exists() and (FRONTEND_DIR / "index.html").exists():
+if (FRONTEND_DIR / "index.html").exists() and (FRONTEND_DIR / "assets").exists():
     # Statische Assets (JS, CSS, Bilder) direkt servieren
     app.mount(
         "/assets",
