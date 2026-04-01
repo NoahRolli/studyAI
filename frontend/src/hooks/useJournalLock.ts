@@ -1,14 +1,13 @@
 // useJournalLock — Automatische Sperrung des Journals
-// Sperrt das Journal automatisch wenn:
-// 1. Der User die Journal-Seite verlässt (aber NICHT zur Journal-Mindmap)
-// 2. Der User 15 Minuten inaktiv ist (Tab-Wechsel, anderes Programm)
+// Sperrt das Journal automatisch nach 15 Minuten Inaktivität:
+// 1. Der User navigiert weg vom Journal-Bereich (aber NICHT zur Journal-Mindmap)
+// 2. Der User wechselt den Browser-Tab oder zu einem anderen Programm
 //
 // WICHTIG: Navigation zu /journal/mindmap sperrt NICHT —
 // das ist ein Journal-Feature und die Session bleibt offen
 //
-// Tab-Wechsel / anderes Programm → 15-Min-Timer
-// Rückkehr vor Ablauf → Timer wird gecancelt
-// Navigation weg vom Journal-Bereich → sofortige Sperrung
+// Manueller Lock-Button sperrt sofort (über lockJournal im Parent)
+// Timer wird gecancelt wenn User zurückkehrt
 
 import { useEffect, useRef } from 'react'
 import { post } from './useAPI'
@@ -28,15 +27,11 @@ function isJournalRoute(): boolean {
 interface UseJournalLockOptions {
   isUnlocked: boolean
   onLocked: () => void
-  lockOnNavigateAway?: boolean
-  lockOnVisibilityChange?: boolean
 }
 
 function useJournalLock({
   isUnlocked,
   onLocked,
-  lockOnNavigateAway = true,
-  lockOnVisibilityChange = true,
 }: UseJournalLockOptions) {
   // Refs für aktuelle Werte — useEffect Cleanup sieht sonst veraltete States
   const isUnlockedRef = useRef(isUnlocked)
@@ -49,13 +44,25 @@ function useJournalLock({
   useEffect(() => { isUnlockedRef.current = isUnlocked }, [isUnlocked])
   useEffect(() => { onLockedRef.current = onLocked }, [onLocked])
 
-  // Timer aufräumen beim Unmount
-  useEffect(() => {
-    return () => {
-      if (inactivityTimer.current) {
-        clearTimeout(inactivityTimer.current)
-      }
+  // Hilfsfunktion: Laufenden Timer abbrechen
+  function clearLockTimer() {
+    if (inactivityTimer.current) {
+      clearTimeout(inactivityTimer.current)
+      inactivityTimer.current = null
     }
+  }
+
+  // Hilfsfunktion: 15-Min-Timer starten (nur wenn nicht schon aktiv)
+  function startLockTimer() {
+    if (inactivityTimer.current) return
+    inactivityTimer.current = setTimeout(() => {
+      lockJournal()
+    }, INACTIVITY_TIMEOUT_MS)
+  }
+
+  // Timer aufräumen beim Unmount des Hooks
+  useEffect(() => {
+    return () => clearLockTimer()
   }, [])
 
   // Lock-Funktion — ruft Backend auf und benachrichtigt Parent
@@ -72,54 +79,47 @@ function useJournalLock({
     }
   }
 
-  // --- 1. Unmount: Sperren wenn Journal-Bereich verlassen wird ---
-  // /journal → /journal/mindmap = NICHT sperren
-  // /journal → /dashboard = SPERREN
+  // --- 1. Unmount: Timer starten wenn Journal-Bereich verlassen wird ---
+  // /journal → /journal/mindmap = NICHT starten
+  // /journal → /dashboard = Timer starten (15 Min)
   useEffect(() => {
-    if (!lockOnNavigateAway) return
     return () => {
       if (isUnlockedRef.current) {
-        // Kleines Delay damit React Router die URL aktualisiert hat
         setTimeout(() => {
           if (!isJournalRoute()) {
-            post('/api/journal/lock').catch(() => {})
+            startLockTimer()
           }
         }, 50)
       }
     }
-  }, [lockOnNavigateAway])
+  }, [])
 
-  // --- 2. Visibility-Change: Tab-Wechsel / anderes Programm ---
-  // Hidden → 15-Min-Timer starten
-  // Visible → Timer canceln, Journal bleibt offen
+  // --- 2. Rückkehr zum Journal: Timer canceln ---
   useEffect(() => {
-    if (!lockOnVisibilityChange || !isUnlocked) return
+    if (isUnlocked && isJournalRoute()) {
+      clearLockTimer()
+    }
+  }, [isUnlocked])
+
+  // --- 3. Visibility-Change: Tab-Wechsel / anderes Programm ---
+  // Hidden → Timer starten
+  // Visible → Timer canceln
+  useEffect(() => {
+    if (!isUnlocked) return
 
     function handleVisibilityChange() {
       if (document.hidden) {
-        // Tab wurde versteckt → Timer starten
-        inactivityTimer.current = setTimeout(() => {
-          lockJournal()
-        }, INACTIVITY_TIMEOUT_MS)
+        startLockTimer()
       } else {
-        // Tab ist wieder sichtbar → Timer canceln
-        if (inactivityTimer.current) {
-          clearTimeout(inactivityTimer.current)
-          inactivityTimer.current = null
-        }
+        clearLockTimer()
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      // Timer aufräumen wenn Effekt neu läuft
-      if (inactivityTimer.current) {
-        clearTimeout(inactivityTimer.current)
-        inactivityTimer.current = null
-      }
     }
-  }, [isUnlocked, lockOnVisibilityChange])
+  }, [isUnlocked])
 }
 
 export default useJournalLock

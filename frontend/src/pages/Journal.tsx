@@ -33,8 +33,6 @@ function Journal() {
   useJournalLock({
     isUnlocked: s.status?.is_unlocked ?? false,
     onLocked: s.resetState,
-    lockOnNavigateAway: true,
-    lockOnVisibilityChange: true,
   })
 
   // Suche: Treffer angeklickt → Kalender-Tab + Modal für den Tag
