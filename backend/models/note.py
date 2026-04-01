@@ -1,6 +1,7 @@
 # Note Model — Markdown-Notizen für das Pallas Notes-Modul
-# Jede Notiz hat Titel, Markdown-Inhalt, und Tags
-# Bidirektionale Links werden über [[Notiz-Titel]] Syntax im Content aufgelöst
+# Bewusst flach gehalten: Titel + Inhalt + bidirektionale Links
+# Keine Ordner, keine Tags — Organisation übernimmt Metis (Second Brain)
+# [[Notiz-Titel]] Syntax im Content für Verlinkungen
 # Gespeichert in der Haupt-DB (pallas.db), NICHT in der Journal-DB
 
 from datetime import datetime, timezone
@@ -18,11 +19,8 @@ class Note(Base):
     # Titel der Notiz (einzigartig für [[Link]] Auflösung)
     title = Column(String, nullable=False, unique=True, index=True)
 
-    # Markdown-Inhalt — kann [[Links]], Tags, und beliebigen Text enthalten
+    # Markdown-Inhalt — kann [[Links]] und beliebigen Text enthalten
     content = Column(Text, nullable=False, default="")
-
-    # Komma-separierte Tags für Kategorisierung (z.B. "python,projekt,idee")
-    tags = Column(String, nullable=True)
 
     # Zeitstempel
     created_at = Column(
