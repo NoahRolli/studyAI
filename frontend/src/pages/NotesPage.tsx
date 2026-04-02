@@ -1,7 +1,7 @@
 // NotesPage — Orchestrator für das Notizen-Modul
 // Verwaltet State und API-Calls, delegiert Anzeige an Komponenten
 // Links: NotesList (Suche, Liste, Aktionen, Pin-Toggle)
-// Rechts: NoteEditor (TipTap mit WikiLinks) + BacklinksPanel
+// Rechts: NoteEditor + BacklinksPanel + NoteAIPanel
 // Cmd+K: QuickSwitcher Modal für schnelle Navigation
 
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -10,6 +10,7 @@ import { useLanguage } from '../hooks/useLanguage'
 import NotesList from '../components/notes/NotesList'
 import NoteEditor from '../components/notes/NoteEditor'
 import BacklinksPanel from '../components/notes/BacklinksPanel'
+import NoteAIPanel from '../components/notes/NoteAIPanel'
 import QuickSwitcher from '../components/notes/QuickSwitcher'
 
 // Notiz-Typ für die Liste (ohne Content)
@@ -110,7 +111,7 @@ function NotesPage() {
     } catch { /* Fehler ignorieren */ }
   }
 
-  // --- WikiLink Handler: Notiz öffnen oder neu erstellen ---
+  // --- WikiLink Handler ---
   const handleWikiLinkClick = useCallback(async (title: string) => {
     const existing = notes.find(
       (n) => n.title.toLowerCase() === title.toLowerCase()
@@ -162,7 +163,7 @@ function NotesPage() {
         onTogglePin={togglePin}
       />
 
-      {/* Rechte Spalte: Editor + Backlinks */}
+      {/* Rechte Spalte: Editor + Backlinks + AI */}
       <div
         className="flex-1 flex flex-col hud-card overflow-hidden"
         style={{ minHeight: 0 }}
@@ -185,6 +186,10 @@ function NotesPage() {
               onWikiLinkClick={handleWikiLinkClick}
             />
             <BacklinksPanel
+              noteId={selectedNote.id}
+              onNavigate={loadNote}
+            />
+            <NoteAIPanel
               noteId={selectedNote.id}
               onNavigate={loadNote}
             />
