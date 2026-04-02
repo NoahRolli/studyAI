@@ -2,6 +2,7 @@
 # SQLite-Datenbanken liegen auf dem LUKS-verschlüsselten Tresor
 # Auth-Config wird read-only gemountet
 # network_mode: host — Container teilt Host-Netzwerk (für Ollama-Zugriff)
+# Sensible Werte (IPs, CORS) in docker-compose.override.yml (nicht auf GitHub)
 
 services:
   pallas:
@@ -20,9 +21,7 @@ services:
       - JOURNAL_DB_PATH=/data/journal.db
       # Storage für Uploads (Dokumente, etc.)
       - PALLAS_STORAGE_DIR=/data/storage
-      # Ollama — localhost funktioniert direkt dank network_mode: host
+      # Ollama Fallback — localhost (Server)
       - OLLAMA_BASE_URL=http://localhost:11434
-      # CORS — Server-IP + VPN
-      - CORS_ORIGINS=http://192.168.0.10:8001,http://192.168.2.1:8001
       # Auth-Config Pfad (im Container)
       - AUTH_CONFIG_PATH=/etc/olymp/auth.json
