@@ -198,3 +198,39 @@ export interface BreadcrumbItem {
   id: number
   name: string
 }
+// --- Insight-Typen (Journal Analytics) ---
+
+// Medikament ↔ Stimmung Korrelation
+export interface MedMoodResult {
+  medication: string
+  avg_mood_with: number
+  avg_mood_without: number
+  difference: number
+  days_with: number
+  days_without: number
+  trend: string
+}
+
+// Stimmung nach Wochentag
+export interface WeekdayMoodResult {
+  weekday: string
+  weekday_index: number
+  avg_mood: number
+  entry_count: number
+}
+
+// Schreibmuster-Analyse
+export interface WritingResult {
+  total_entries: number
+  avg_length: number
+  avg_mood_writing_days: number | null
+  avg_mood_silent_days: number | null
+  writing_days: number
+}
+
+// Keyword ↔ Stimmung Korrelation
+export interface KeywordMoodResult {
+  keyword: string
+  avg_mood: number
+  count: number
+}
