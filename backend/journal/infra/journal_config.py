@@ -28,8 +28,10 @@ AES_KEY_LENGTH = 32             # 256-bit Schlüssel
 AES_IV_LENGTH = 12              # 96-bit IV (empfohlen für GCM)
 
 # Ollama — EINZIGER erlaubter AI-Provider für Journal
+# Primary (MacBook) mit Fallback (lokal) via ollama_connector
 # Kein Fallback auf Claude, kein gemeinsamer Code-Pfad
 # Env-Variable erlaubt Umschalten zwischen lokal und remote
+OLLAMA_PRIMARY_URL = os.environ.get("OLLAMA_PRIMARY_URL", "")
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_CHAT_MODEL = "llama3.2"              # Für Sentiment, Storylines
 OLLAMA_EMBED_MODEL = "nomic-embed-text"     # Für Embeddings/Clustering
