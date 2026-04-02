@@ -1,9 +1,8 @@
 // StorylineView — Narrative Bögen über mehrere Einträge
 // Zeigt erkannte Storylines mit Arc-Typ und Konfidenz
-// Ruft POST /api/journal/analytics/storylines auf
+// Daten kommen gecacht aus useJournalAnalytics (kein eigener State)
 
-import { useState, useEffect } from 'react'
-import { post } from '../../hooks/useAPI'
+import { useEffect } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { StorylineResult } from '../../types/models'
 
@@ -15,28 +14,18 @@ const ARC_CONFIG: Record<string, { color: string; icon: string }> = {
   ongoing:  { color: '#ffaa00', icon: '→' },
 }
 
-function StorylineView() {
-  const { t, language } = useLanguage()
-  const [storylines, setStorylines] = useState<StorylineResult[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+interface StorylineViewProps {
+  storylines: StorylineResult[]
+  loading: boolean
+  error: string | null
+  onLoad: () => void
+}
 
-  useEffect(() => {
-    loadStorylines()
-  }, [])
+function StorylineView({ storylines, loading, error, onLoad }: StorylineViewProps) {
+  const { t } = useLanguage()
 
-  async function loadStorylines() {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await post<StorylineResult[]>(`/api/journal/analytics/storylines?language=${language}`)
-      setStorylines(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.common.error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Beim ersten Rendern laden (Cache-Check passiert im Hook)
+  useEffect(() => { onLoad() }, [])
 
   if (loading) {
     return (
