@@ -1,13 +1,15 @@
 // NotesPage — Orchestrator für das Notizen-Modul
 // Verwaltet State und API-Calls, delegiert Anzeige an Komponenten
 // Links: NotesList (Suche, Liste, Aktionen)
-// Rechts: NoteEditor (TipTap Rich-Text Editor mit Auto-Save)
+// Rechts: NoteEditor (TipTap mit WikiLinks) + BacklinksPanel
+// WikiLink-Klick: Navigiert zur verlinkten Notiz (oder erstellt sie)
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { get, post, put, del } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import NotesList from '../components/notes/NotesList'
 import NoteEditor from '../components/notes/NoteEditor'
+import BacklinksPanel from '../components/notes/BacklinksPanel'
 
 // Notiz-Typ für die Liste (ohne Content)
 interface NoteListItem {
@@ -50,14 +52,15 @@ function NotesPage() {
     } catch { /* Fehler ignorieren */ }
   }
 
-  async function createNote() {
+  async function createNote(title?: string) {
     try {
       const data = await post<NoteDetail>('/api/notes', {
-        title: t.notes.untitled,
+        title: title || t.notes.untitled,
         content: '',
       })
       await loadNotes()
       setSelectedNote(data)
+      return data
     } catch { /* Fehler ignorieren */ }
   }
 
@@ -83,6 +86,20 @@ function NotesPage() {
       await loadNotes()
     } catch { /* Fehler ignorieren */ }
   }
+
+  // --- WikiLink Handler: Notiz öffnen oder neu erstellen ---
+  const handleWikiLinkClick = useCallback(async (title: string) => {
+    // Existierende Notiz suchen
+    const existing = notes.find(
+      (n) => n.title.toLowerCase() === title.toLowerCase()
+    )
+    if (existing) {
+      await loadNote(existing.id)
+    } else {
+      // Notiz existiert nicht → neu erstellen mit dem Titel
+      await createNote(title)
+    }
+  }, [notes])
 
   // --- Auto-Save Handler ---
   function triggerAutoSave(updated: NoteDetail) {
@@ -119,11 +136,11 @@ function NotesPage() {
         search={search}
         onSearchChange={setSearch}
         onSelectNote={loadNote}
-        onCreateNote={createNote}
+        onCreateNote={() => createNote()}
         onDeleteNote={deleteNote}
       />
 
-      {/* Rechte Spalte: Editor */}
+      {/* Rechte Spalte: Editor + Backlinks */}
       <div
         className="flex-1 flex flex-col hud-card overflow-hidden"
         style={{ minHeight: 0 }}
@@ -135,14 +152,21 @@ function NotesPage() {
             </p>
           </div>
         ) : (
-          <NoteEditor
-            title={selectedNote.title}
-            content={selectedNote.content}
-            saving={saving}
-            savedMsg={savedMsg}
-            onTitleChange={handleTitleChange}
-            onContentChange={handleContentChange}
-          />
+          <>
+            <NoteEditor
+              title={selectedNote.title}
+              content={selectedNote.content}
+              saving={saving}
+              savedMsg={savedMsg}
+              onTitleChange={handleTitleChange}
+              onContentChange={handleContentChange}
+              onWikiLinkClick={handleWikiLinkClick}
+            />
+            <BacklinksPanel
+              noteId={selectedNote.id}
+              onNavigate={loadNote}
+            />
+          </>
         )}
       </div>
     </div>
