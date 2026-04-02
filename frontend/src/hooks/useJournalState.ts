@@ -1,16 +1,16 @@
 // useJournalState — Zentraler State-Hook für das Journal
 // Kapselt allen State, API-Aufrufe und Logik
+// Analytics-Daten werden an useJournalAnalytics delegiert
 // Journal.tsx importiert nur diesen Hook und verteilt die Daten
-// language wird aus useLanguage geholt und an Backend-Calls angehängt
 
 import { useState, useEffect } from 'react'
 import { get, post, del, put } from './useAPI'
 import { useLanguage } from './useLanguage'
+import useJournalAnalytics from './useJournalAnalytics'
 import type {
   JournalStatus,
   JournalEntry,
   JournalEntryCreate,
-  MoodResult,
   Medication,
   MedicationSettingsResponse,
 } from '../types/models'
@@ -28,6 +28,9 @@ export type JournalTab =
 export default function useJournalState() {
   // Sprache aus Context holen — wird an API-Calls angehängt
   const { language } = useLanguage()
+
+  // Analytics-Hook — gecachte Moods, Clusters, Storylines, Insights
+  const analytics = useJournalAnalytics()
 
   // --- Core State ---
   const [status, setStatus] = useState<JournalStatus | null>(null)
@@ -47,10 +50,6 @@ export default function useJournalState() {
   const [editEntry, setEditEntry] = useState<JournalEntryCreate>({
     title: '', content: '', date: '',
   })
-
-  // Mood-Daten
-  const [moods, setMoods] = useState<MoodResult[]>([])
-  const [moodsLoaded, setMoodsLoaded] = useState(false)
 
   // Medikamenten-State
   const [medEnabled, setMedEnabled] = useState(false)
@@ -109,8 +108,6 @@ export default function useJournalState() {
   // --- Auth-Aktionen ---
   function resetState() {
     setEntries([])
-    setMoods([])
-    setMoodsLoaded(false)
     setMedications([])
     setMedEnabled(false)
     setMessage(null)
@@ -119,6 +116,7 @@ export default function useJournalState() {
     setEditEntry({ title: '', content: '', date: '' })
     setShowMedReminder(false)
     setStatus((prev) => prev ? { ...prev, is_unlocked: false } : prev)
+    analytics.resetAnalytics()
   }
 
   async function setupJournal() {
@@ -140,7 +138,6 @@ export default function useJournalState() {
       setPassword('')
       setMessage(null)
       await loadStatus()
-      // Nach erfolgreichem Unlock: Medikamenten-Erinnerung triggern
       setShowMedReminder(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Wrong password')
@@ -168,7 +165,7 @@ export default function useJournalState() {
       await post(`/api/journal/entries/?language=${language}`, payload)
       setShowForm(false)
       setAutoTitle(true)
-      setMoodsLoaded(false)
+      analytics.invalidateCache()
       await loadEntries()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error creating entry')
@@ -178,7 +175,7 @@ export default function useJournalState() {
   async function deleteEntry(id: number) {
     try {
       await del(`/api/journal/entries/${id}`)
-      setMoodsLoaded(false)
+      analytics.invalidateCache()
       await loadEntries()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error deleting entry')
@@ -203,24 +200,10 @@ export default function useJournalState() {
       const payload = data || editEntry
       await put(`/api/journal/entries/${editingId}`, payload)
       cancelEdit()
-      setMoodsLoaded(false)
+      analytics.invalidateCache()
       await loadEntries()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error saving entry')
-    }
-  }
-
-  // --- Mood --- language als Query-Parameter
-  async function loadMoods() {
-    if (moodsLoaded) return
-    try {
-      const data = await post<MoodResult[]>(
-        `/api/journal/analytics/mood?language=${language}`
-      )
-      setMoods(data)
-      setMoodsLoaded(true)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Mood analysis failed')
     }
   }
 
@@ -242,7 +225,6 @@ export default function useJournalState() {
     }
   }
 
-  // --- Med-Erinnerung schliessen ---
   function dismissMedReminder() {
     setShowMedReminder(false)
   }
@@ -254,11 +236,12 @@ export default function useJournalState() {
     // State
     status, password, setPassword, entries, loading, error, message,
     activeTab, setActiveTab, showForm, setShowForm, autoTitle, setAutoTitle,
-    editingId, editEntry, setEditEntry, moods, moodsLoaded, medEnabled,
-    medications, showMedReminder,
+    editingId, editEntry, setEditEntry, medEnabled, medications, showMedReminder,
+    // Analytics (durchgereicht)
+    analytics,
     // Aktionen
     setupJournal, unlockJournal, lockJournal, resetState,
     createEntry, deleteEntry, startEdit, cancelEdit, saveEdit,
-    loadMoods, loadMedications, toggleMedTracker, dismissMedReminder,
+    loadMedications, toggleMedTracker, dismissMedReminder,
   }
 }
