@@ -36,6 +36,9 @@ AI_PROVIDER = os.environ.get("PALLAS_AI_PROVIDER", "ollama")
 CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY", "")
 CLAUDE_MODEL = "claude-sonnet-4-20250514"
 
-# Ollama — Env-Variable erlaubt Umschalten zwischen lokal und remote
+# Ollama — Primary (MacBook) mit Fallback (lokal)
+# OLLAMA_PRIMARY_URL: Schnelles MacBook-Ollama (optional, leer = deaktiviert)
+# OLLAMA_BASE_URL: Fallback auf lokales Ollama
+OLLAMA_PRIMARY_URL = os.environ.get("OLLAMA_PRIMARY_URL", "")
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = "llama3.2"
