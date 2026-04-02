@@ -1,87 +1,22 @@
 // InsightsView — Modulare Journal-Datenanalyse
 // Zeigt auswählbare Analyse-Karten: Medikament↔Stimmung, Wochentage, etc.
-// Jede Analyse wird einzeln geladen wenn der User sie anklickt
+// Daten kommen gecacht aus useJournalAnalytics (kein eigener State)
 // Alle Daten bleiben lokal (Ollama-only für AI-Summary)
 
-import { useState } from 'react'
-import { post } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import InsightCard from './InsightCard'
+import type { InsightKey } from '../../hooks/useJournalAnalytics'
 
-// Typen für die verschiedenen Analysen
-export interface MedMoodResult {
-  medication: string
-  avg_mood_with: number
-  avg_mood_without: number
-  difference: number
-  days_with: number
-  days_without: number
-  trend: string
-}
-
-export interface WeekdayMoodResult {
-  weekday: string
-  weekday_index: number
-  avg_mood: number
-  entry_count: number
-}
-
-export interface WritingResult {
-  total_entries: number
-  avg_length: number
-  avg_mood_writing_days: number | null
-  avg_mood_silent_days: number | null
-  writing_days: number
-}
-
-export interface KeywordMoodResult {
-  keyword: string
-  avg_mood: number
-  count: number
-}
-
-// Analyse-Module die der User auswählen kann
-type InsightKey = 'medication-mood' | 'weekday-mood' | 'writing-patterns' | 'keyword-mood' | 'ai-summary'
-
-function InsightsView() {
-  const { t, language } = useLanguage()
-
-  // State pro Analyse-Modul
+interface InsightsViewProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [results, setResults] = useState<Record<string, any>>({})
-  const [loading, setLoading] = useState<Record<string, boolean>>({})
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  results: Record<string, any>
+  loading: Record<string, boolean>
+  errors: Record<string, string>
+  onLoadInsight: (key: InsightKey) => void
+}
 
-  // Analyse laden
-  async function loadInsight(key: InsightKey) {
-    // Toggle: wenn schon geladen, zuklappen
-    if (results[key] !== undefined) {
-      setResults((prev) => {
-        const next = { ...prev }
-        delete next[key]
-        return next
-      })
-      return
-    }
-
-    try {
-      setLoading((prev) => ({ ...prev, [key]: true }))
-      setErrors((prev) => {
-        const next = { ...prev }
-        delete next[key]
-        return next
-      })
-      const data = await post(`/api/journal/insights/${key}?language=${language}`)
-      setResults((prev) => ({ ...prev, [key]: data }))
-    } catch (err) {
-      setErrors((prev) => ({
-        ...prev,
-        [key]: err instanceof Error ? err.message : t.common.error,
-      }))
-    } finally {
-      setLoading((prev) => ({ ...prev, [key]: false }))
-    }
-  }
+function InsightsView({ results, loading, errors, onLoadInsight }: InsightsViewProps) {
+  const { t } = useLanguage()
 
   // Analyse-Module Konfiguration (keine Emojis — geometrische Symbole)
   const modules: { key: InsightKey; icon: string; title: string; desc: string }[] = [
@@ -134,7 +69,7 @@ function InsightsView() {
           <div key={mod.key}>
             {/* Analyse-Button-Karte */}
             <button
-              onClick={() => loadInsight(mod.key)}
+              onClick={() => onLoadInsight(mod.key)}
               disabled={loading[mod.key]}
               className="hud-card p-4 w-full text-left transition-all duration-200"
               style={{
