@@ -2,7 +2,7 @@
 // Verwaltet State und API-Calls, delegiert Anzeige an Komponenten
 // Links: NotesList (Suche, Liste, Aktionen)
 // Rechts: NoteEditor (TipTap mit WikiLinks) + BacklinksPanel
-// WikiLink-Klick: Navigiert zur verlinkten Notiz (oder erstellt sie)
+// Cmd+K: QuickSwitcher Modal für schnelle Navigation
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { get, post, put, del } from '../hooks/useAPI'
@@ -10,6 +10,7 @@ import { useLanguage } from '../hooks/useLanguage'
 import NotesList from '../components/notes/NotesList'
 import NoteEditor from '../components/notes/NoteEditor'
 import BacklinksPanel from '../components/notes/BacklinksPanel'
+import QuickSwitcher from '../components/notes/QuickSwitcher'
 
 // Notiz-Typ für die Liste (ohne Content)
 interface NoteListItem {
@@ -33,9 +34,22 @@ function NotesPage() {
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState(false)
   const [savedMsg, setSavedMsg] = useState(false)
+  const [showSwitcher, setShowSwitcher] = useState(false)
 
   // Auto-Save Timer Ref
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // --- Cmd+K Keyboard Shortcut ---
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setShowSwitcher((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // --- API-Aufrufe ---
   async function loadNotes() {
@@ -89,14 +103,12 @@ function NotesPage() {
 
   // --- WikiLink Handler: Notiz öffnen oder neu erstellen ---
   const handleWikiLinkClick = useCallback(async (title: string) => {
-    // Existierende Notiz suchen
     const existing = notes.find(
       (n) => n.title.toLowerCase() === title.toLowerCase()
     )
     if (existing) {
       await loadNote(existing.id)
     } else {
-      // Notiz existiert nicht → neu erstellen mit dem Titel
       await createNote(title)
     }
   }, [notes])
@@ -169,6 +181,16 @@ function NotesPage() {
           </>
         )}
       </div>
+
+      {/* Quick-Switcher Modal (Cmd+K) */}
+      {showSwitcher && (
+        <QuickSwitcher
+          notes={notes}
+          onSelect={loadNote}
+          onCreate={(title) => createNote(title)}
+          onClose={() => setShowSwitcher(false)}
+        />
+      )}
     </div>
   )
 }
