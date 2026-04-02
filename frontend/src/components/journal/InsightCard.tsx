@@ -8,7 +8,7 @@ import type {
   WeekdayMoodResult,
   WritingResult,
   KeywordMoodResult,
-} from './InsightsView'
+} from '../../types/models'
 
 interface InsightCardProps {
   type: string
