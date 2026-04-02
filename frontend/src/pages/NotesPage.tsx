@@ -1,6 +1,6 @@
 // NotesPage — Orchestrator für das Notizen-Modul
 // Verwaltet State und API-Calls, delegiert Anzeige an Komponenten
-// Links: NotesList (Suche, Liste, Aktionen)
+// Links: NotesList (Suche, Liste, Aktionen, Pin-Toggle)
 // Rechts: NoteEditor (TipTap mit WikiLinks) + BacklinksPanel
 // Cmd+K: QuickSwitcher Modal für schnelle Navigation
 
@@ -16,6 +16,7 @@ import QuickSwitcher from '../components/notes/QuickSwitcher'
 interface NoteListItem {
   id: number
   title: string
+  is_pinned?: boolean
   updated_at: string
   created_at: string
 }
@@ -101,6 +102,14 @@ function NotesPage() {
     } catch { /* Fehler ignorieren */ }
   }
 
+  // --- Pin Toggle ---
+  async function togglePin(id: number) {
+    try {
+      await put(`/api/notes/${id}/pin`, {})
+      await loadNotes()
+    } catch { /* Fehler ignorieren */ }
+  }
+
   // --- WikiLink Handler: Notiz öffnen oder neu erstellen ---
   const handleWikiLinkClick = useCallback(async (title: string) => {
     const existing = notes.find(
@@ -150,6 +159,7 @@ function NotesPage() {
         onSelectNote={loadNote}
         onCreateNote={() => createNote()}
         onDeleteNote={deleteNote}
+        onTogglePin={togglePin}
       />
 
       {/* Rechte Spalte: Editor + Backlinks */}
