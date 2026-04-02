@@ -1,39 +1,29 @@
 // ClusterView — Themen-Cluster Visualisierung + Mindmap-Button
 // Zeigt gruppierte Journal-Einträge nach thematischer Ähnlichkeit
+// Daten kommen gecacht aus useJournalAnalytics (kein eigener State)
 // Button oben navigiert zur Fullscreen Journal-Mindmap
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { post } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { ClusterResult } from '../../types/models'
 
 // Cluster-Farben — Cyan-Palette passend zum HUD-Theme
 const CLUSTER_COLORS = ['#00d4ff', '#a78bfa', '#00ff88', '#ffaa00', '#ff3b5c']
 
-function ClusterView() {
+interface ClusterViewProps {
+  clusters: ClusterResult[]
+  loading: boolean
+  error: string | null
+  onLoad: () => void
+}
+
+function ClusterView({ clusters, loading, error, onLoad }: ClusterViewProps) {
   const navigate = useNavigate()
-  const { t, language } = useLanguage()
-  const [clusters, setClusters] = useState<ClusterResult[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { t } = useLanguage()
 
-  useEffect(() => {
-    loadClusters()
-  }, [])
-
-  async function loadClusters() {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await post<ClusterResult[]>(`/api/journal/analytics/clusters?language=${language}`)
-      setClusters(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.common.error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Beim ersten Rendern laden (Cache-Check passiert im Hook)
+  useEffect(() => { onLoad() }, [])
 
   if (loading) {
     return (
