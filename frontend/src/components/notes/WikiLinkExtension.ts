@@ -2,6 +2,7 @@
 // Erkennt [[Notiz-Titel]] im Text und rendert sie als klickbare Links
 // Verwendet InputRule für Live-Erkennung beim Tippen
 // onClick-Handler wird vom Editor-Parent via Extension-Option übergeben
+// inclusive: false — Cursor verlässt die Mark nach dem Link automatisch
 
 import { Mark, mergeAttributes } from '@tiptap/core'
 import { InputRule } from '@tiptap/core'
@@ -10,9 +11,6 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 // Regex: erkennt [[beliebiger Text]] im Eingabefluss
 const WIKI_LINK_INPUT_REGEX = /\[\[([^\]]+)\]\]$/
 
-// Regex: erkennt [[beliebiger Text]] im bestehenden Content (Paste)
-const WIKI_LINK_PASTE_REGEX = /\[\[([^\]]+)\]\]/g
-
 /**
  * WikiLink Mark — rendert [[Text]] als klickbaren Link
  * Optionen:
@@ -20,6 +18,9 @@ const WIKI_LINK_PASTE_REGEX = /\[\[([^\]]+)\]\]/g
  */
 const WikiLink = Mark.create({
   name: 'wikiLink',
+
+  // Mark ist NICHT inklusiv — Cursor springt nach dem Link raus
+  inclusive: false,
 
   // Attribute: Der Titel der verlinkten Notiz
   addAttributes() {
@@ -57,22 +58,15 @@ const WikiLink = Mark.create({
         handler: ({ state, range, match }) => {
           const title = match[1]
           const { tr } = state
-          // Altes [[Text]] durch markierten Text ersetzen
-          tr.replaceWith(
-            range.from,
-            range.to,
-            state.schema.text(title, [
-              state.schema.marks.wikiLink.create({ title }),
-            ])
-          )
+          // [[Text]] durch markierten Text ersetzen + Leerzeichen danach
+          const linkText = state.schema.text(title, [
+            state.schema.marks.wikiLink.create({ title }),
+          ])
+          const space = state.schema.text(' ')
+          tr.replaceWith(range.from, range.to, [linkText, space])
         },
       }),
     ]
-  },
-
-  // PasteRule: [[Text]] im eingefügten Content erkennen
-  addPasteRules() {
-    return []
   },
 
   // Klick-Handler via ProseMirror Plugin
@@ -104,4 +98,3 @@ const WikiLink = Mark.create({
 })
 
 export default WikiLink
-export { WIKI_LINK_PASTE_REGEX }
