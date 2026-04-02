@@ -5,6 +5,7 @@
 // Nav-Links: Dashboard, Journal, Kalender, Notes, Metis
 // Logout-Button (nur wenn Auth aktiv auf Olymp-Server)
 // Language-Toggle und Theme-Selector unten (nur wenn ausgeklappt)
+// Ollama-Status-Indikator im Footer (MacBook/Server/Offline)
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { NavLink, Link, useNavigate } from 'react-router-dom'
@@ -20,8 +21,11 @@ const DEFAULT_WIDTH = 256
 const COLLAPSED_WIDTH = 56
 const STORAGE_KEY = 'pallas-sidebar-collapsed'
 
-// API-URL für Auth-Check (direkter fetch, kein useAPI wegen 401-Redirect)
+// API-URL für Auth-Check und Ollama-Status (direkter fetch, kein useAPI wegen 401-Redirect)
 const API_BASE = import.meta.env.DEV ? 'http://localhost:8000' : ''
+
+// Ollama-Status Polling-Intervall (Sekunden)
+const OLLAMA_POLL_INTERVAL = 60_000
 
 function Sidebar() {
   const { t } = useLanguage()
@@ -42,12 +46,31 @@ function Sidebar() {
   // Auth aktiv? (nur auf Olymp-Server mit /etc/olymp/auth.json)
   const [authActive, setAuthActive] = useState(false)
 
+  // Ollama-Status: macbook | server | offline
+  const [ollamaInstance, setOllamaInstance] = useState<'macbook' | 'server' | 'offline'>('offline')
+
   // Beim Mount prüfen ob Auth aktiv ist
   // Direkter fetch statt useAPI — useAPI redirectet bei 401 auf /login
   useEffect(() => {
     fetch(API_BASE + '/api/auth/check', { credentials: 'include' })
       .then((r) => setAuthActive(r.ok))
       .catch(() => setAuthActive(false))
+  }, [])
+
+  // Ollama-Status pollen (beim Mount + alle 60s)
+  useEffect(() => {
+    const fetchStatus = () => {
+      fetch(API_BASE + '/api/ollama/status', { credentials: 'include' })
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (data?.instance) setOllamaInstance(data.instance)
+          else setOllamaInstance('offline')
+        })
+        .catch(() => setOllamaInstance('offline'))
+    }
+    fetchStatus()
+    const interval = setInterval(fetchStatus, OLLAMA_POLL_INTERVAL)
+    return () => clearInterval(interval)
   }, [])
 
   // Pallas Logout — Cookie löschen, zur Login-Seite
@@ -103,6 +126,18 @@ function Sidebar() {
         ? 'text-[var(--color-primary)] bg-[rgba(0,212,255,0.1)] border border-[var(--color-border-glow)]'
         : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[rgba(0,212,255,0.05)] border border-transparent'
     }`
+
+  // Ollama-Status Farbe: Grün = MacBook, Orange = Server, Rot = Offline
+  const ollamaColor =
+    ollamaInstance === 'macbook' ? 'var(--color-success)'
+    : ollamaInstance === 'server' ? 'var(--color-warning)'
+    : 'var(--color-danger)'
+
+  // Ollama-Status Label
+  const ollamaLabel =
+    ollamaInstance === 'macbook' ? t.sidebar.ollamaMacbook
+    : ollamaInstance === 'server' ? t.sidebar.ollamaServer
+    : t.sidebar.ollamaOffline
 
   // Aktuelle Breite: collapsed oder frei einstellbar
   const currentWidth = collapsed ? COLLAPSED_WIDTH : width
@@ -203,15 +238,16 @@ function Sidebar() {
           </button>
         )}
 
-        {/* Footer: Versionsnummer + Status */}
+        {/* Footer: Ollama-Status + Version */}
         <div className={`flex items-center gap-2 ${collapsed ? 'justify-center' : ''}`}>
           <div
             className="w-2 h-2 rounded-full animate-glow-pulse flex-shrink-0"
-            style={{ backgroundColor: 'var(--color-success)' }}
+            style={{ backgroundColor: ollamaColor }}
+            title={ollamaLabel}
           />
           {!collapsed && (
             <span style={{ color: 'var(--color-text-muted)', fontSize: '0.7rem' }}>
-              {t.sidebar.version}
+              {t.sidebar.version} — {ollamaLabel}
             </span>
           )}
         </div>
