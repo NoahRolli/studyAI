@@ -29,6 +29,7 @@ scp -r backend olymp:~/pallas/
 # Docker-Dateien kopieren
 scp Dockerfile olymp:~/pallas/
 scp docker-compose.yml olymp:~/pallas/
+scp docker-compose.override.yml olymp:~/pallas/
 
 # 3. Container auf dem Server bauen und starten
 echo "[3/4] Docker Container bauen und starten..."
