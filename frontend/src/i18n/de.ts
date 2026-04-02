@@ -338,5 +338,11 @@ const de = {
     links: 'Verlinkte Notizen',
     noLinks: 'Keine Links gefunden',
     backlinks: 'Backlinks',  },
-} as const
+    aiSummarize: 'Zusammenfassen',
+    aiRelated: 'Verwandte Notizen',
+    aiSuggestLinks: 'Link-Vorschläge',
+    aiLoading: 'Analysiert...',
+    aiError: 'Ollama nicht erreichbar',
+    aiNoRelated: 'Keine verwandten Notizen gefunden',
+    aiNoSuggestions: 'Keine Link-Vorschläge',} as const
 export default de

@@ -337,5 +337,11 @@ const en = {
     links: 'Linked Notes',
     noLinks: 'No links found',
     backlinks: 'Backlinks',  },
-} as const
+    aiSummarize: 'Summarize',
+    aiRelated: 'Related Notes',
+    aiSuggestLinks: 'Link Suggestions',
+    aiLoading: 'Analyzing...',
+    aiError: 'Ollama not available',
+    aiNoRelated: 'No related notes found',
+    aiNoSuggestions: 'No link suggestions',} as const
 export default en
