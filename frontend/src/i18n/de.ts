@@ -337,12 +337,14 @@ const de = {
     saved: 'Gespeichert',
     links: 'Verlinkte Notizen',
     noLinks: 'Keine Links gefunden',
-    backlinks: 'Backlinks',  },
+    backlinks: 'Backlinks',
     aiSummarize: 'Zusammenfassen',
     aiRelated: 'Verwandte Notizen',
     aiSuggestLinks: 'Link-Vorschläge',
     aiLoading: 'Analysiert...',
     aiError: 'Ollama nicht erreichbar',
     aiNoRelated: 'Keine verwandten Notizen gefunden',
-    aiNoSuggestions: 'Keine Link-Vorschläge',} as const
+    aiNoSuggestions: 'Keine Link-Vorschläge',
+  },
+} as const
 export default de

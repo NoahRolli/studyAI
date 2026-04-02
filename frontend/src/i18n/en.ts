@@ -336,12 +336,14 @@ const en = {
     saved: 'Saved',
     links: 'Linked Notes',
     noLinks: 'No links found',
-    backlinks: 'Backlinks',  },
+    backlinks: 'Backlinks',
     aiSummarize: 'Summarize',
     aiRelated: 'Related Notes',
     aiSuggestLinks: 'Link Suggestions',
     aiLoading: 'Analyzing...',
     aiError: 'Ollama not available',
     aiNoRelated: 'No related notes found',
-    aiNoSuggestions: 'No link suggestions',} as const
+    aiNoSuggestions: 'No link suggestions',
+  },
+} as const
 export default en
