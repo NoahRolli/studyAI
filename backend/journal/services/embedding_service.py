@@ -1,5 +1,6 @@
 # Embedding Service — Text-Embeddings für Journal-Einträge
 # Nutzt Ollama mit nomic-embed-text (lokal, kein externer API-Call)
+# Nutzt ollama_connector für dynamische URL (MacBook → Server Fallback)
 # Embeddings werden für Clustering und Ähnlichkeitssuche verwendet
 #
 # nomic-embed-text gibt 768-dimensionale Vektoren zurück
@@ -7,10 +8,8 @@
 
 import httpx
 import numpy as np
-from backend.journal.infra.journal_config import (
-    OLLAMA_BASE_URL,
-    OLLAMA_EMBED_MODEL,
-)
+from backend.journal.infra.journal_config import OLLAMA_EMBED_MODEL
+from backend.infra.ollama_connector import get_ollama_url
 
 
 async def generate_embedding(text: str) -> list[float]:
@@ -18,9 +17,10 @@ async def generate_embedding(text: str) -> list[float]:
     Generiert einen Embedding-Vektor für einen Text.
     Gibt eine Liste von 768 Floats zurück.
     """
+    base_url = await get_ollama_url()
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
-            f"{OLLAMA_BASE_URL}/api/embeddings",
+            f"{base_url}/api/embeddings",
             json={
                 "model": OLLAMA_EMBED_MODEL,
                 "prompt": text[:2000],  # Textlänge begrenzen
