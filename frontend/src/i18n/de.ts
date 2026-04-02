@@ -30,7 +30,9 @@ const de = {
     collapse: 'Sidebar einklappen',
     expand: 'Sidebar ausklappen',
     logout: 'Abmelden',
-  },
+    ollamaMacbook: 'MacBook',
+    ollamaServer: 'Server',
+    ollamaOffline: 'Ollama offline',  },
 
   // Begrüssungsseite
   welcome: {
@@ -41,6 +43,10 @@ const de = {
     journalDesc: 'Verschlüsseltes Tagebuch mit Stimmungsanalyse und Mindmaps.',
     calendarTitle: 'Kalender',
     calendarDesc: 'Termine und Events planen und verwalten.',
+    notesTitle: 'Notizen',
+    notesDesc: 'Markdown-Notizen mit Verlinkungen.',
+    metisTitle: 'Metis',
+    metisDesc: 'Dein Second Brain — Verbindungen automatisch erkennen.',
     hint: 'Wähle einen Bereich um loszulegen.',
   },
 

@@ -29,7 +29,9 @@ const en = {
     collapse: 'Collapse sidebar',
     expand: 'Expand sidebar',
     logout: 'Log out',
-  },
+    ollamaMacbook: 'MacBook',
+    ollamaServer: 'Server',
+    ollamaOffline: 'Ollama offline',  },
 
   // Welcome Page
   welcome: {
@@ -40,6 +42,10 @@ const en = {
     journalDesc: 'Encrypted diary with mood analysis and mindmaps.',
     calendarTitle: 'Calendar',
     calendarDesc: 'Plan and manage appointments and events.',
+    notesTitle: 'Notes',
+    notesDesc: 'Markdown notes with bi-directional links.',
+    metisTitle: 'Metis',
+    metisDesc: 'Your Second Brain — connections detected automatically.',
     hint: 'Choose an area to get started.',
   },
 
