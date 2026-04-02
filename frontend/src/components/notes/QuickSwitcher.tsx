@@ -1,10 +1,12 @@
 // QuickSwitcher — Cmd+K Modal für schnelle Notiz-Navigation
-// Suchfeld mit Echtzeit-Filterung der Notizen
+// Durchsucht Titel UND Content via Backend-API (Volltext)
 // Enter oder Klick öffnet die Notiz, Escape schliesst das Modal
 // Pfeil-Tasten für Navigation in der Liste
+// Debounce: 200ms nach letztem Tastendruck
 
 import { useState, useEffect, useRef } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
+import { get } from '../../hooks/useAPI'
 
 interface NoteListItem {
   id: number
@@ -21,23 +23,35 @@ interface QuickSwitcherProps {
 function QuickSwitcher({ notes, onSelect, onCreate, onClose }: QuickSwitcherProps) {
   const { t } = useLanguage()
   const [query, setQuery] = useState('')
+  const [results, setResults] = useState<NoteListItem[]>(notes)
   const [activeIdx, setActiveIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Autofokus beim Öffnen
   useEffect(() => { inputRef.current?.focus() }, [])
 
-  // Gefilterte Notizen
-  const filtered = query.trim()
-    ? notes.filter((n) =>
-        n.title.toLowerCase().includes(query.toLowerCase())
-      )
-    : notes
-
-  // Aktiven Index begrenzen wenn sich die Liste ändert
+  // Volltext-Suche mit Debounce via Backend
   useEffect(() => {
-    if (activeIdx >= filtered.length) setActiveIdx(Math.max(0, filtered.length - 1))
-  }, [filtered.length, activeIdx])
+    if (!query.trim()) {
+      setResults(notes)
+      setActiveIdx(0)
+      return
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const data = await get<NoteListItem[]>(
+          `/api/notes/search?q=${encodeURIComponent(query)}`
+        )
+        setResults(data)
+        setActiveIdx(0)
+      } catch {
+        setResults([])
+      }
+    }, 200)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [query, notes])
 
   // Tastatur-Navigation
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -45,16 +59,15 @@ function QuickSwitcher({ notes, onSelect, onCreate, onClose }: QuickSwitcherProp
       onClose()
     } else if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setActiveIdx((i) => Math.min(i + 1, filtered.length - 1))
+      setActiveIdx((i) => Math.min(i + 1, results.length - 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setActiveIdx((i) => Math.max(i - 1, 0))
     } else if (e.key === 'Enter') {
       e.preventDefault()
-      if (filtered.length > 0) {
-        onSelect(filtered[activeIdx].id)
+      if (results.length > 0) {
+        onSelect(results[activeIdx].id)
       } else if (query.trim()) {
-        // Keine Treffer → neue Notiz mit dem Suchbegriff erstellen
         onCreate(query.trim())
       }
       onClose()
@@ -62,13 +75,11 @@ function QuickSwitcher({ notes, onSelect, onCreate, onClose }: QuickSwitcherProp
   }
 
   return (
-    // Backdrop — Klick ausserhalb schliesst das Modal
     <div
       className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
       onClick={onClose}
     >
-      {/* Modal */}
       <div
         className="w-full max-w-md rounded-lg border shadow-2xl overflow-hidden"
         style={{
@@ -82,7 +93,7 @@ function QuickSwitcher({ notes, onSelect, onCreate, onClose }: QuickSwitcherProp
           ref={inputRef}
           type="text"
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setActiveIdx(0) }}
+          onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t.notes.searchPlaceholder}
           className="w-full px-4 py-3 bg-transparent border-b outline-none text-sm"
@@ -94,11 +105,12 @@ function QuickSwitcher({ notes, onSelect, onCreate, onClose }: QuickSwitcherProp
 
         {/* Ergebnis-Liste */}
         <div className="max-h-64 overflow-y-auto">
-          {filtered.map((note, idx) => (
+          {results.map((note, idx) => (
             <button
               key={note.id}
               onClick={() => { onSelect(note.id); onClose() }}
-              className="w-full text-left px-4 py-2.5 text-sm transition-all duration-150"
+              className="w-full text-left px-4 py-2.5 text-sm transition-all
+                duration-150"
               style={{
                 color: idx === activeIdx
                   ? 'var(--color-primary)'
@@ -111,8 +123,7 @@ function QuickSwitcher({ notes, onSelect, onCreate, onClose }: QuickSwitcherProp
               {note.title}
             </button>
           ))}
-          {/* Keine Treffer → Notiz erstellen */}
-          {filtered.length === 0 && query.trim() && (
+          {results.length === 0 && query.trim() && (
             <div
               className="px-4 py-3 text-sm"
               style={{ color: 'var(--color-text-muted)' }}
