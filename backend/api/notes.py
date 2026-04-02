@@ -180,3 +180,28 @@ def get_note_links(note_id: int, db: Session = Depends(get_db)):
         }
         for n in linked
     ]
+
+
+@router.get("/api/notes/{note_id}/backlinks")
+def get_note_backlinks(note_id: int, db: Session = Depends(get_db)):
+    """Alle Notizen finden die auf diese Notiz verlinken (Backlinks)"""
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Notiz nicht gefunden")
+    # Alle Notizen durchsuchen die [[Titel]] im Content haben
+    pattern = f"%[[{note.title}]]%"
+    backlinks = (
+        db.query(Note)
+        .filter(Note.id != note_id)
+        .filter(Note.content.ilike(pattern))
+        .order_by(Note.updated_at.desc())
+        .all()
+    )
+    return [
+        {
+            "id": n.id,
+            "title": n.title,
+            "updated_at": n.updated_at,
+        }
+        for n in backlinks
+    ]
