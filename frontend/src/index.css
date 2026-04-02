@@ -380,12 +380,12 @@ body {
 }
 .tiptap ul[data-type="taskList"] li {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.5rem;
 }
 .tiptap ul[data-type="taskList"] li label input[type="checkbox"] {
   accent-color: var(--color-primary);
-  margin-top: 0.25rem;
+  margin-top: 0;
 }
 .tiptap blockquote {
   border-left: 3px solid var(--color-primary);

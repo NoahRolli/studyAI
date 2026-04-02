@@ -104,14 +104,14 @@ function NoteEditor({
         <TBtn
           active={editor.isActive('bold')}
           onClick={() => editor.chain().focus().toggleBold().run()}
-          title="Bold (Ctrl+B)"
+          title="Bold"
         >
           B
         </TBtn>
         <TBtn
           active={editor.isActive('italic')}
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          title="Italic (Ctrl+I)"
+          title="Italic"
         >
           I
         </TBtn>
@@ -193,14 +193,14 @@ function NoteEditor({
         <TBtn
           active={editor.isActive('blockquote')}
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          title="Blockquote"
+          title="Quote"
         >
           &#8220;
         </TBtn>
         <TBtn
           active={false}
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
-          title="Horizontal Rule"
+          title="Divider"
         >
           &#8212;
         </TBtn>
