@@ -1,31 +1,33 @@
 # Journal AI Service — Ollama-Anbindung exklusiv für das Journal
 # WICHTIG: Kein Claude, kein Fallback, kein gemeinsamer Code-Pfad
 # Alle Journal-Daten bleiben lokal auf dem Rechner
+# Nutzt ollama_connector für dynamische URL (MacBook → Server Fallback)
 #
 # Nutzt llama3.2 für Textanalyse (Mood, Storylines, Titel-Generierung)
-# Nutzt nomic-embed-text für Embeddings (Clustering)
 
 import json
 import re
 import httpx
-from backend.journal.infra.journal_config import (
-    OLLAMA_BASE_URL,
-    OLLAMA_CHAT_MODEL,
-)
+from backend.journal.infra.journal_config import OLLAMA_CHAT_MODEL
+from backend.infra.ollama_connector import get_ollama_url
 
 
 class JournalAIService:
     """Lokaler AI-Service nur für Journal-Features. Ollama-only."""
 
     def __init__(self):
-        self.base_url = OLLAMA_BASE_URL
         self.chat_model = OLLAMA_CHAT_MODEL
+
+    async def _get_url(self) -> str:
+        """Holt die aktuell erreichbare Ollama-URL (gecacht)."""
+        return await get_ollama_url()
 
     async def _chat(self, prompt: str, max_tokens: int = 1000) -> str:
         """Sendet einen Prompt an Ollama und gibt die Antwort zurück."""
+        base_url = await self._get_url()
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
-                f"{self.base_url}/api/generate",
+                f"{base_url}/api/generate",
                 json={
                     "model": self.chat_model,
                     "prompt": prompt,
@@ -45,8 +47,9 @@ class JournalAIService:
     async def is_available(self) -> bool:
         """Prüft ob Ollama läuft und erreichbar ist."""
         try:
+            base_url = await self._get_url()
             async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(f"{self.base_url}/api/tags")
+                response = await client.get(f"{base_url}/api/tags")
                 return response.status_code == 200
         except Exception:
             return False
@@ -77,11 +80,7 @@ class JournalAIService:
         """
         Analysiert die Stimmung eines Journal-Eintrags.
         Gibt zurück: {"score": float, "label": str, "keywords": list}
-        - score: -1.0 (sehr negativ) bis 1.0 (sehr positiv)
-        - label: Präzises Stimmungswort (nicht generisch)
-        - keywords: Stimmungsprägende Wörter aus dem Text
         """
-        # Sprachabhängige Prompts — bessere Labels durch konkrete Beispiele
         if language == "de":
             prompt = f"""Analysiere die Stimmung dieses Tagebucheintrags präzise.
 
