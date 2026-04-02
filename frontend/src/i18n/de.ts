@@ -337,6 +337,6 @@ const de = {
     saved: 'Gespeichert',
     links: 'Verlinkte Notizen',
     noLinks: 'Keine Links gefunden',
-  },
+    backlinks: 'Backlinks',  },
 } as const
 export default de

@@ -336,6 +336,6 @@ const en = {
     saved: 'Saved',
     links: 'Linked Notes',
     noLinks: 'No links found',
-  },
+    backlinks: 'Backlinks',  },
 } as const
 export default en
