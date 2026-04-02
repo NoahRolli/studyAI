@@ -1,28 +1,34 @@
 # Ollama Provider: Anbindung an die lokale Ollama API
 # Wird über ai_service.py aufgerufen — nie direkt
-# Läuft komplett lokal — keine Daten verlassen den Rechner
+# Nutzt ollama_connector für dynamische URL (MacBook → Server Fallback)
+# Läuft komplett lokal — keine Daten verlassen das Netzwerk
 
 import json
 import re
 import httpx
-from backend.infra.config import OLLAMA_BASE_URL, OLLAMA_MODEL
+from backend.infra.config import OLLAMA_MODEL
+from backend.infra.ollama_connector import get_ollama_url
 
 
 class OllamaProvider:
     """AI-Provider für die lokale Ollama-Instanz."""
 
     def __init__(self):
-        self.base_url = OLLAMA_BASE_URL
         self.model = OLLAMA_MODEL
+
+    async def _get_url(self) -> str:
+        """Holt die aktuell erreichbare Ollama-URL (gecacht)."""
+        return await get_ollama_url()
 
     async def _chat(self, prompt: str, max_tokens: int = 2000) -> str:
         """
         Sendet eine Anfrage an die Ollama API.
         Gibt den Antwort-Text zurück.
         """
+        base_url = await self._get_url()
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
-                f"{self.base_url}/api/generate",
+                f"{base_url}/api/generate",
                 json={
                     "model": self.model,
                     "prompt": prompt,
@@ -44,8 +50,9 @@ class OllamaProvider:
     async def is_available(self) -> bool:
         """Prüft ob Ollama läuft und erreichbar ist."""
         try:
+            base_url = await self._get_url()
             async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(f"{self.base_url}/api/tags")
+                response = await client.get(f"{base_url}/api/tags")
                 return response.status_code == 200
         except Exception:
             return False
