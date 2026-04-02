@@ -94,14 +94,15 @@ def get_note(note_id: int, db: Session = Depends(get_db)):
 
 @router.post("/api/notes")
 def create_note(data: NoteCreate, db: Session = Depends(get_db)):
-    """Neue Notiz erstellen"""
-    # Prüfen ob Titel schon existiert (für eindeutige [[Links]])
-    existing = db.query(Note).filter(Note.title == data.title).first()
-    if existing:
-        raise HTTPException(
-            status_code=409, detail="Notiz mit diesem Titel existiert bereits"
-        )
-    note = Note(title=data.title, content=data.content)
+    """Neue Notiz erstellen — bei doppeltem Titel Zähler anhängen"""
+    base_title = data.title
+    title = base_title
+    counter = 2
+    # Solange Titel existiert, Zähler hochzählen
+    while db.query(Note).filter(Note.title == title).first():
+        title = f"{base_title} {counter}"
+        counter += 1
+    note = Note(title=title, content=data.content)
     db.add(note)
     db.commit()
     db.refresh(note)
