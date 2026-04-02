@@ -432,3 +432,14 @@ body {
   height: 0;
   opacity: 0.5;
 }
+
+/* WikiLink — [[Notiz-Titel]] im TipTap Editor */
+.wiki-link {
+  color: var(--color-primary);
+  cursor: pointer;
+  border-bottom: 1px dashed var(--color-primary);
+  transition: opacity 0.2s;
+}
+.wiki-link:hover {
+  opacity: 0.7;
+}
