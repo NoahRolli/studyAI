@@ -1,5 +1,6 @@
 // NotesList — Linke Spalte des Notizen-Moduls
 // Suchfeld, Neu-Button und scrollbare Notiz-Liste
+// Gepinnte Notizen werden mit Pin-Symbol markiert
 // Ausgewählte Notiz wird visuell hervorgehoben
 
 import { useLanguage } from '../../hooks/useLanguage'
@@ -7,6 +8,7 @@ import { useLanguage } from '../../hooks/useLanguage'
 interface NoteListItem {
   id: number
   title: string
+  is_pinned?: boolean
   updated_at: string
   created_at: string
 }
@@ -19,11 +21,12 @@ interface NotesListProps {
   onSelectNote: (id: number) => void
   onCreateNote: () => void
   onDeleteNote: (id: number) => void
+  onTogglePin: (id: number) => void
 }
 
 function NotesList({
   notes, selectedId, search, onSearchChange,
-  onSelectNote, onCreateNote, onDeleteNote,
+  onSelectNote, onCreateNote, onDeleteNote, onTogglePin,
 }: NotesListProps) {
   const { t } = useLanguage()
 
@@ -71,26 +74,48 @@ function NotesList({
                 : 'hover:bg-[rgba(0,212,255,0.05)] border border-transparent'
               }`}
           >
+            {/* Pin-Indikator + Titel */}
             <span
-              className="text-sm truncate"
+              className="text-sm truncate flex items-center gap-1.5"
               style={{
                 color: selectedId === note.id
                   ? 'var(--color-primary)'
                   : 'var(--color-text-secondary)',
               }}
             >
+              {note.is_pinned && (
+                <span style={{ color: 'var(--color-warning)', fontSize: '0.65rem' }}>
+                  &#9650;
+                </span>
+              )}
               {note.title}
             </span>
-            {/* Löschen-Button (X) */}
-            <button
-              onClick={(e) => { e.stopPropagation(); onDeleteNote(note.id) }}
-              className="opacity-0 group-hover:opacity-100 text-xs px-1.5 py-0.5
-                rounded transition-all duration-200
-                text-[var(--color-text-muted)] hover:text-[var(--color-danger)]
-                hover:bg-[rgba(255,59,92,0.1)]"
-            >
-              X
-            </button>
+
+            {/* Aktions-Buttons (Pin + Löschen) */}
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100
+              transition-all duration-200">
+              <button
+                onClick={(e) => { e.stopPropagation(); onTogglePin(note.id) }}
+                className="text-xs px-1.5 py-0.5 rounded transition-all duration-200
+                  hover:bg-[rgba(0,212,255,0.1)]"
+                style={{
+                  color: note.is_pinned
+                    ? 'var(--color-warning)'
+                    : 'var(--color-text-muted)',
+                }}
+                title={note.is_pinned ? 'Unpin' : 'Pin'}
+              >
+                &#9650;
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDeleteNote(note.id) }}
+                className="text-xs px-1.5 py-0.5 rounded transition-all duration-200
+                  text-[var(--color-text-muted)] hover:text-[var(--color-danger)]
+                  hover:bg-[rgba(255,59,92,0.1)]"
+              >
+                X
+              </button>
+            </div>
           </div>
         ))}
       </div>
