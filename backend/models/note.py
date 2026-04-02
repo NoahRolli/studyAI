@@ -2,10 +2,11 @@
 # Bewusst flach gehalten: Titel + Inhalt + bidirektionale Links
 # Keine Ordner, keine Tags — Organisation übernimmt Metis (Second Brain)
 # [[Notiz-Titel]] Syntax im Content für Verlinkungen
+# is_pinned: Gepinnte Notizen erscheinen oben in der Liste
 # Gespeichert in der Haupt-DB (pallas.db), NICHT in der Journal-DB
 
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
 from backend.models.database import Base
 
 
@@ -21,6 +22,9 @@ class Note(Base):
 
     # Markdown-Inhalt — kann [[Links]] und beliebigen Text enthalten
     content = Column(Text, nullable=False, default="")
+
+    # Gepinnt — erscheint oben in der Liste
+    is_pinned = Column(Boolean, nullable=False, default=False)
 
     # Zeitstempel
     created_at = Column(
