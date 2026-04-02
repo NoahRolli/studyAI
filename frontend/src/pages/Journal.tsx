@@ -1,7 +1,7 @@
 // Journal — Orchestrator für das verschlüsselte Tagebuch
 // Delegiert alles an Sub-Komponenten und useJournalState Hook
 // Drei Zustände: Setup → Unlock → Tabs (Einträge, Kalender, Analytics, Meds, Insights)
-// Globale Suche im Header über alle Einträge
+// Analytics-Daten kommen gecacht aus useJournalAnalytics via useJournalState
 
 import { useRef } from 'react'
 import useJournalState from '../hooks/useJournalState'
@@ -24,6 +24,7 @@ import JournalSearch from '../components/journal/JournalSearch'
 
 function Journal() {
   const s = useJournalState()
+  const a = s.analytics
   const { t } = useLanguage()
 
   // Ref um CalendarView von aussen zu steuern (Tag öffnen)
@@ -151,7 +152,7 @@ function Journal() {
       {/* Zustand 3: Entsperrt → Tabs */}
       {s.status?.is_unlocked && (
         <div>
-          {/* Tab-Navigation */}
+          {/* Tab-Navigation (scrollbar auf kleinen Screens) */}
           <div
             className="flex gap-1 mb-6 p-1 rounded-lg overflow-x-auto max-w-full"
             style={{ backgroundColor: 'var(--color-bg-surface)' }}
@@ -161,7 +162,7 @@ function Journal() {
                 key={tab.key}
                 onClick={() => {
                   s.setActiveTab(tab.key)
-                  if (tab.key === 'mood') s.loadMoods()
+                  if (tab.key === 'mood') a.loadMoods()
                 }}
                 className={`hud-tab ${s.activeTab === tab.key ? 'hud-tab-active' : ''}`}
               >
@@ -203,9 +204,9 @@ function Journal() {
           {s.activeTab === 'calendar' && (
             <CalendarView
               ref={calendarRef}
-              moods={s.moods}
-              moodsLoaded={s.moodsLoaded}
-              onLoadMoods={s.loadMoods}
+              moods={a.moods}
+              moodsLoaded={a.moodsLoaded}
+              onLoadMoods={a.loadMoods}
               entries={s.entries}
               editingId={s.editingId}
               editEntry={s.editEntry}
@@ -225,19 +226,40 @@ function Journal() {
           {s.activeTab === 'mood' && (
             <MoodChart
               entries={s.entries}
-              moods={s.moods}
-              loading={!s.moodsLoaded && s.moods.length === 0}
+              moods={a.moods}
+              loading={!a.moodsLoaded && a.moods.length === 0}
             />
           )}
 
           {/* Tab: Themen */}
-          {s.activeTab === 'clusters' && <ClusterView />}
+          {s.activeTab === 'clusters' && (
+            <ClusterView
+              clusters={a.clusters}
+              loading={a.clustersLoading}
+              error={a.clustersError}
+              onLoad={a.loadClusters}
+            />
+          )}
 
           {/* Tab: Storylines */}
-          {s.activeTab === 'storylines' && <StorylineView />}
+          {s.activeTab === 'storylines' && (
+            <StorylineView
+              storylines={a.storylines}
+              loading={a.storylinesLoading}
+              error={a.storylinesError}
+              onLoad={a.loadStorylines}
+            />
+          )}
 
           {/* Tab: Insights */}
-          {s.activeTab === 'insights' && <InsightsView />}
+          {s.activeTab === 'insights' && (
+            <InsightsView
+              results={a.insightResults}
+              loading={a.insightLoading}
+              errors={a.insightErrors}
+              onLoadInsight={a.loadInsight}
+            />
+          )}
 
           {/* Tab: Medikamente */}
           {s.activeTab === 'medications' && s.medEnabled && (
