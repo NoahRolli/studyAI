@@ -45,12 +45,6 @@ function GlowNode({ position, color, size, label, onClick }: {
 
   return (
     <group position={position}>
-      {/* Äusserster Puls — atmendes Feld */}
-      <mesh ref={pulseRef}>
-        <sphereGeometry args={[size * 6, 10, 10]} />
-        <meshBasicMaterial color={color} transparent opacity={0.03}
-          depthWrite={false} blending={THREE.AdditiveBlending} />
-      </mesh>
 
 
       {/* Kern — weisser Punkt */}
