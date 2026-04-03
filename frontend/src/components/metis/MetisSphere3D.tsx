@@ -46,6 +46,12 @@ function GlowNode({ position, color, size, label, onClick }: {
   return (
     <group position={position}>
 
+      {/* Innerer Glow — farbig */}
+      <mesh ref={glowRef}>
+        <sphereGeometry args={[size * 2, 16, 16]} />
+        <meshBasicMaterial color={color} transparent opacity={0.25}
+          depthWrite={false} blending={THREE.AdditiveBlending} />
+      </mesh>
 
       {/* Kern — weisser Punkt */}
       <mesh ref={meshRef} onClick={onClick}>
