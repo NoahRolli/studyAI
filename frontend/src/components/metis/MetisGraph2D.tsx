@@ -27,6 +27,7 @@ interface Props {
   graph: MetisGraph
   onPositionUpdate: (id: number, x: number | null, y: number | null) => void
   onNodeClick: (nodeId: number) => void
+  transparent?: boolean
 }
 
 // Eigener Node-Typ
