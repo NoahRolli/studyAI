@@ -138,7 +138,7 @@ function BackgroundParticles() {
     const geo = new THREE.BufferGeometry()
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     const mat = new THREE.PointsMaterial({
-      color: '#5a8a9a', size: 0.05, transparent: true,
+      color: '#3a6a7a', size: 0.015, transparent: true, sizeAttenuation: true,
       opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending,
     })
     return { geometry: geo, material: mat }
