@@ -159,7 +159,7 @@ export default function JournalMetisContent() {
   const graphClass = fullscreen
     ? 'flex-1 overflow-hidden relative'
     : 'overflow-hidden relative border border-[var(--color-border)] rounded-lg'
-  const graphStyle = fullscreen ? {} : { height: 'calc(100vh - 220px)' }
+  const graphStyle = fullscreen ? {} : { height: 'calc(100vh - 280px)' }
 
   return (
     <div className={wrapperClass}>
@@ -232,8 +232,8 @@ export default function JournalMetisContent() {
                     ? '#d4a574' : 'var(--color-border)',
                 }}
                 onClick={() => setShowPublic(!showPublic)}
-                title="P"
-              >P</button>
+                title="V1"
+              >V1</button>
             </div>
             {/* Fullscreen oben rechts */}
             <div className="absolute top-2 right-2 z-20">
