@@ -12,6 +12,7 @@ from backend.models.metis_edge import MetisEdge
 from backend.models.metis_cluster import MetisCluster, MetisClusterMember
 from backend.models.note import Note
 from backend.models.summary import Summary
+from backend.models.document import Document
 from backend.api.metis_sync import sync_nodes, sync_wikilinks
 
 router = APIRouter(prefix="/api/metis", tags=["metis"])
@@ -45,7 +46,13 @@ def _node_to_dict(node: MetisNode, db: Session) -> dict:
         summary = db.query(Summary).filter(
             Summary.id == node.source_id
         ).first()
-        title = summary.title if summary else "(gelöscht)"
+        if summary:
+            doc = db.query(Document).filter(
+                Document.id == summary.document_id
+            ).first()
+            title = doc.name if doc else f"Summary #{node.source_id}"
+        else:
+            title = "(gelöscht)"
 
     return {
         "id": node.id,
