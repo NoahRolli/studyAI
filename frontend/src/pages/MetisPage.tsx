@@ -200,7 +200,6 @@ export default function MetisPage() {
             onPositionUpdate={handlePositionUpdate}
             onNodeClick={handleNodeClick}
             transparent={transparent}
-            transparent={transparent}
           />
         )}
 

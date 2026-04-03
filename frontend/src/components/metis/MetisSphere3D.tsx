@@ -173,7 +173,7 @@ function CameraTracker({ onCameraMove }: {
 }
 
 // --- Szene ---
-function MetisScene({ graph, onNodeClick, onCameraMove }: {
+function MetisScene({ graph, onNodeClick, onCameraMove, transparent }: {
   graph: MetisGraph
   onNodeClick?: (id: number) => void
   onCameraMove: (a: number, e: number, d: number) => void
@@ -222,7 +222,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove }: {
       />
       <ambientLight intensity={0.1} />
       <CameraTracker onCameraMove={onCameraMove} />
-      <BackgroundGrid />
+      {!transparent && <BackgroundGrid />}
       <group ref={groupRef}>
         {graph.edges.map(edge => {
           const start = nodePositions.get(edge.source_node_id)
@@ -259,9 +259,10 @@ interface Props {
   graph: MetisGraph
   onNodeClick?: (nodeId: number) => void
   onCameraMove?: (a: number, e: number, d: number) => void
+  transparent?: boolean
 }
 
-export default function MetisSphere3D({ graph, onNodeClick, onCameraMove }: Props) {
+export default function MetisSphere3D({ graph, onNodeClick, onCameraMove, transparent }: Props) {
   const handleCameraMove = useCallback((a: number, e: number, d: number) => {
     onCameraMove?.(a, e, d)
   }, [onCameraMove])
@@ -273,7 +274,7 @@ export default function MetisSphere3D({ graph, onNodeClick, onCameraMove }: Prop
         style={{ background: 'transparent' }}
         gl={{ antialias: true, alpha: true }}
       >
-        <MetisScene graph={graph} onNodeClick={onNodeClick}
+        <MetisScene graph={graph} onNodeClick={onNodeClick} transparent={transparent}
           onCameraMove={handleCameraMove} />
       </Canvas>
     </div>
