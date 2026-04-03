@@ -1,6 +1,7 @@
 // MetisSphere3D — 3D Knowledge-Graph Sphäre mit Three.js
-// Auto-Rotation (stoppt bei Interaktion), Glow-Nodes, animierte Edges.
-// Klick auf Node triggert onNodeClick. Lazy-loaded.
+// Inspiriert von Cryptaris + neuronales Netz + JARVIS HUD.
+// Auto-Rotation, intensive Glow-Nodes, leuchtende Edges.
+// Farben: Grün=Note, Orange=Summary. Lazy-loaded.
 
 import { useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
@@ -8,12 +9,12 @@ import { OrbitControls, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import type { MetisGraph } from '../../types/metis'
 
-// Farben — gedämpft, HUD-Stil
+// Farben — satte, leuchtende Varianten für 3D
 const COLORS = {
   note: new THREE.Color('#7dd4a3'),
   summary: new THREE.Color('#d4a574'),
   wikilink: new THREE.Color('#d4cc7d'),
-  ai: new THREE.Color('#666666'),
+  ai: new THREE.Color('#5a8a9a'),
 }
 
 // --- Einzelner Node als leuchtender Punkt ---
@@ -26,46 +27,75 @@ function GlowNode({ position, color, size, label, onClick }: {
 }) {
   const meshRef = useRef<THREE.Mesh>(null)
   const glowRef = useRef<THREE.Mesh>(null)
+  const outerGlowRef = useRef<THREE.Mesh>(null)
 
-  // Sanftes Pulsieren
+  // Sanftes Pulsieren — Kern + Glow
   useFrame(({ clock }) => {
-    if (glowRef.current) {
-      const scale = 1 + Math.sin(clock.elapsedTime * 2) * 0.15
-      glowRef.current.scale.setScalar(scale)
+    const pulse = 1 + Math.sin(clock.elapsedTime * 1.5 + size * 10) * 0.2
+    if (glowRef.current) glowRef.current.scale.setScalar(pulse)
+    if (outerGlowRef.current) {
+      outerGlowRef.current.scale.setScalar(pulse * 1.1)
     }
   })
 
   return (
     <group position={position}>
-      {/* Kern-Punkt — klickbar */}
-      <mesh ref={meshRef} onClick={onClick}>
-        <sphereGeometry args={[size, 16, 16]} />
-        <meshBasicMaterial color={color} />
-      </mesh>
-
-      {/* Glow-Hülle */}
-      <mesh ref={glowRef}>
-        <sphereGeometry args={[size * 2.5, 16, 16]} />
+      {/* Äusserer Glow — weiches Leuchten */}
+      <mesh ref={outerGlowRef}>
+        <sphereGeometry args={[size * 4, 12, 12]} />
         <meshBasicMaterial
           color={color}
           transparent
-          opacity={0.12}
+          opacity={0.04}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* Mittlerer Glow */}
+      <mesh ref={glowRef}>
+        <sphereGeometry args={[size * 2.2, 16, 16]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.18}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* Kern-Punkt — hell, klickbar */}
+      <mesh ref={meshRef} onClick={onClick}>
+        <sphereGeometry args={[size, 16, 16]} />
+        <meshBasicMaterial color={new THREE.Color('#ffffff')} />
+      </mesh>
+
+      {/* Farbiger Ring um den Kern */}
+      <mesh>
+        <ringGeometry args={[size * 1.1, size * 1.4, 24]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.6}
+          side={THREE.DoubleSide}
           depthWrite={false}
         />
       </mesh>
 
       {/* Label */}
       <Html
-        position={[size * 3, size, 0]}
+        position={[size * 4, size * 1.5, 0]}
         style={{
           color: `#${color.getHexString()}`,
-          fontSize: '10px',
+          fontSize: '11px',
+          fontFamily: 'Orbitron, monospace',
           whiteSpace: 'nowrap',
-          textShadow: `0 0 6px #${color.getHexString()}40`,
+          textShadow: `0 0 8px #${color.getHexString()}80, 0 0 16px #${color.getHexString()}40`,
           pointerEvents: 'none',
           userSelect: 'none',
+          letterSpacing: '0.5px',
         }}
-        distanceFactor={15}
+        distanceFactor={12}
       >
         {label}
       </Html>
@@ -94,12 +124,49 @@ function GlowEdge({ start, end, color, strength }: {
     return new THREE.LineBasicMaterial({
       color,
       transparent: true,
-      opacity: 0.15 + strength * 0.35,
+      opacity: 0.25 + strength * 0.5,
       depthWrite: false,
+      blending: THREE.AdditiveBlending,
     })
   }, [color, strength])
 
   return <primitive ref={ref} object={new THREE.Line(geometry, material)} />
+}
+
+// --- Hintergrund-Partikel (Atmosphäre) ---
+function BackgroundParticles() {
+  const ref = useRef<THREE.Points>(null)
+
+  const { geometry, material } = useMemo(() => {
+    const count = 200
+    const positions = new Float32Array(count * 3)
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 40
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 40
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 40
+    }
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    const mat = new THREE.PointsMaterial({
+      color: '#4a6a7a',
+      size: 0.04,
+      transparent: true,
+      opacity: 0.4,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    })
+    return { geometry: geo, material: mat }
+  }, [])
+
+  // Langsame Rotation der Partikel
+  useFrame((_, delta) => {
+    if (ref.current) {
+      ref.current.rotation.y += delta * 0.01
+      ref.current.rotation.x += delta * 0.005
+    }
+  })
+
+  return <points ref={ref} geometry={geometry} material={material} />
 }
 
 // --- Szene mit Rotation ---
@@ -131,7 +198,7 @@ function MetisScene({ graph, onNodeClick }: {
     return positions
   }, [graph.nodes])
 
-  // Auto-Rotation
+  // Auto-Rotation — sanft, stoppt bei Interaktion
   useFrame((_, delta) => {
     if (!groupRef.current) return
     if (isInteracting.current) {
@@ -140,7 +207,7 @@ function MetisScene({ graph, onNodeClick }: {
       idleTime.current += delta
     }
     if (idleTime.current > 2) {
-      groupRef.current.rotation.y += delta * 0.08
+      groupRef.current.rotation.y += delta * 0.06
     }
   })
 
@@ -154,10 +221,16 @@ function MetisScene({ graph, onNodeClick }: {
         onStart={() => { isInteracting.current = true }}
         onEnd={() => { isInteracting.current = false }}
       />
-      <ambientLight intensity={0.3} />
 
+      {/* Minimale Ambiente-Beleuchtung */}
+      <ambientLight intensity={0.15} />
+
+      {/* Hintergrund-Partikel für Tiefe */}
+      <BackgroundParticles />
+
+      {/* Rotierende Gruppe — Graph */}
       <group ref={groupRef}>
-        {/* Edges */}
+        {/* Edges zuerst (hinter Nodes) */}
         {graph.edges.map(edge => {
           const start = nodePositions.get(edge.source_node_id)
           const end = nodePositions.get(edge.target_node_id)
@@ -183,13 +256,14 @@ function MetisScene({ graph, onNodeClick }: {
           const conns = graph.edges.filter(
             e => e.source_node_id === node.id || e.target_node_id === node.id,
           ).length
-          const size = 0.12 + conns * 0.04
+          // Grössere Nodes für mehr Verbindungen
+          const size = 0.15 + conns * 0.05
           return (
             <GlowNode
               key={node.id}
               position={pos}
               color={color}
-              size={Math.min(size, 0.4)}
+              size={Math.min(size, 0.45)}
               label={node.title}
               onClick={() => onNodeClick?.(node.id)}
             />
@@ -212,6 +286,7 @@ export default function MetisSphere3D({ graph, onNodeClick }: Props) {
       <Canvas
         camera={{ position: [0, 0, 15], fov: 50 }}
         style={{ background: 'transparent' }}
+        gl={{ antialias: true, alpha: true }}
       >
         <MetisScene graph={graph} onNodeClick={onNodeClick} />
       </Canvas>

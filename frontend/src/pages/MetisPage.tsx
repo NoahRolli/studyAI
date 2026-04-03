@@ -21,7 +21,7 @@ export default function MetisPage() {
   const [graph, setGraph] = useState<MetisGraph>({
     nodes: [], edges: [], clusters: [],
   })
-  const [view, setView] = useState<MetisViewMode>('2d')
+  const [view, setView] = useState<MetisViewMode>('3d')
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [linking, setLinking] = useState(false)
