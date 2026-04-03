@@ -192,7 +192,7 @@ export default function MetisPage() {
 
         {/* Graph-Controls overlay — oben rechts im Fenster */}
         {view !== 'list' && graph.nodes.length > 0 && (
-          <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+          <div className="absolute top-2 right-2 z-20 flex items-center gap-2">
             <label
               className="flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)]
                 cursor-pointer select-none px-2 py-1 rounded
