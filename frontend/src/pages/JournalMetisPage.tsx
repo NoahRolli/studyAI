@@ -1,58 +1,75 @@
 // JournalMetisPage — Verschlüsselter Knowledge-Graph im Journal
-// Merged View: Journal-Einträge + öffentliche Metis-Nodes (read-only)
+// Merged View: Journal-Einträge (Cyan) + öffentliche Nodes (transparent)
+// Public Nodes können ausgeblendet werden.
 // Route: /journal/metis
 
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { get, post } from '../hooks/useAPI'
-import type {
-  JournalMetisGraph, MetisViewMode,
-} from '../types/metis'
+import { useLanguage } from '../hooks/useLanguage'
+import MetisGraph2D from '../components/metis/MetisGraph2D'
+import MetisListView from '../components/metis/MetisListView'
+import MetisNodeDetail from '../components/metis/MetisNodeDetail'
+import MetisMiniMap3D from '../components/metis/MetisMiniMap3D'
+import type { MetisGraph, MetisViewMode, MetisNode } from '../types/metis'
+import type { JournalMetisGraph } from '../types/metis'
 
 const MetisSphere3D = lazy(
   () => import('../components/metis/MetisSphere3D')
 )
 
-// Adapter: JournalMetisGraph → MetisGraph Format für bestehende Komponenten
-function adaptGraph(jGraph: JournalMetisGraph) {
+// Journal-Metis Graph → MetisGraph Adapter
+// Filtert optional Public-Nodes raus, mappt String-IDs auf Numbers
+function adaptGraph(
+  jGraph: JournalMetisGraph, showPublic: boolean,
+): MetisGraph {
+  // Filtern
+  const nodes = showPublic
+    ? jGraph.nodes
+    : jGraph.nodes.filter(n => n.realm === 'journal')
+  const nodeIds = new Set(nodes.map(n => n.id))
+  const edges = jGraph.edges.filter(
+    e => nodeIds.has(e.source) && nodeIds.has(e.target)
+  )
+
+  // ID-Map: String → fortlaufende Number
+  const idMap = new Map<string, number>()
+  nodes.forEach((n, i) => idMap.set(n.id, i + 1))
+
   return {
-    nodes: jGraph.nodes.map(n => ({
-      id: n.id,
-      type: n.type as 'note' | 'summary',
+    nodes: nodes.map(n => ({
+      id: idMap.get(n.id) || 0,
+      type: n.realm === 'journal' ? 'entry' as any : n.type as any,
       source_id: n.source_id,
       title: n.label,
       pos_x: n.pos_x,
       pos_y: n.pos_y,
       embedding_stale: false,
-      cluster_ids: n.cluster_ids,
-      realm: n.realm,
+      cluster_ids: [],
     })),
-    edges: jGraph.edges.map(e => ({
-      id: e.id,
-      source_node_id: e.source,
-      target_node_id: e.target,
-      relation_type: e.relation_type,
+    edges: edges.map(e => ({
+      id: idMap.get(e.id) || 0,
+      source_node_id: idMap.get(e.source) || 0,
+      target_node_id: idMap.get(e.target) || 0,
+      relation_type: 'related' as const,
       strength: e.strength,
-      realm: e.realm,
     })),
-    clusters: jGraph.clusters.map(c => ({
-      id: c.id,
-      label: c.label,
-      description: null,
-      color: c.color,
-      node_ids: c.node_ids,
-      realm: c.realm,
-    })),
+    clusters: [],
   }
 }
 
 export default function JournalMetisPage() {
-  const [graph, setGraph] = useState<JournalMetisGraph>({
+  const { t } = useLanguage()
+  const [rawGraph, setRawGraph] = useState<JournalMetisGraph>({
     nodes: [], edges: [], clusters: [],
   })
   const [view, setView] = useState<MetisViewMode>('3d')
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [linking, setLinking] = useState(false)
+  const [clustering, setClustering] = useState(false)
+  const [selectedNode, setSelectedNode] = useState<MetisNode | null>(null)
+  const [fullscreen, setFullscreen] = useState(false)
+  const [showPublic, setShowPublic] = useState(true)
 
   // Kamera für MiniMap
   const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 22 })
@@ -60,23 +77,24 @@ export default function JournalMetisPage() {
   const lastCameraUpdate = useRef(0)
 
   const handleCameraMove = useCallback((
-    azimuth: number, elevation: number, distance: number,
+    az: number, el: number, dist: number,
   ) => {
-    cameraRef.current = { azimuth, elevation, distance }
+    cameraRef.current = { azimuth: az, elevation: el, distance: dist }
     const now = Date.now()
     if (now - lastCameraUpdate.current > 100) {
       lastCameraUpdate.current = now
-      setCameraTick(prev => prev + 1)
+      setCameraTick(p => p + 1)
     }
   }, [])
 
   const loadGraph = useCallback(async () => {
     try {
-      setError(null)
-      const data = await get<JournalMetisGraph>('/api/journal/metis/graph')
-      setGraph(data)
+      const data = await get<JournalMetisGraph>(
+        '/api/journal/metis/graph',
+      )
+      setRawGraph(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler')
+      console.error('Journal Metis load failed:', err)
     } finally {
       setLoading(false)
     }
@@ -90,142 +108,201 @@ export default function JournalMetisPage() {
       await post('/api/journal/metis/sync')
       await loadGraph()
     } catch (err) {
-      console.error('Journal Metis sync failed:', err)
-    } finally {
-      setSyncing(false)
-    }
+      console.error('Sync failed:', err)
+    } finally { setSyncing(false) }
   }, [loadGraph])
 
-  // Adapted graph für bestehende Komponenten
-  const adapted = adaptGraph(graph)
+  const handleAutoLink = useCallback(async () => {
+    setLinking(true)
+    try {
+      await post('/api/journal/metis/auto-link')
+      await loadGraph()
+    } catch (err) {
+      console.error('Auto-link failed:', err)
+    } finally { setLinking(false) }
+  }, [loadGraph])
 
-  if (error) {
+  const handleAutoCluster = useCallback(async () => {
+    setClustering(true)
+    try {
+      await post('/api/journal/metis/auto-cluster')
+      await loadGraph()
+    } catch (err) {
+      console.error('Auto-cluster failed:', err)
+    } finally { setClustering(false) }
+  }, [loadGraph])
+
+  const handleNodeClick = useCallback((nodeId: number) => {
+    const node = graph.nodes.find(n => n.id === nodeId)
+    setSelectedNode(node || null)
+  }, [])
+
+  // Escape für Fullscreen
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && fullscreen) setFullscreen(false)
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [fullscreen])
+
+  // Adapted graph (mit/ohne Public)
+  const graph = adaptGraph(rawGraph, showPublic)
+
+  // Stats
+  const jCount = rawGraph.nodes.filter(n => n.realm === 'journal').length
+  const pCount = rawGraph.nodes.filter(n => n.realm === 'public').length
+
+  if (loading) {
     return (
-      <div className="p-6">
-        <p style={{ color: 'var(--color-danger)' }}>{error}</p>
-        <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px' }}>
-          {'Journal ist gesperrt'}
+      <div className="flex items-center justify-center h-full">
+        <p className="text-[var(--color-text-muted)]">
+          {t.common.loading}
         </p>
       </div>
     )
   }
 
-  const journalCount = graph.nodes.filter(n => n.realm === 'journal').length
-  const publicCount = graph.nodes.filter(n => n.realm === 'public').length
+  const wrapCls = fullscreen
+    ? 'fixed inset-0 z-50 flex flex-col bg-[var(--color-bg-deep)]'
+    : 'flex flex-col h-full gap-4 p-4'
+  const graphCls = fullscreen
+    ? 'flex-1 overflow-hidden relative'
+    : 'flex-1 overflow-hidden relative border border-[var(--color-border)] rounded-lg'
 
   return (
-    <div className="relative w-full" style={{ height: 'calc(100vh - 48px)' }}>
-      {/* Toolbar */}
-      <div
-        className="absolute top-3 left-3 z-20 flex items-center gap-3"
-        style={{ fontFamily: 'Orbitron, monospace' }}
-      >
-        {/* Stats */}
-        <div className="flex gap-3" style={{
-          fontSize: '11px', color: 'var(--color-text-secondary)',
-        }}>
-          <span title="Journal Nodes">J: {journalCount}</span>
-          <span title="Public Nodes">P: {publicCount}</span>
-          <span title="Edges">E: {graph.edges.length}</span>
-        </div>
-
-        {/* Sync Button */}
-        <button
-          className="hud-btn text-xs px-3 py-1"
-          onClick={handleSync}
-          disabled={syncing}
-        >
-          {syncing ? '...' : 'Sync'}
-        </button>
-
-        {/* View Toggle */}
-        <div className="flex border rounded overflow-hidden"
-          style={{ borderColor: 'var(--color-border)' }}>
-          {(['3d', '2d', 'list'] as MetisViewMode[]).map(m => (
-            <button
-              key={m}
-              className="px-2 py-1 text-xs uppercase"
-              style={{
-                background: view === m
-                  ? 'var(--color-primary)' : 'transparent',
-                color: view === m
-                  ? 'var(--color-bg)' : 'var(--color-text-secondary)',
-                fontFamily: 'Orbitron, monospace',
-              }}
-              onClick={() => setView(m)}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Legende */}
-      <div
-        className="absolute top-3 right-3 z-20 flex gap-3"
-        style={{ fontSize: '10px', fontFamily: 'Orbitron, monospace' }}
-      >
-        <span style={{ color: '#7dd4a3' }}>● Journal</span>
-        <span style={{ color: '#d4a574' }}>● Public</span>
-      </div>
-
-      {/* Graph Render */}
-      {loading ? (
-        <div className="flex items-center justify-center h-full">
-          <span style={{ color: 'var(--color-text-secondary)' }}>
-            Loading...
-          </span>
-        </div>
-      ) : view === '3d' ? (
-        <Suspense fallback={
-          <div className="flex items-center justify-center h-full">
-            <span style={{ color: 'var(--color-text-secondary)' }}>
-              Loading 3D...
-            </span>
+    <div className={wrapCls}>
+      {/* Header */}
+      <div className={`flex items-center justify-between ${fullscreen ? 'p-3' : ''}`}>
+        {!fullscreen && (
+          <div>
+            <h1 className="hud-title text-glow text-2xl">
+              {t.metis?.title || 'METIS'}
+            </h1>
+            <span style={{
+              fontFamily: 'Orbitron, monospace',
+              fontSize: '10px',
+              color: '#00d4ff',
+              letterSpacing: '2px',
+            }}>JOURNAL</span>
           </div>
-        }>
-          <MetisSphere3D
-            graph={adapted as any}
-            onCameraMove={handleCameraMove}
-          />
-        </Suspense>
-      ) : view === 'list' ? (
-        <div className="p-6 overflow-y-auto" style={{ height: '100%' }}>
-          <div className="grid gap-4 mt-12">
-            {graph.nodes.map(n => (
-              <div
-                key={n.id}
-                className="p-3 rounded border"
+        )}
+        {/* Toolbar inline */}
+        <div className="flex items-center gap-3"
+          style={{ fontFamily: 'Orbitron, monospace' }}>
+          {/* Stats */}
+          <div className="flex gap-3" style={{
+            fontSize: '11px',
+            color: 'var(--color-text-secondary)',
+          }}>
+            <span style={{ color: '#00d4ff' }}>{jCount} J</span>
+            <span style={{ color: '#d4a574' }}>{pCount} P</span>
+            <span>{graph.edges.length} E</span>
+          </div>
+          {/* View Toggle */}
+          <div className="flex border rounded overflow-hidden"
+            style={{ borderColor: 'var(--color-border)' }}>
+            {(['3d', '2d', 'list'] as MetisViewMode[]).map(m => (
+              <button key={m}
+                className="px-2 py-1 text-xs uppercase"
                 style={{
-                  borderColor: n.realm === 'journal'
-                    ? 'rgba(125, 212, 163, 0.3)'
-                    : 'rgba(212, 165, 116, 0.3)',
-                  background: 'rgba(0,0,0,0.2)',
-                }}
-              >
-                <span style={{
-                  color: n.realm === 'journal' ? '#7dd4a3' : '#d4a574',
-                  fontSize: '10px',
+                  background: view === m
+                    ? 'var(--color-primary)' : 'transparent',
+                  color: view === m
+                    ? 'var(--color-bg)' : 'var(--color-text-secondary)',
                   fontFamily: 'Orbitron, monospace',
-                  marginRight: '8px',
-                }}>
-                  {n.realm === 'journal' ? 'J' : 'P'}
-                </span>
-                <span style={{ color: 'var(--color-text)' }}>
-                  {n.label}
-                </span>
-                <span style={{
-                  color: 'var(--color-text-secondary)',
-                  fontSize: '11px',
-                  marginLeft: '8px',
-                }}>
-                  {n.type}
-                </span>
-              </div>
+                }} onClick={() => setView(m)}>{m}</button>
             ))}
           </div>
+          {/* Public Toggle */}
+          <button
+            className="hud-btn text-xs px-3 py-1"
+            style={{
+              opacity: showPublic ? 1 : 0.4,
+              borderColor: showPublic ? '#d4a574' : 'var(--color-border)',
+            }}
+            onClick={() => setShowPublic(!showPublic)}
+            title={showPublic ? 'Public ausblenden' : 'Public einblenden'}
+          >P</button>
+          {/* Actions */}
+          <button className="hud-btn text-xs px-3 py-1"
+            onClick={handleSync} disabled={syncing}>
+            {syncing ? '...' : 'SYNC'}
+          </button>
+          <button className="hud-btn text-xs px-3 py-1"
+            onClick={handleAutoLink} disabled={linking}>
+            {linking ? '...' : 'DETECT'}
+          </button>
+          <button className="hud-btn text-xs px-3 py-1"
+            onClick={handleAutoCluster} disabled={clustering}>
+            {clustering ? '...' : 'GROUP'}
+          </button>
         </div>
-      ) : null}
+      </div>
+
+      {/* Graph */}
+      <div className={graphCls}>
+        {graph.nodes.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-[var(--color-text-muted)]">
+              {t.metis?.noNodes || 'Keine Nodes'}
+            </p>
+          </div>
+        ) : view === 'list' ? (
+          <MetisListView graph={graph} />
+        ) : view === '3d' ? (
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-full">
+              <p className="text-[var(--color-text-muted)]">
+                {t.common.loading}
+              </p>
+            </div>
+          }>
+            <MetisSphere3D
+              graph={graph}
+              onNodeClick={handleNodeClick}
+              onCameraMove={handleCameraMove}
+              transparent={true}
+            />
+          </Suspense>
+        ) : (
+          <MetisGraph2D
+            graph={graph}
+            onNodeClick={handleNodeClick}
+            transparent={true}
+          />
+        )}
+
+        {/* Fullscreen Button */}
+        {view !== 'list' && graph.nodes.length > 0 && (
+          <div className="absolute top-2 right-2 z-20">
+            <button
+              onClick={() => setFullscreen(!fullscreen)}
+              className="hud-btn text-xs px-2 py-1"
+              title={fullscreen ? 'Escape' : 'Fullscreen'}
+            >{fullscreen ? '✖' : '⛶'}</button>
+          </div>
+        )}
+
+        {/* MiniMap 3D */}
+        {view === '3d' && graph.nodes.length > 0 && (
+          <MetisMiniMap3D
+            graph={graph}
+            cameraAzimuth={cameraRef.current.azimuth}
+            cameraElevation={cameraRef.current.elevation}
+            cameraDistance={cameraRef.current.distance}
+          />
+        )}
+
+        {/* Detail Panel */}
+        {selectedNode && (
+          <MetisNodeDetail
+            node={selectedNode}
+            graph={graph}
+            onClose={() => setSelectedNode(null)}
+          />
+        )}
+      </div>
     </div>
   )
 }

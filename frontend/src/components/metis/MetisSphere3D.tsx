@@ -9,11 +9,12 @@ import * as THREE from 'three'
 import type { MetisGraph } from '../../types/metis'
 
 // Farben — kräftiger für 3D
-const COLORS = {
+const COLORS: Record<string, THREE.Color> = {
   note: new THREE.Color('#90edb8'),
   summary: new THREE.Color('#e8b882'),
   wikilink: new THREE.Color('#e8e090'),
   ai: new THREE.Color('#6aacbe'),
+  entry: new THREE.Color('#00d4ff'),
 }
 
 // --- GlowNode — intensiver, mehrschichtig ---

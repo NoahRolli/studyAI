@@ -14,7 +14,6 @@ export interface LayoutNode extends MetisNode {
 // dagre wird später ergänzt wenn npm install möglich ist
 export function layoutGraph(graph: MetisGraph): { nodes: LayoutNode[] } {
   const NODE_W = 160
-  const NODE_H = 60
   const PADDING = 40
 
   // Adjacency Map für Verbindungsinfo
@@ -36,7 +35,6 @@ export function layoutGraph(graph: MetisGraph): { nodes: LayoutNode[] } {
 
   // Grid-Layout als Fallback — Spirale von der Mitte nach aussen
   const positioned: LayoutNode[] = []
-  const cols = Math.ceil(Math.sqrt(sorted.length))
 
   for (let i = 0; i < sorted.length; i++) {
     const node = sorted[i]
