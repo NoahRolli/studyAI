@@ -158,16 +158,6 @@ export default function MetisPage() {
           edgeCount={graph.edges.length}
           clusterCount={graph.clusters.length}
         />
-        {/* Fullscreen-Button */}
-        {view !== 'list' && (
-          <button
-            onClick={() => setFullscreen(!fullscreen)}
-            className="hud-btn text-xs px-2 py-1"
-            title={fullscreen ? 'Escape' : 'Fullscreen'}
-          >
-            {fullscreen ? '\u2716' : '\u26F6'}
-          </button>
-        )}
       </div>
 
       {/* Graph */}
