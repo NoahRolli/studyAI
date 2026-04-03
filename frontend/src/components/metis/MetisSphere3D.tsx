@@ -131,7 +131,7 @@ function BackgroundGrid() {
     const size = 50
     const step = 2.5
     const mat = new THREE.LineBasicMaterial({
-      color: '#162a35', transparent: true, opacity: 0.5,
+      color: '#1e4050', transparent: true, opacity: 0.35,
       depthWrite: false,
     })
     // Horizontale Linien
@@ -153,7 +153,7 @@ function BackgroundGrid() {
     return group
   }, [])
 
-  return <primitive object={lines} position={[0, 0, -20]} />
+  return <primitive object={lines} position={[0, 0, -15]} />
 }
 
 
@@ -222,7 +222,6 @@ function MetisScene({ graph, onNodeClick, onCameraMove }: {
       />
       <ambientLight intensity={0.1} />
       <CameraTracker onCameraMove={onCameraMove} />
-      <BackgroundGrid />
       <BackgroundGrid />
       <group ref={groupRef}>
         {graph.edges.map(edge => {
