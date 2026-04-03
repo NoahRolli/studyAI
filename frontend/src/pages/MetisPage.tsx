@@ -1,14 +1,19 @@
 // MetisPage — Orchestrator für den Metis Knowledge-Graph
-// Toggle zwischen 2D-Graph, 3D-Sphäre und Listen-Ansicht.
+// Toggle zwischen 2D-Graph, 3D-Sphäre (lazy) und Listen-Ansicht.
 // Toolbar mit Sync, Auto-Link, Auto-Cluster Buttons.
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { get, post, put } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import MetisGraph2D from '../components/metis/MetisGraph2D'
 import MetisToolbar from '../components/metis/MetisToolbar'
 import MetisListView from '../components/metis/MetisListView'
 import type { MetisGraph, MetisViewMode } from '../types/metis'
+
+// 3D Sphäre lazy-loaded (Three.js Bundle gross)
+const MetisSphere3D = lazy(
+  () => import('../components/metis/MetisSphere3D')
+)
 
 export default function MetisPage() {
   const { t } = useLanguage()
@@ -35,7 +40,7 @@ export default function MetisPage() {
 
   useEffect(() => { loadGraph() }, [loadGraph])
 
-  // Sync: Notes + Summaries synchronisieren
+  // Sync
   const handleSync = useCallback(async () => {
     setSyncing(true)
     try {
@@ -48,7 +53,7 @@ export default function MetisPage() {
     }
   }, [loadGraph])
 
-  // Auto-Link: Ollama Embeddings + Similarity
+  // Auto-Link
   const handleAutoLink = useCallback(async () => {
     setLinking(true)
     try {
@@ -61,7 +66,7 @@ export default function MetisPage() {
     }
   }, [loadGraph])
 
-  // Auto-Cluster: Ollama Themen-Gruppierung
+  // Auto-Cluster
   const handleAutoCluster = useCallback(async () => {
     setClustering(true)
     try {
@@ -127,6 +132,16 @@ export default function MetisPage() {
           </div>
         ) : view === 'list' ? (
           <MetisListView graph={graph} />
+        ) : view === '3d' ? (
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-full">
+              <p className="text-[var(--color-text-muted)]">
+                {t.common.loading}
+              </p>
+            </div>
+          }>
+            <MetisSphere3D graph={graph} />
+          </Suspense>
         ) : (
           <MetisGraph2D
             graph={graph}
