@@ -9,6 +9,7 @@ import MetisGraph2D from '../components/metis/MetisGraph2D'
 import MetisToolbar from '../components/metis/MetisToolbar'
 import MetisListView from '../components/metis/MetisListView'
 import MetisNodeDetail from '../components/metis/MetisNodeDetail'
+import MetisMiniMap3D from '../components/metis/MetisMiniMap3D'
 import type { MetisGraph, MetisViewMode, MetisNode } from '../types/metis'
 
 // 3D Sphäre lazy-loaded
@@ -155,6 +156,11 @@ export default function MetisPage() {
             onPositionUpdate={handlePositionUpdate}
             onNodeClick={handleNodeClick}
           />
+        )}
+
+        {/* MiniMap für 3D */}
+        {view === '3d' && graph.nodes.length > 0 && (
+          <MetisMiniMap3D graph={graph} />
         )}
 
         {/* Detail-Panel */}
