@@ -189,7 +189,6 @@ export default function MetisPage() {
             <MetisSphere3D
               graph={graph}
               onNodeClick={handleNodeClick}
-            transparent={transparent}
               onCameraMove={handleCameraMove}
               transparent={transparent}
             />

@@ -32,7 +32,7 @@ interface Props {
 // Eigener Node-Typ
 const nodeTypes = { metis: MetisNode2D }
 
-export default function MetisGraph2D({ graph, onPositionUpdate, onNodeClick }: Props) {
+export default function MetisGraph2D({ graph, onPositionUpdate, onNodeClick, transparent }: Props) {
   const { t } = useLanguage()
 
   // Graph-Daten in ReactFlow-Format

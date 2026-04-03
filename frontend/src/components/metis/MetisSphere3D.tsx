@@ -160,6 +160,7 @@ function BackgroundGrid() {
 // --- Kamera-Tracker ---
 function CameraTracker({ onCameraMove }: {
   onCameraMove: (a: number, e: number, d: number) => void
+  transparent?: boolean
 }) {
   const { camera } = useThree()
   useFrame(() => {
@@ -177,6 +178,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent }: {
   graph: MetisGraph
   onNodeClick?: (id: number) => void
   onCameraMove: (a: number, e: number, d: number) => void
+  transparent?: boolean
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const idleTime = useRef(0)
