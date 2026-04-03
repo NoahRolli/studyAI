@@ -169,8 +169,8 @@ export default function JournalMetisContent() {
     ? 'flex-1 overflow-hidden relative'
     : 'overflow-hidden relative border border-[var(--color-border)] rounded-lg'
 
-  // Graph-Container-Höhe im Tab-Modus
-  const graphStyle = fullscreen ? {} : { height: 'calc(100vh - 320px)' }
+  // Graph-Container-Höhe: maximale Nutzung, nur Header/Tabs abziehen
+  const graphStyle = fullscreen ? {} : { height: 'calc(100vh - 220px)' }
 
   return (
     <div className={wrapperClass}>
