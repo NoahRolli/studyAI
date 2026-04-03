@@ -97,7 +97,7 @@ export default function MetisGraph2D({ graph, onPositionUpdate, onNodeClick }: P
       maxZoom={2}
       proOptions={{ hideAttribution: true }}
     >
-      <Background color="#1a3a4a" gap={25} size={1.2} />
+      <Background color="#1e4555" gap={25} size={1} />
       <Controls
         showInteractive={false}
         className="metis-controls"

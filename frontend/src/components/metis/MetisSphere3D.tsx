@@ -131,7 +131,7 @@ function BackgroundGrid() {
     const size = 50
     const step = 2.5
     const mat = new THREE.LineBasicMaterial({
-      color: '#152530', transparent: true, opacity: 0.3,
+      color: '#1a4050', transparent: true, opacity: 0.5,
       depthWrite: false,
     })
     // Horizontale Linien
