@@ -4,7 +4,6 @@
 
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { get, post } from '../hooks/useAPI'
-import { useLanguage } from '../hooks/useLanguage'
 import type {
   JournalMetisGraph, MetisViewMode,
 } from '../types/metis'
@@ -47,7 +46,6 @@ function adaptGraph(jGraph: JournalMetisGraph) {
 }
 
 export default function JournalMetisPage() {
-  const { t } = useLanguage()
   const [graph, setGraph] = useState<JournalMetisGraph>({
     nodes: [], edges: [], clusters: [],
   })
