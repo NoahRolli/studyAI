@@ -159,7 +159,7 @@ export default function JournalMetisContent() {
   const graphClass = fullscreen
     ? 'flex-1 overflow-hidden relative'
     : 'overflow-hidden relative border border-[var(--color-border)] rounded-lg'
-  const graphStyle = fullscreen ? {} : { height: 'calc(100vh - 280px)' }
+  const graphStyle = fullscreen ? {} : { height: 'calc(100vh - 250px)' }
 
   return (
     <div className={wrapperClass}>
@@ -229,7 +229,7 @@ export default function JournalMetisContent() {
                 style={{
                   opacity: showPublic ? 1 : 0.4,
                   borderColor: showPublic
-                    ? '#d4a574' : 'var(--color-border)',
+                    ? 'var(--color-primary)' : 'var(--color-border)',
                 }}
                 onClick={() => setShowPublic(!showPublic)}
                 title="V1"
