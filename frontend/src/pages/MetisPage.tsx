@@ -1,10 +1,9 @@
 // MetisPage — Orchestrator für den Metis Knowledge-Graph
 // Toggle zwischen 2D-Graph, 3D-Sphäre und Listen-Ansicht.
 // Toolbar mit Sync, Auto-Link, Auto-Cluster Buttons.
-// Lädt Graph-Daten vom Backend und reicht sie an Kind-Komponenten weiter.
 
 import { useState, useEffect, useCallback } from 'react'
-import { get, post } from '../hooks/useAPI'
+import { get, post, put } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import MetisGraph2D from '../components/metis/MetisGraph2D'
 import MetisToolbar from '../components/metis/MetisToolbar'
@@ -19,8 +18,10 @@ export default function MetisPage() {
   const [view, setView] = useState<MetisViewMode>('2d')
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [linking, setLinking] = useState(false)
+  const [clustering, setClustering] = useState(false)
 
-  // Graph-Daten vom Backend laden
+  // Graph laden
   const loadGraph = useCallback(async () => {
     try {
       const data = await get<MetisGraph>('/api/metis/graph')
@@ -34,7 +35,7 @@ export default function MetisPage() {
 
   useEffect(() => { loadGraph() }, [loadGraph])
 
-  // Sync: Notes + Summaries mit Graph synchronisieren
+  // Sync: Notes + Summaries synchronisieren
   const handleSync = useCallback(async () => {
     setSyncing(true)
     try {
@@ -47,12 +48,38 @@ export default function MetisPage() {
     }
   }, [loadGraph])
 
-  // Node-Position speichern (Pin/Unpin)
+  // Auto-Link: Ollama Embeddings + Similarity
+  const handleAutoLink = useCallback(async () => {
+    setLinking(true)
+    try {
+      await post('/api/metis/auto-link')
+      await loadGraph()
+    } catch (err) {
+      console.error('Metis auto-link failed:', err)
+    } finally {
+      setLinking(false)
+    }
+  }, [loadGraph])
+
+  // Auto-Cluster: Ollama Themen-Gruppierung
+  const handleAutoCluster = useCallback(async () => {
+    setClustering(true)
+    try {
+      await post('/api/metis/auto-cluster')
+      await loadGraph()
+    } catch (err) {
+      console.error('Metis auto-cluster failed:', err)
+    } finally {
+      setClustering(false)
+    }
+  }, [loadGraph])
+
+  // Node-Position speichern
   const handlePositionUpdate = useCallback(async (
     nodeId: number, x: number | null, y: number | null,
   ) => {
     try {
-      await post(`/api/metis/nodes/${nodeId}/position`, {
+      await put(`/api/metis/nodes/${nodeId}/position`, {
         pos_x: x, pos_y: y,
       })
     } catch (err) {
@@ -72,23 +99,25 @@ export default function MetisPage() {
 
   return (
     <div className="flex flex-col h-full gap-4 p-4">
-      {/* Header mit Titel + Toolbar */}
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="hud-title text-glow text-2xl">{t.metis.title}</h1>
-        </div>
+        <h1 className="hud-title text-glow text-2xl">{t.metis.title}</h1>
         <MetisToolbar
           view={view}
           onViewChange={setView}
           onSync={handleSync}
+          onAutoLink={handleAutoLink}
+          onAutoCluster={handleAutoCluster}
           syncing={syncing}
+          linking={linking}
+          clustering={clustering}
           nodeCount={graph.nodes.length}
           edgeCount={graph.edges.length}
           clusterCount={graph.clusters.length}
         />
       </div>
 
-      {/* Graph-Bereich */}
+      {/* Graph */}
       <div className="flex-1 hud-card overflow-hidden relative">
         {graph.nodes.length === 0 ? (
           <div className="flex items-center justify-center h-full">

@@ -27,6 +27,7 @@ from backend.auth.auth_middleware import require_auth
 from backend.api.ollama_status import router as ollama_status_router
 from backend.api.notes_ai import router as notes_ai_router# WICHTIG: Alle Models importieren, damit SQLAlchemy sie kennt
 from backend.api.metis import router as metis_router
+from backend.api.metis_ai import router as metis_ai_router
 from backend.models.module import Module  # noqa: F401
 from backend.models.document import Document  # noqa: F401
 from backend.models.summary import Summary  # noqa: F401
@@ -119,6 +120,7 @@ app.include_router(journal_insights_router)
 app.include_router(ollama_status_router)
 app.include_router(notes_ai_router)
 app.include_router(metis_router)
+app.include_router(metis_ai_router)
 
 # Static Files — gebautes Frontend servieren (nur in Production)
 if _HAS_FRONTEND:
