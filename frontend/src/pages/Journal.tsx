@@ -1,10 +1,9 @@
 // Journal — Orchestrator für das verschlüsselte Tagebuch
 // Delegiert alles an Sub-Komponenten und useJournalState Hook
-// Drei Zustände: Setup → Unlock → Tabs (Einträge, Kalender, Analytics, Meds, Insights)
+// Drei Zustände: Setup → Unlock → Tabs (Einträge, Kalender, Analytics, Meds, Insights, Metis)
 // Analytics-Daten kommen gecacht aus useJournalAnalytics via useJournalState
 
 import { useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import useJournalState from '../hooks/useJournalState'
 import type { JournalTab } from '../hooks/useJournalState'
 import type { JournalEntry } from '../types/models'
@@ -22,6 +21,7 @@ import InsightsView from '../components/journal/InsightsView'
 import MedicationTracker from '../components/journal/MedicationTracker'
 import MedicationReminder from '../components/journal/MedicationReminder'
 import JournalSearch from '../components/journal/JournalSearch'
+import JournalMetisContent from '../components/journal/JournalMetisContent'
 
 function Journal() {
   const s = useJournalState()
@@ -30,7 +30,6 @@ function Journal() {
 
   // Ref um CalendarView von aussen zu steuern (Tag öffnen)
   const calendarRef = useRef<{ openDay: (date: string) => void }>(null)
-  const navigate = useNavigate()
 
   // Auto-Lock bei Navigation weg oder Laptop-Zuklappen
   useJournalLock({
@@ -164,7 +163,6 @@ function Journal() {
               <button
                 key={tab.key}
                 onClick={() => {
-                  if (tab.key === 'metis') { navigate('/journal/metis'); return }
                   s.setActiveTab(tab.key)
                   if (tab.key === 'mood') a.loadMoods()
                 }}
@@ -271,6 +269,11 @@ function Journal() {
               medications={s.medications}
               onReload={s.loadMedications}
             />
+          )}
+
+          {/* Tab: Metis — inline wie alle anderen Tabs */}
+          {s.activeTab === 'metis' && (
+            <JournalMetisContent />
           )}
         </div>
       )}
