@@ -176,7 +176,7 @@ function CalendarPage() {
     <div className="animate-fade-in">
       {/* Header: Titel + Navigation */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="hud-title text-glow text-lg" style={{ color: 'var(--color-primary)' }}>
+        <h1 className="hud-title text-glow text-2xl" style={{ color: 'var(--color-primary)' }}>
           {t.mainCalendar.title}
         </h1>
         <div className="flex items-center gap-3">

@@ -75,8 +75,9 @@ function EntryList({
                   onClick={() => onStartEdit(entry)}
                   className="text-xs transition-colors"
                   style={{ color: 'var(--color-text-muted)' }}
+                  title={t.common.edit}
                 >
-                  {t.common.edit}
+                  ✎
                 </button>
                 <button
                   onClick={() => onDelete(entry.id)}
@@ -88,8 +89,9 @@ function EntryList({
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')
                   }
+                  title={t.common.delete}
                 >
-                  {t.common.delete}
+                  ✕
                 </button>
               </div>
             </div>

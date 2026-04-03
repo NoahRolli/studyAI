@@ -1,5 +1,5 @@
 // MetisToolbar — Steuerleiste für den Knowledge-Graph
-// Sync, Auto-Link, Auto-Cluster Buttons + View-Toggle + Statistik.
+// View-Toggle als einheitliche Button-Gruppe, Action-Buttons rechts.
 
 import { useLanguage } from '../../hooks/useLanguage'
 import type { MetisViewMode } from '../../types/metis'
@@ -40,13 +40,25 @@ export default function MetisToolbar({
         <span>{clusterCount} {t.metis.clusters}</span>
       </div>
 
-      {/* View-Toggle */}
-      <div className="flex gap-1">
-        {views.map(v => (
+      {/* View-Toggle — einheitliche Gruppe */}
+      <div
+        className="flex rounded-md overflow-hidden"
+        style={{ border: '1px solid var(--color-border)' }}
+      >
+        {views.map((v, i) => (
           <button
             key={v.key}
             onClick={() => onViewChange(v.key)}
-            className={view === v.key ? 'hud-tab-active' : 'hud-tab'}
+            className="px-3 py-1.5 text-xs tracking-wider transition-all"
+            style={{
+              background: view === v.key
+                ? 'var(--color-primary)' : 'transparent',
+              color: view === v.key
+                ? 'var(--color-bg-deep)' : 'var(--color-text-muted)',
+              fontWeight: view === v.key ? 600 : 400,
+              borderRight: i < views.length - 1
+                ? '1px solid var(--color-border)' : 'none',
+            }}
           >
             {v.label}
           </button>

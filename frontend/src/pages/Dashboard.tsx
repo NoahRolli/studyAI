@@ -363,8 +363,8 @@ function Dashboard() {
                       style={{ color: 'rgba(255, 59, 92, 0.4)' }}
                       onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-danger)')}
                       onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')}
-                    >
-                      {t.common.delete}
+                     title={t.common.delete}>
+                      ✕
                     </button>
                   </div>
                 </div>
@@ -391,8 +391,8 @@ function Dashboard() {
                     style={{ color: 'rgba(255, 59, 92, 0.4)' }}
                     onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-danger)')}
                     onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')}
-                  >
-                    {t.common.delete}
+                   title={t.common.delete}>
+                    ✕
                   </button>
                 </div>
               </Link>
