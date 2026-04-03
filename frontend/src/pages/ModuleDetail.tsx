@@ -69,7 +69,7 @@ function ModuleDetail() {
       formData.append('file', file)
       const API_BASE = import.meta.env.DEV ? 'http://localhost:8000' : ''
       const response = await fetch(
-        `/api/modules/${id}/documents/`,
+         `${API_BASE}/api/modules/${id}/documents/`,
         { method: 'POST', body: formData, credentials: 'include' }
       )
       if (!response.ok) {
