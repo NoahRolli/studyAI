@@ -1,7 +1,7 @@
 // MetisGraph2D — 2D Knowledge-Graph mit ReactFlow
-// Nodes farbig nach Typ (Grün=Note, Orange=Summary).
+// Nodes als leuchtende Dots (Grün=Note, Orange=Summary).
 // Edges: WikiLinks durchgezogen gelb, AI-Edges gestrichelt grau.
-// Auto-Layout via dagre, gepinnte Nodes behalten ihre Position.
+// Spiral-Layout, gepinnte Nodes behalten ihre Position.
 
 import { useMemo, useCallback } from 'react'
 import ReactFlow, {
@@ -17,10 +17,10 @@ import MetisNode2D from './MetisNode2D'
 
 // Farben — gedämpft, passend zum HUD-Theme
 const COLORS = {
-  note: '#7dd4a3',       // Grün (emerald)
-  summary: '#d4a574',    // Orange
-  wikilink: '#d4cc7d',   // Gelb
-  ai: '#888888',         // Grau
+  note: '#7dd4a3',
+  summary: '#d4a574',
+  wikilink: '#d4cc7d',
+  ai: '#888888',
 }
 
 interface Props {
@@ -28,15 +28,14 @@ interface Props {
   onPositionUpdate: (id: number, x: number | null, y: number | null) => void
 }
 
-// Eigener Node-Typ registrieren
+// Eigener Node-Typ
 const nodeTypes = { metis: MetisNode2D }
 
 export default function MetisGraph2D({ graph, onPositionUpdate }: Props) {
   const { t } = useLanguage()
 
-  // Graph-Daten in ReactFlow-Format konvertieren
+  // Graph-Daten in ReactFlow-Format
   const { initialNodes, initialEdges } = useMemo(() => {
-    // Nodes mit Layout-Positionen berechnen
     const positioned = layoutGraph(graph)
 
     const rfNodes: Node[] = positioned.nodes.map(n => ({
@@ -67,23 +66,18 @@ export default function MetisGraph2D({ graph, onPositionUpdate }: Props) {
           strokeDasharray: isWikilink ? undefined : '5 5',
           opacity: 0.6 + e.strength * 0.4,
         },
-        label: isWikilink ? '' : t.metis[
-          `edge${e.relation_type.charAt(0).toUpperCase()}${e.relation_type.slice(1)}` as keyof typeof t.metis
-        ] || e.relation_type,
-        labelStyle: { fontSize: 10, fill: 'var(--color-text-muted)' },
       }
     })
 
     return { initialNodes: rfNodes, initialEdges: rfEdges }
   }, [graph, t])
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
+  const [nodes, , onNodesChange] = useNodesState(initialNodes)
   const [edges, , onEdgesChange] = useEdgesState(initialEdges)
 
-  // Node-Drag beendet → Position speichern (Pin)
+  // Node-Drag → Position speichern
   const onNodeDragStop = useCallback((_: unknown, node: Node) => {
-    const metisId = Number(node.id)
-    onPositionUpdate(metisId, node.position.x, node.position.y)
+    onPositionUpdate(Number(node.id), node.position.x, node.position.y)
   }, [onPositionUpdate])
 
   return (
@@ -102,12 +96,18 @@ export default function MetisGraph2D({ graph, onPositionUpdate }: Props) {
       <Background color="var(--color-border)" gap={20} size={1} />
       <Controls
         showInteractive={false}
-        style={{ bottom: 10, left: 10 }}
+        className="metis-controls"
       />
       <MiniMap
         nodeColor={(n) => n.data?.color || '#888'}
-        maskColor="rgba(0,0,0,0.5)"
-        style={{ bottom: 10, right: 10 }}
+        maskColor="rgba(0, 0, 0, 0.6)"
+        className="metis-minimap"
+        style={{
+          backgroundColor: 'var(--color-bg-deep)',
+          border: '1px solid var(--color-border)',
+          borderRadius: '8px',
+          overflow: 'hidden',
+        }}
       />
     </ReactFlow>
   )

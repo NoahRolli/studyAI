@@ -443,3 +443,25 @@ body {
 .wiki-link:hover {
   opacity: 0.7;
 }
+
+/* Metis — ReactFlow Controls + MiniMap HUD-Styling */
+.metis-controls button {
+  background: var(--color-bg-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-secondary) !important;
+  border-radius: 4px !important;
+}
+.metis-controls button:hover {
+  background: var(--color-bg-elevated) !important;
+  color: var(--color-primary) !important;
+}
+.metis-controls {
+  border: none !important;
+  box-shadow: none !important;
+}
+.metis-minimap {
+  background: var(--color-bg-deep) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}

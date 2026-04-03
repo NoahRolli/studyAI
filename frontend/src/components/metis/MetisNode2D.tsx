@@ -1,6 +1,6 @@
-// MetisNode2D — Custom ReactFlow Node für den Knowledge-Graph
-// Zeigt Titel, Typ-Farbe als Rand, Glow-Effekt.
-// Grösse proportional zur Anzahl Verbindungen.
+// MetisNode2D — Kreisförmiger Node im Knowledge-Graph
+// Leuchtender Dot mit Label daneben. Grösse proportional zu Verbindungen.
+// Farbe: Grün=Note, Orange=Summary. Sanfter Glow-Effekt.
 
 import { memo } from 'react'
 import { Handle, Position } from 'reactflow'
@@ -15,41 +15,56 @@ interface MetisNodeData {
 }
 
 function MetisNode2D({ data }: NodeProps<MetisNodeData>) {
-  // Basisgrösse + Bonus pro Verbindung (max 2x)
-  const scale = Math.min(1 + data.connectionCount * 0.1, 2)
-  const size = 120 * scale
+  // Dot-Grösse: 12px Basis + 4px pro Verbindung (max 36px)
+  const dotSize = Math.min(12 + data.connectionCount * 4, 36)
+  // Glow-Intensität steigt mit Verbindungen
+  const glowSize = Math.min(8 + data.connectionCount * 3, 24)
 
   return (
-    <div
-      style={{
-        width: size,
-        minHeight: 40,
-        borderColor: data.color,
-        boxShadow: `0 0 ${8 * scale}px ${data.color}40`,
-      }}
-      className="
-        rounded-lg border-2 px-3 py-2
-        bg-[var(--color-bg-surface)]
-        text-[var(--color-text-primary)]
-        cursor-pointer transition-all duration-200
-        hover:brightness-125
-      "
-    >
-      {/* Typ-Indikator */}
+    <div className="flex items-center gap-2 group cursor-pointer">
+      {/* Leuchtender Dot */}
       <div
-        className="text-[10px] uppercase tracking-wider mb-1"
-        style={{ color: data.color }}
-      >
-        {data.nodeType === 'note' ? 'N' : 'S'}
-        {data.pinned ? ' *' : ''}
-      </div>
+        style={{
+          width: dotSize,
+          height: dotSize,
+          backgroundColor: data.color,
+          boxShadow: `0 0 ${glowSize}px ${data.color}80, 0 0 ${glowSize * 2}px ${data.color}30`,
+          borderRadius: '50%',
+          border: data.pinned
+            ? `2px solid ${data.color}`
+            : '1px solid rgba(255,255,255,0.15)',
+          transition: 'all 0.3s ease',
+        }}
+        className="group-hover:brightness-150 group-hover:scale-125"
+      />
 
-      {/* Titel */}
-      <div className="text-xs font-medium leading-tight truncate">
+      {/* Label — erscheint neben dem Dot */}
+      <div
+        className="
+          text-[11px] leading-tight max-w-[120px] truncate
+          text-[var(--color-text-secondary)]
+          group-hover:text-[var(--color-text-primary)]
+          transition-colors duration-200
+        "
+        style={{
+          textShadow: `0 0 6px ${data.color}40`,
+        }}
+      >
         {data.label}
       </div>
 
-      {/* ReactFlow Handles — unsichtbar, für Edges */}
+      {/* Typ-Indikator — klein über dem Label */}
+      <div
+        className="
+          absolute -top-3 left-0 text-[8px] uppercase tracking-widest
+          opacity-0 group-hover:opacity-100 transition-opacity
+        "
+        style={{ color: data.color }}
+      >
+        {data.nodeType === 'note' ? 'NOTE' : 'SUM'}
+      </div>
+
+      {/* ReactFlow Handles — unsichtbar */}
       <Handle
         type="target"
         position={Position.Top}
