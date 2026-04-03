@@ -219,13 +219,10 @@ export default function MetisPage() {
             </label>
             <button
               onClick={() => setFullscreen(!fullscreen)}
-              className="text-[10px] px-2 py-1 rounded transition-all
-                text-[var(--color-text-muted)] hover:text-[var(--color-primary)]
-                bg-[var(--color-bg-deep)] bg-opacity-70
-                border border-[var(--color-border)]"
+              className="hud-btn text-xs px-2 py-1"
               title={fullscreen ? 'Escape' : 'Fullscreen'}
             >
-              {fullscreen ? 'EXIT' : 'FULL'}
+              {fullscreen ? '✖' : '⛶'}
             </button>
           </div>
         )}
