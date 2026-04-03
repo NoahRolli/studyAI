@@ -63,9 +63,10 @@ export default function MetisGraph2D({ graph, onPositionUpdate, onNodeClick }: P
         animated: !isWikilink,
         style: {
           stroke: isWikilink ? COLORS.wikilink : COLORS.ai,
-          strokeWidth: isWikilink ? 2 : 1,
-          strokeDasharray: isWikilink ? undefined : '5 5',
-          opacity: 0.6 + e.strength * 0.4,
+          strokeWidth: isWikilink ? 2.5 : 1.5,
+          strokeDasharray: isWikilink ? undefined : '6 4',
+          opacity: 0.5 + e.strength * 0.5,
+          filter: 'drop-shadow(0 0 3px ' + (isWikilink ? '#d4cc7d60' : '#88888840') + ')',
         },
       }
     })
