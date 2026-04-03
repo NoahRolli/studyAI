@@ -359,12 +359,12 @@ function Dashboard() {
                     </span>
                     <button
                       onClick={(e) => deleteFolder(folder.id, e)}
-                      className="text-xs transition-colors"
-                      style={{ color: 'rgba(255, 59, 92, 0.4)' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-danger)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')}
-                     title={t.common.delete}>
-                      ✕
+                      className="text-xs px-1.5 py-0.5 rounded transition-all duration-200
+                        text-[var(--color-text-muted)] hover:text-[var(--color-danger)]
+                        hover:bg-[rgba(255,59,92,0.1)]"
+                      title={t.common.delete}
+                    >
+                      X
                     </button>
                   </div>
                 </div>
@@ -387,12 +387,12 @@ function Dashboard() {
                   </span>
                   <button
                     onClick={(e) => deleteModule(module.id, e)}
-                    className="text-xs transition-colors"
-                    style={{ color: 'rgba(255, 59, 92, 0.4)' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-danger)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 59, 92, 0.4)')}
-                   title={t.common.delete}>
-                    ✕
+                    className="text-xs px-1.5 py-0.5 rounded transition-all duration-200
+                      text-[var(--color-text-muted)] hover:text-[var(--color-danger)]
+                      hover:bg-[rgba(255,59,92,0.1)]"
+                    title={t.common.delete}
+                  >
+                    X
                   </button>
                 </div>
               </Link>
