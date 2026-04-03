@@ -1,6 +1,6 @@
 // MetisPage — Orchestrator für den Metis Knowledge-Graph
 // Toggle zwischen 2D-Graph, 3D-Sphäre (lazy) und Listen-Ansicht.
-// Toolbar mit Sync, Auto-Link, Auto-Cluster Buttons.
+// Toolbar mit Sync, Auto-Link, Auto-Cluster. Detail-Panel bei Klick.
 
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { get, post, put } from '../hooks/useAPI'
@@ -8,9 +8,10 @@ import { useLanguage } from '../hooks/useLanguage'
 import MetisGraph2D from '../components/metis/MetisGraph2D'
 import MetisToolbar from '../components/metis/MetisToolbar'
 import MetisListView from '../components/metis/MetisListView'
-import type { MetisGraph, MetisViewMode } from '../types/metis'
+import MetisNodeDetail from '../components/metis/MetisNodeDetail'
+import type { MetisGraph, MetisViewMode, MetisNode } from '../types/metis'
 
-// 3D Sphäre lazy-loaded (Three.js Bundle gross)
+// 3D Sphäre lazy-loaded
 const MetisSphere3D = lazy(
   () => import('../components/metis/MetisSphere3D')
 )
@@ -25,6 +26,7 @@ export default function MetisPage() {
   const [syncing, setSyncing] = useState(false)
   const [linking, setLinking] = useState(false)
   const [clustering, setClustering] = useState(false)
+  const [selectedNode, setSelectedNode] = useState<MetisNode | null>(null)
 
   // Graph laden
   const loadGraph = useCallback(async () => {
@@ -40,7 +42,6 @@ export default function MetisPage() {
 
   useEffect(() => { loadGraph() }, [loadGraph])
 
-  // Sync
   const handleSync = useCallback(async () => {
     setSyncing(true)
     try {
@@ -53,7 +54,6 @@ export default function MetisPage() {
     }
   }, [loadGraph])
 
-  // Auto-Link
   const handleAutoLink = useCallback(async () => {
     setLinking(true)
     try {
@@ -66,7 +66,6 @@ export default function MetisPage() {
     }
   }, [loadGraph])
 
-  // Auto-Cluster
   const handleAutoCluster = useCallback(async () => {
     setClustering(true)
     try {
@@ -79,7 +78,6 @@ export default function MetisPage() {
     }
   }, [loadGraph])
 
-  // Node-Position speichern
   const handlePositionUpdate = useCallback(async (
     nodeId: number, x: number | null, y: number | null,
   ) => {
@@ -91,6 +89,12 @@ export default function MetisPage() {
       console.error('Position update failed:', err)
     }
   }, [])
+
+  // Node-Klick Handler
+  const handleNodeClick = useCallback((nodeId: number) => {
+    const node = graph.nodes.find(n => n.id === nodeId)
+    setSelectedNode(node || null)
+  }, [graph.nodes])
 
   if (loading) {
     return (
@@ -122,7 +126,7 @@ export default function MetisPage() {
         />
       </div>
 
-      {/* Graph */}
+      {/* Graph + Detail-Panel */}
       <div className="flex-1 hud-card overflow-hidden relative">
         {graph.nodes.length === 0 ? (
           <div className="flex items-center justify-center h-full">
@@ -140,12 +144,25 @@ export default function MetisPage() {
               </p>
             </div>
           }>
-            <MetisSphere3D graph={graph} />
+            <MetisSphere3D
+              graph={graph}
+              onNodeClick={handleNodeClick}
+            />
           </Suspense>
         ) : (
           <MetisGraph2D
             graph={graph}
             onPositionUpdate={handlePositionUpdate}
+            onNodeClick={handleNodeClick}
+          />
+        )}
+
+        {/* Detail-Panel */}
+        {selectedNode && (
+          <MetisNodeDetail
+            node={selectedNode}
+            graph={graph}
+            onClose={() => setSelectedNode(null)}
           />
         )}
       </div>

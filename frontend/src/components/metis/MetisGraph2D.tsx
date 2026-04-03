@@ -1,7 +1,7 @@
 // MetisGraph2D — 2D Knowledge-Graph mit ReactFlow
 // Nodes als leuchtende Dots (Grün=Note, Orange=Summary).
 // Edges: WikiLinks durchgezogen gelb, AI-Edges gestrichelt grau.
-// Spiral-Layout, gepinnte Nodes behalten ihre Position.
+// Klick auf Node öffnet Detail-Panel, Drag speichert Position.
 
 import { useMemo, useCallback } from 'react'
 import ReactFlow, {
@@ -15,7 +15,7 @@ import type { MetisGraph } from '../../types/metis'
 import { layoutGraph } from '../../utils/metisLayout'
 import MetisNode2D from './MetisNode2D'
 
-// Farben — gedämpft, passend zum HUD-Theme
+// Farben — gedämpft, HUD-Stil
 const COLORS = {
   note: '#7dd4a3',
   summary: '#d4a574',
@@ -26,12 +26,13 @@ const COLORS = {
 interface Props {
   graph: MetisGraph
   onPositionUpdate: (id: number, x: number | null, y: number | null) => void
+  onNodeClick: (nodeId: number) => void
 }
 
 // Eigener Node-Typ
 const nodeTypes = { metis: MetisNode2D }
 
-export default function MetisGraph2D({ graph, onPositionUpdate }: Props) {
+export default function MetisGraph2D({ graph, onPositionUpdate, onNodeClick }: Props) {
   const { t } = useLanguage()
 
   // Graph-Daten in ReactFlow-Format
@@ -87,6 +88,7 @@ export default function MetisGraph2D({ graph, onPositionUpdate }: Props) {
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeDragStop={onNodeDragStop}
+      onNodeClick={(_: unknown, node: Node) => onNodeClick(Number(node.id))}
       nodeTypes={nodeTypes}
       fitView
       minZoom={0.2}
