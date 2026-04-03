@@ -123,7 +123,7 @@ def get_merged_graph(
             summary = main_db.query(Summary).filter(
                 Summary.id == n.source_id
             ).first()
-            label = summary.title if summary else f"Summary #{n.source_id}"
+            label = summary.content[:50] if summary else f"Summary #{n.source_id}"
 
         memberships = main_db.query(MetisClusterMember).filter(
             MetisClusterMember.node_id == n.id
