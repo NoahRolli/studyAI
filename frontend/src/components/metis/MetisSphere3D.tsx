@@ -157,44 +157,6 @@ function BackgroundGrid() {
 }
 
 
-// --- Hintergrund-Gitter — feines HUD-Grid im Raum ---
-function BackgroundGrid() {
-  const gridRef = useRef<THREE.Group>(null)
-  
-  const lines = useMemo(() => {
-    const result: { start: [number, number, number]; end: [number, number, number] }[] = []
-    const size = 40
-    const step = 4
-    const y = -15
-    
-    // Horizontal
-    for (let x = -size; x <= size; x += step) {
-      result.push({ start: [x, y, -size], end: [x, y, size] })
-    }
-    // Vertikal
-    for (let z = -size; z <= size; z += step) {
-      result.push({ start: [-size, y, z], end: [size, y, z] })
-    }
-    return result
-  }, [])
-
-  return (
-    <group ref={gridRef}>
-      {lines.map((line, i) => {
-        const geo = new THREE.BufferGeometry().setFromPoints([
-          new THREE.Vector3(...line.start),
-          new THREE.Vector3(...line.end),
-        ])
-        const mat = new THREE.LineBasicMaterial({
-          color: '#2a4a5a', transparent: true, opacity: 0.08,
-          depthWrite: false,
-        })
-        return <primitive key={i} object={new THREE.Line(geo, mat)} />
-      })}
-    </group>
-  )
-}
-
 // --- Kamera-Tracker ---
 function CameraTracker({ onCameraMove }: {
   onCameraMove: (a: number, e: number, d: number) => void
