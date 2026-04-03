@@ -21,7 +21,7 @@ export default function MetisToolbar({
 }: Props) {
   const { t } = useLanguage()
 
-  // View-Toggle Buttons — aktiver Tab bekommt hud-tab-active
+  // View-Toggle Optionen
   const views: { key: MetisViewMode; label: string }[] = [
     { key: '2d', label: t.metis.view2D },
     { key: '3d', label: t.metis.view3D },
@@ -37,13 +37,25 @@ export default function MetisToolbar({
         <span>{clusterCount} {t.metis.clusters}</span>
       </div>
 
-      {/* View-Toggle */}
-      <div className="flex gap-1">
+      {/* View-Toggle — alle als einheitliche Button-Gruppe */}
+      <div
+        className="flex rounded overflow-hidden"
+        style={{ border: '1px solid var(--color-border)' }}
+      >
         {views.map(v => (
           <button
             key={v.key}
             onClick={() => onViewChange(v.key)}
-            className={view === v.key ? 'hud-tab-active' : 'hud-tab'}
+            className="px-3 py-1.5 text-xs font-medium transition-all"
+            style={{
+              background: view === v.key
+                ? 'var(--color-primary)'
+                : 'var(--color-bg-surface)',
+              color: view === v.key
+                ? 'var(--color-bg-deep)'
+                : 'var(--color-text-secondary)',
+              borderRight: '1px solid var(--color-border)',
+            }}
           >
             {v.label}
           </button>
@@ -54,7 +66,7 @@ export default function MetisToolbar({
       <button
         onClick={onSync}
         disabled={syncing}
-        className="hud-btn-primary"
+        className="hud-btn-primary px-4 py-1.5 text-xs"
       >
         {syncing ? t.metis.syncing : t.metis.sync}
       </button>
