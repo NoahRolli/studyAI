@@ -16,15 +16,12 @@ interface Props {
   nodeCount: number
   edgeCount: number
   clusterCount: number
-  transparent: boolean
-  onTransparentChange: (v: boolean) => void
 }
 
 export default function MetisToolbar({
   view, onViewChange, onSync, onAutoLink, onAutoCluster,
   syncing, linking, clustering,
   nodeCount, edgeCount, clusterCount,
-  transparent, onTransparentChange,
 }: Props) {
   const { t } = useLanguage()
 
@@ -67,22 +64,6 @@ export default function MetisToolbar({
           </button>
         ))}
       </div>
-
-      {/* Transparenz-Toggle — nur bei 2D/3D */}
-      {view !== 'list' && (
-        <label
-          className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]
-            cursor-pointer select-none"
-        >
-          <input
-            type="checkbox"
-            checked={transparent}
-            onChange={(e) => onTransparentChange(e.target.checked)}
-            className="accent-[var(--color-primary)] w-3 h-3"
-          />
-          BG
-        </label>
-      )}
 
       {/* Action-Buttons */}
       <div className="flex gap-2">

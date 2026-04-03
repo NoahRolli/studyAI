@@ -157,8 +157,6 @@ export default function MetisPage() {
           nodeCount={graph.nodes.length}
           edgeCount={graph.edges.length}
           clusterCount={graph.clusters.length}
-          transparent={transparent}
-          onTransparentChange={setTransparent}
         />
         {/* Fullscreen-Button */}
         {view !== 'list' && (
@@ -200,6 +198,36 @@ export default function MetisPage() {
             onNodeClick={handleNodeClick}
             transparent={transparent}
           />
+        )}
+
+        {/* Graph-Controls overlay — oben rechts im Fenster */}
+        {view !== 'list' && graph.nodes.length > 0 && (
+          <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+            <label
+              className="flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)]
+                cursor-pointer select-none px-2 py-1 rounded
+                bg-[var(--color-bg-deep)] bg-opacity-70
+                border border-[var(--color-border)]"
+            >
+              <input
+                type="checkbox"
+                checked={transparent}
+                onChange={(e) => setTransparent(e.target.checked)}
+                className="accent-[var(--color-primary)] w-3 h-3"
+              />
+              BG
+            </label>
+            <button
+              onClick={() => setFullscreen(!fullscreen)}
+              className="text-[10px] px-2 py-1 rounded transition-all
+                text-[var(--color-text-muted)] hover:text-[var(--color-primary)]
+                bg-[var(--color-bg-deep)] bg-opacity-70
+                border border-[var(--color-border)]"
+              title={fullscreen ? 'Escape' : 'Fullscreen'}
+            >
+              {fullscreen ? 'EXIT' : 'FULL'}
+            </button>
+          </div>
         )}
 
         {/* MiniMap für 3D */}
