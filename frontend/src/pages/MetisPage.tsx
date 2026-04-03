@@ -141,10 +141,8 @@ export default function MetisPage() {
   return (
     <div className={wrapperClass}>
       {/* Header */}
-      <div className={`flex items-center justify-between ${fullscreen ? 'p-3' : ''}`}>
-        {!fullscreen && (
-          <h1 className="hud-title text-glow text-2xl">{t.metis.title}</h1>
-        )}
+      <div className={`flex items-center gap-4 ${fullscreen ? 'p-3' : 'justify-between'}`}>
+        <h1 className="hud-title text-glow text-2xl">{t.metis.title}</h1>
         <MetisToolbar
           view={view}
           onViewChange={setView}
@@ -158,6 +156,16 @@ export default function MetisPage() {
           edgeCount={graph.edges.length}
           clusterCount={graph.clusters.length}
         />
+        {/* Fullscreen / Exit — ganz rechts mit Abstand */}
+        {view !== 'list' && (
+          <button
+            onClick={() => setFullscreen(!fullscreen)}
+            className="hud-btn text-xs px-2 py-1 ml-auto"
+            title={fullscreen ? 'Escape' : 'Fullscreen'}
+          >
+            {fullscreen ? 'X' : '⛶'}
+          </button>
+        )}
       </div>
 
       {/* Graph */}
