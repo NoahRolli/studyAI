@@ -5,7 +5,7 @@
 
 import { useMemo, useCallback } from 'react'
 import ReactFlow, {
-  Background, Controls, MiniMap,
+  Background, BackgroundVariant, Controls, MiniMap,
   useNodesState, useEdgesState,
 } from 'reactflow'
 import type { Node, Edge } from 'reactflow'
@@ -92,11 +92,12 @@ export default function MetisGraph2D({ graph, onPositionUpdate, onNodeClick }: P
       onNodeClick={(_: unknown, node: Node) => onNodeClick(Number(node.id))}
       nodeTypes={nodeTypes}
       fitView
+      fitViewOptions={{ padding: 0.4 }}
       minZoom={0.2}
       maxZoom={2}
       proOptions={{ hideAttribution: true }}
     >
-      <Background color="var(--color-border)" gap={20} size={1} />
+      <Background color="var(--color-border)" gap={20} size={1} variant={"dots" as any} />
       <Controls
         showInteractive={false}
         className="metis-controls"

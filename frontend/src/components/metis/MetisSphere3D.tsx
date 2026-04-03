@@ -152,6 +152,45 @@ function BackgroundParticles() {
   return <points ref={ref} geometry={geometry} material={material} />
 }
 
+
+// --- Hintergrund-Gitter — feines HUD-Grid im Raum ---
+function BackgroundGrid() {
+  const gridRef = useRef<THREE.Group>(null)
+  
+  const lines = useMemo(() => {
+    const result: { start: [number, number, number]; end: [number, number, number] }[] = []
+    const size = 40
+    const step = 4
+    const y = -15
+    
+    // Horizontal
+    for (let x = -size; x <= size; x += step) {
+      result.push({ start: [x, y, -size], end: [x, y, size] })
+    }
+    // Vertikal
+    for (let z = -size; z <= size; z += step) {
+      result.push({ start: [-size, y, z], end: [size, y, z] })
+    }
+    return result
+  }, [])
+
+  return (
+    <group ref={gridRef}>
+      {lines.map((line, i) => {
+        const geo = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(...line.start),
+          new THREE.Vector3(...line.end),
+        ])
+        const mat = new THREE.LineBasicMaterial({
+          color: '#2a4a5a', transparent: true, opacity: 0.08,
+          depthWrite: false,
+        })
+        return <primitive key={i} object={new THREE.Line(geo, mat)} />
+      })}
+    </group>
+  )
+}
+
 // --- Kamera-Tracker ---
 function CameraTracker({ onCameraMove }: {
   onCameraMove: (a: number, e: number, d: number) => void
@@ -218,6 +257,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove }: {
       <ambientLight intensity={0.1} />
       <CameraTracker onCameraMove={onCameraMove} />
       <BackgroundParticles />
+      <BackgroundGrid />
       <group ref={groupRef}>
         {graph.edges.map(edge => {
           const start = nodePositions.get(edge.source_node_id)
@@ -264,7 +304,7 @@ export default function MetisSphere3D({ graph, onNodeClick, onCameraMove }: Prop
   return (
     <div className="w-full h-full" style={{ background: 'transparent' }}>
       <Canvas
-        camera={{ position: [0, 0, 22], fov: 45 }}
+        camera={{ position: [0, 0, 28], fov: 42 }}
         style={{ background: 'transparent' }}
         gl={{ antialias: true, alpha: true }}
       >
