@@ -52,19 +52,6 @@ function GlowNode({ position, color, size, label, onClick }: {
           depthWrite={false} blending={THREE.AdditiveBlending} />
       </mesh>
 
-      {/* Äusserer Glow */}
-      <mesh ref={outerRef}>
-        <sphereGeometry args={[size * 3.5, 12, 12]} />
-        <meshBasicMaterial color={color} transparent opacity={0.08}
-          depthWrite={false} blending={THREE.AdditiveBlending} />
-      </mesh>
-
-      {/* Mittlerer Glow — intensiv */}
-      <mesh ref={glowRef}>
-        <sphereGeometry args={[size * 2, 16, 16]} />
-        <meshBasicMaterial color={color} transparent opacity={0.25}
-          depthWrite={false} blending={THREE.AdditiveBlending} />
-      </mesh>
 
       {/* Kern — weisser Punkt */}
       <mesh ref={meshRef} onClick={onClick}>
