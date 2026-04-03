@@ -23,7 +23,7 @@ export default function MetisPage() {
   // Graph-Daten vom Backend laden
   const loadGraph = useCallback(async () => {
     try {
-      const data = await get('/api/metis/graph')
+      const data = await get<MetisGraph>('/api/metis/graph')
       setGraph(data)
     } catch (err) {
       console.error('Metis graph load failed:', err)
@@ -75,10 +75,7 @@ export default function MetisPage() {
       {/* Header mit Titel + Toolbar */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="hud-title text-2xl">{t.metis.title}</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            {t.metis.subtitle}
-          </p>
+          <h1 className="hud-title text-glow text-2xl">{t.metis.title}</h1>
         </div>
         <MetisToolbar
           view={view}

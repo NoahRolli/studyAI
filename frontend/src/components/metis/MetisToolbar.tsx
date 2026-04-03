@@ -37,7 +37,7 @@ export default function MetisToolbar({
         <span>{clusterCount} {t.metis.clusters}</span>
       </div>
 
-      {/* View-Toggle — hud-tab Klassen wie Sidebar */}
+      {/* View-Toggle */}
       <div className="flex gap-1">
         {views.map(v => (
           <button
@@ -50,7 +50,7 @@ export default function MetisToolbar({
         ))}
       </div>
 
-      {/* Sync-Button — hud-btn wie Sidebar */}
+      {/* Sync-Button */}
       <button
         onClick={onSync}
         disabled={syncing}

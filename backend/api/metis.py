@@ -50,7 +50,7 @@ def _node_to_dict(node: MetisNode, db: Session) -> dict:
             doc = db.query(Document).filter(
                 Document.id == summary.document_id
             ).first()
-            title = doc.name if doc else f"Summary #{node.source_id}"
+            title = doc.filename if doc else f"Summary #{node.source_id}"
         else:
             title = "(gelöscht)"
 
