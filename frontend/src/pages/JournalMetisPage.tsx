@@ -267,6 +267,7 @@ export default function JournalMetisPage() {
           </Suspense>
         ) : (
           <MetisGraph2D
+            onPositionUpdate={() => {}}
             graph={graph}
             onNodeClick={handleNodeClick}
             transparent={true}
