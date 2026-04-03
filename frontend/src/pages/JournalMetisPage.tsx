@@ -106,7 +106,7 @@ export default function JournalMetisPage() {
       <div className="p-6">
         <p style={{ color: 'var(--color-danger)' }}>{error}</p>
         <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px' }}>
-          {t.journal?.locked || 'Journal ist gesperrt'}
+          {'Journal ist gesperrt'}
         </p>
       </div>
     )
