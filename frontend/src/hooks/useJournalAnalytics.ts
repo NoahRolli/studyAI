@@ -1,9 +1,10 @@
 // useJournalAnalytics — Zentraler Cache für Journal-Analysedaten
 // Moods, Clusters, Storylines und Insights werden einmal geladen
 // und bleiben beim Tab-Wechsel erhalten (kein Neuladen von Ollama)
+// Loaded-Flags als useRef um Closure-Probleme zu vermeiden
 // Wird von useJournalState eingebunden und an Komponenten weitergereicht
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { post } from './useAPI'
 import { useLanguage } from './useLanguage'
 import type {
@@ -23,19 +24,21 @@ export type InsightKey =
 export default function useJournalAnalytics() {
   const { language } = useLanguage()
 
+  // --- Loaded-Flags als Refs (immer aktuell, keine Closure-Probleme) ---
+  const moodsLoadedRef = useRef(false)
+  const clustersLoadedRef = useRef(false)
+  const storylinesLoadedRef = useRef(false)
+
   // --- Mood-State ---
   const [moods, setMoods] = useState<MoodResult[]>([])
-  const [moodsLoaded, setMoodsLoaded] = useState(false)
 
   // --- Cluster-State ---
   const [clusters, setClusters] = useState<ClusterResult[]>([])
-  const [clustersLoaded, setClustersLoaded] = useState(false)
   const [clustersLoading, setClustersLoading] = useState(false)
   const [clustersError, setClustersError] = useState<string | null>(null)
 
   // --- Storyline-State ---
   const [storylines, setStorylines] = useState<StorylineResult[]>([])
-  const [storylinesLoaded, setStorylinesLoaded] = useState(false)
   const [storylinesLoading, setStorylinesLoading] = useState(false)
   const [storylinesError, setStorylinesError] = useState<string | null>(null)
 
@@ -45,24 +48,23 @@ export default function useJournalAnalytics() {
   const [insightLoading, setInsightLoading] = useState<Record<string, boolean>>({})
   const [insightErrors, setInsightErrors] = useState<Record<string, string>>({})
 
-  // --- Moods laden (mit Cache-Flag) ---
+  // --- Moods laden (Ref-basierter Cache-Check) ---
   async function loadMoods() {
-    if (moodsLoaded) return
+    if (moodsLoadedRef.current) return
     try {
       const data = await post<MoodResult[]>(
         `/api/journal/analytics/mood?language=${language}`
       )
       setMoods(data)
-      setMoodsLoaded(true)
+      moodsLoadedRef.current = true
     } catch (err) {
-      // Fehler wird im aufrufenden Hook behandelt
       throw err
     }
   }
 
-  // --- Clusters laden (mit Cache-Flag) ---
+  // --- Clusters laden (Ref-basierter Cache-Check) ---
   async function loadClusters() {
-    if (clustersLoaded) return
+    if (clustersLoadedRef.current) return
     try {
       setClustersLoading(true)
       setClustersError(null)
@@ -70,7 +72,7 @@ export default function useJournalAnalytics() {
         `/api/journal/analytics/clusters?language=${language}`
       )
       setClusters(data)
-      setClustersLoaded(true)
+      clustersLoadedRef.current = true
     } catch (err) {
       setClustersError(err instanceof Error ? err.message : 'Error')
     } finally {
@@ -78,9 +80,9 @@ export default function useJournalAnalytics() {
     }
   }
 
-  // --- Storylines laden (mit Cache-Flag) ---
+  // --- Storylines laden (Ref-basierter Cache-Check) ---
   async function loadStorylines() {
-    if (storylinesLoaded) return
+    if (storylinesLoadedRef.current) return
     try {
       setStorylinesLoading(true)
       setStorylinesError(null)
@@ -88,7 +90,7 @@ export default function useJournalAnalytics() {
         `/api/journal/analytics/storylines?language=${language}`
       )
       setStorylines(data)
-      setStorylinesLoaded(true)
+      storylinesLoadedRef.current = true
     } catch (err) {
       setStorylinesError(err instanceof Error ? err.message : 'Error')
     } finally {
@@ -98,7 +100,6 @@ export default function useJournalAnalytics() {
 
   // --- Insight laden (Toggle: laden oder zuklappen) ---
   async function loadInsight(key: InsightKey) {
-    // Toggle: wenn schon geladen, zuklappen
     if (insightResults[key] !== undefined) {
       setInsightResults((prev) => {
         const next = { ...prev }
@@ -132,13 +133,13 @@ export default function useJournalAnalytics() {
   // --- Alles zurücksetzen (bei Lock/Logout) ---
   function resetAnalytics() {
     setMoods([])
-    setMoodsLoaded(false)
+    moodsLoadedRef.current = false
     setClusters([])
-    setClustersLoaded(false)
+    clustersLoadedRef.current = false
     setClustersLoading(false)
     setClustersError(null)
     setStorylines([])
-    setStorylinesLoaded(false)
+    storylinesLoadedRef.current = false
     setStorylinesLoading(false)
     setStorylinesError(null)
     setInsightResults({})
@@ -148,19 +149,19 @@ export default function useJournalAnalytics() {
 
   // --- Cache invalidieren (nach Entry-Änderung) ---
   function invalidateCache() {
-    setMoodsLoaded(false)
-    setClustersLoaded(false)
-    setStorylinesLoaded(false)
+    moodsLoadedRef.current = false
+    clustersLoadedRef.current = false
+    storylinesLoadedRef.current = false
     setInsightResults({})
   }
 
   return {
     // Moods
-    moods, moodsLoaded, loadMoods,
+    moods, moodsLoaded: moodsLoadedRef.current, loadMoods,
     // Clusters
-    clusters, clustersLoaded, clustersLoading, clustersError, loadClusters,
+    clusters, clustersLoading, clustersError, loadClusters,
     // Storylines
-    storylines, storylinesLoaded, storylinesLoading, storylinesError, loadStorylines,
+    storylines, storylinesLoading, storylinesError, loadStorylines,
     // Insights
     insightResults, insightLoading, insightErrors, loadInsight,
     // Aktionen
