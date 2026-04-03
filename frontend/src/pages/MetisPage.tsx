@@ -28,7 +28,7 @@ export default function MetisPage() {
   const [clustering, setClustering] = useState(false)
   const [selectedNode, setSelectedNode] = useState<MetisNode | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
-  const [transparent, setTransparent] = useState(false)
+  
 
   // Kamera-State für MiniMap
   const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 22 })
@@ -136,7 +136,7 @@ export default function MetisPage() {
 
   const graphClass = fullscreen
     ? 'flex-1 overflow-hidden relative'
-    : transparent ? 'flex-1 overflow-hidden relative border border-[var(--color-border)] rounded-lg' : 'flex-1 hud-card overflow-hidden relative'
+    : 'flex-1 overflow-hidden relative border border-[var(--color-border)] rounded-lg'
 
   return (
     <div className={wrapperClass}>
@@ -178,7 +178,7 @@ export default function MetisPage() {
               graph={graph}
               onNodeClick={handleNodeClick}
               onCameraMove={handleCameraMove}
-              transparent={transparent}
+              transparent={true}
             />
           </Suspense>
         ) : (
@@ -186,27 +186,14 @@ export default function MetisPage() {
             graph={graph}
             onPositionUpdate={handlePositionUpdate}
             onNodeClick={handleNodeClick}
-            transparent={transparent}
+            transparent={true}
           />
         )}
 
         {/* Graph-Controls overlay — oben rechts im Fenster */}
         {view !== 'list' && graph.nodes.length > 0 && (
           <div className="absolute top-2 right-2 z-20 flex items-center gap-2">
-            <label
-              className="flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)]
-                cursor-pointer select-none px-2 py-1 rounded
-                bg-[var(--color-bg-deep)] bg-opacity-70
-                border border-[var(--color-border)]"
-            >
-              <input
-                type="checkbox"
-                checked={transparent}
-                onChange={(e) => setTransparent(e.target.checked)}
-                className="accent-[var(--color-primary)] w-3 h-3"
-              />
-              BG
-            </label>
+
             <button
               onClick={() => setFullscreen(!fullscreen)}
               className="hud-btn text-xs px-2 py-1"
