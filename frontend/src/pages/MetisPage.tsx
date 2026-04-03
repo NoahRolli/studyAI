@@ -30,7 +30,7 @@ export default function MetisPage() {
 
   // Kamera-State für MiniMap (useRef um Re-Renders zu vermeiden)
   const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 15 })
-  const [cameraTick, setCameraTick] = useState(0)
+  const [, setCameraTick] = useState(0)
 
   // Kamera-Update — throttled (alle 100ms)
   const lastCameraUpdate = useRef(0)
