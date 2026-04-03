@@ -40,3 +40,43 @@ export interface MetisGraph {
 
 // Ansichts-Modi
 export type MetisViewMode = '2d' | '3d' | 'list'
+
+// --- Journal Metis (verschlüsselt, merged view) ---
+
+// Node im merged Journal-Metis-Graph
+export interface JournalMetisNode {
+  id: string           // "j-5" (journal) oder "p-3" (public)
+  type: string         // "entry", "note", "summary"
+  source_id: number
+  label: string
+  pos_x: number | null
+  pos_y: number | null
+  cluster_ids: string[]
+  realm: 'journal' | 'public'
+}
+
+// Edge im merged Graph
+export interface JournalMetisEdge {
+  id: string
+  source: string       // Node-ID ("j-5", "p-3")
+  target: string
+  relation_type: string
+  strength: number
+  realm: 'journal' | 'public'
+}
+
+// Cluster im merged Graph
+export interface JournalMetisCluster {
+  id: string
+  label: string
+  color: string
+  node_ids: string[]
+  realm: 'journal' | 'public'
+}
+
+// Kompletter merged Graph
+export interface JournalMetisGraph {
+  nodes: JournalMetisNode[]
+  edges: JournalMetisEdge[]
+  clusters: JournalMetisCluster[]
+}
