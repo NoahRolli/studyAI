@@ -257,6 +257,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove }: {
       <ambientLight intensity={0.1} />
       <CameraTracker onCameraMove={onCameraMove} />
       <BackgroundParticles />
+      <gridHelper args={[60, 30, '#1a3a4a', '#1a3a4a']} position={[0, -12, 0]} />
       <BackgroundGrid />
       <group ref={groupRef}>
         {graph.edges.map(edge => {
