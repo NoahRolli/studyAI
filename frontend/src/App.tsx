@@ -7,7 +7,7 @@
 // - "/modules/:id" → Modul-Detailseite
 // - "/calendar" → Hauptkalender
 // - "/mindmap/:summaryId" → Fullscreen Study-Mindmap
-// - "/journal" → Verschlüsseltes Tagebuch
+// - "/journal" → Verschlüsseltes Tagebuch (inkl. Metis-Tab)
 // - "/journal/mindmap" → Fullscreen Journal-Mindmap
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
@@ -22,7 +22,6 @@ import NotesPage from './pages/NotesPage'
 import MetisPage from './pages/MetisPage'
 import MindmapPage from './pages/MindmapPage'
 import JournalMindmapPage from './pages/JournalMindmapPage'
-import JournalMetisPage from './pages/JournalMetisPage'
 import Journal from './pages/Journal'
 import LoginPage from './pages/LoginPage'
 
@@ -46,7 +45,6 @@ function App() {
             {/* Mindmaps ausserhalb von Layout — Fullscreen ohne Sidebar */}
             <Route path="mindmap/:summaryId" element={<MindmapPage />} />
             <Route path="journal/mindmap" element={<JournalMindmapPage />} />
-            <Route path="journal/metis" element={<JournalMetisPage />} />
           </Routes>
         </BrowserRouter>
       </LanguageProvider>
