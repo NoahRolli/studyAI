@@ -5,7 +5,6 @@
 import { useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Html } from '@react-three/drei'
-import type { OrbitControls as OrbitControlsType } from 'three-stdlib'
 import * as THREE from 'three'
 import type { MetisGraph } from '../../types/metis'
 
