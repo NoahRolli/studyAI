@@ -240,7 +240,7 @@ def sync_journal_nodes(
     journal_db: Session = Depends(get_journal_db),
 ):
     key = require_journal_key()
-    entries = journal_db.query(JournalEntry).all()
+    entries = journal_db.query(JournalEntry).filter(JournalEntry.is_deleted == 0).all()
     entry_ids = {e.id for e in entries}
     created = 0
     removed = 0
