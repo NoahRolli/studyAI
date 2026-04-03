@@ -22,6 +22,7 @@ from backend.journal.models.journal_database import engine as journal_engine
 from backend.journal.models.journal_database import JournalBase
 from backend.journal.api.calendar import router as journal_calendar_router
 from backend.journal.api.insights import router as journal_insights_router
+from backend.journal.api.journal_metis import router as journal_metis_router
 from backend.auth.auth_middleware import router as auth_router
 from backend.auth.auth_middleware import require_auth
 from backend.api.ollama_status import router as ollama_status_router
@@ -45,6 +46,10 @@ from backend.journal.models.medication import IntakeLog  # noqa: F401
 from backend.journal.models.medication import MedicationSettings  # noqa: F401
 from backend.journal.models.mood_cache import MoodCache  # noqa: F401
 from backend.journal.models.storyline import StorylineCache  # noqa: F401
+from backend.journal.models.journal_metis_node import JournalMetisNode  # noqa: F401
+from backend.journal.models.journal_metis_edge import JournalMetisEdge  # noqa: F401
+from backend.journal.models.journal_metis_cluster import JournalMetisCluster  # noqa: F401
+from backend.journal.models.journal_metis_cluster import JournalMetisClusterMember  # noqa: F401
 
 # Erstellt alle Tabellen in beiden Datenbanken beim Server-Start
 Base.metadata.create_all(bind=engine)
@@ -117,6 +122,7 @@ app.include_router(journal_analytics_router)
 app.include_router(journal_medications_router)
 app.include_router(journal_calendar_router)
 app.include_router(journal_insights_router)
+app.include_router(journal_metis_router)
 app.include_router(ollama_status_router)
 app.include_router(notes_ai_router)
 app.include_router(metis_router)
