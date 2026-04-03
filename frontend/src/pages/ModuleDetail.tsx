@@ -44,7 +44,7 @@ function ModuleDetail() {
       setError(null)
       const moduleData = await get<Module>(`/api/modules/${id}`)
       setModule(moduleData)
-      const docsData = await get<Document[]>(`${API_BASE}/api/modules/${id}/documents/`)
+      const docsData = await get<Document[]>(`/api/modules/${id}/documents/`)
       setDocuments(docsData)
       await loadSummaries(docsData)
     } catch (err) {
@@ -69,7 +69,7 @@ function ModuleDetail() {
       formData.append('file', file)
       const API_BASE = import.meta.env.DEV ? 'http://localhost:8000' : ''
       const response = await fetch(
-        `${API_BASE}/api/modules/${id}/documents/`,
+        `/api/modules/${id}/documents/`,
         { method: 'POST', body: formData, credentials: 'include' }
       )
       if (!response.ok) {
