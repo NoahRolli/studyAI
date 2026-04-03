@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { get, post } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import type {
-  JournalMetisGraph, JournalMetisNode, MetisViewMode,
+  JournalMetisGraph, MetisViewMode,
 } from '../types/metis'
 
 const MetisSphere3D = lazy(
