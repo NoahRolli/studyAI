@@ -4,6 +4,7 @@
 // Analytics-Daten kommen gecacht aus useJournalAnalytics via useJournalState
 
 import { useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import useJournalState from '../hooks/useJournalState'
 import type { JournalTab } from '../hooks/useJournalState'
 import type { JournalEntry } from '../types/models'
@@ -29,6 +30,7 @@ function Journal() {
 
   // Ref um CalendarView von aussen zu steuern (Tag öffnen)
   const calendarRef = useRef<{ openDay: (date: string) => void }>(null)
+  const navigate = useNavigate()
 
   // Auto-Lock bei Navigation weg oder Laptop-Zuklappen
   useJournalLock({
@@ -67,6 +69,7 @@ function Journal() {
     ...(s.medEnabled
       ? [{ key: 'medications' as JournalTab, label: t.journal.tabs.medications }]
       : []),
+    { key: 'metis' as JournalTab, label: 'Metis' },
   ]
 
   return (
@@ -161,6 +164,7 @@ function Journal() {
               <button
                 key={tab.key}
                 onClick={() => {
+                  if (tab.key === 'metis') { navigate('/journal/metis'); return }
                   s.setActiveTab(tab.key)
                   if (tab.key === 'mood') a.loadMoods()
                 }}

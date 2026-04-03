@@ -24,7 +24,7 @@ export type JournalTab =
   | 'storylines'
   | 'insights'
   | 'medications'
-
+  | 'metis'
 export default function useJournalState() {
   // Sprache aus Context holen — wird an API-Calls angehängt
   const { language } = useLanguage()
