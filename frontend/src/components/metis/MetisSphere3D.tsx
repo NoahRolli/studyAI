@@ -124,32 +124,36 @@ function GlowEdge({ start, end, color, strength }: {
   return <primitive ref={ref} object={new THREE.Line(geometry, material)} />
 }
 
-// --- Hintergrund-Partikel — mehr, feiner ---
-function BackgroundParticles() {
-  const ref = useRef<THREE.Points>(null)
-  const { geometry, material } = useMemo(() => {
-    const count = 400
-    const positions = new Float32Array(count * 3)
-    for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 50
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 50
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 50
-    }
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    const mat = new THREE.PointsMaterial({
-      color: '#3a6a7a', size: 0.015, transparent: true, sizeAttenuation: true,
-      opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending,
+// --- Fixes Hintergrund-Grid — dreht sich NICHT mit ---
+function BackgroundGrid() {
+  const lines = useMemo(() => {
+    const group = new THREE.Group()
+    const size = 50
+    const step = 2.5
+    const mat = new THREE.LineBasicMaterial({
+      color: '#162a35', transparent: true, opacity: 0.5,
+      depthWrite: false,
     })
-    return { geometry: geo, material: mat }
-  }, [])
-  useFrame((_, delta) => {
-    if (ref.current) {
-      ref.current.rotation.y += delta * 0.012
-      ref.current.rotation.x += delta * 0.006
+    // Horizontale Linien
+    for (let i = -size; i <= size; i += step) {
+      const geo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-size, i, -0.1),
+        new THREE.Vector3(size, i, -0.1),
+      ])
+      group.add(new THREE.Line(geo, mat))
     }
-  })
-  return <points ref={ref} geometry={geometry} material={material} />
+    // Vertikale Linien
+    for (let i = -size; i <= size; i += step) {
+      const geo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(i, -size, -0.1),
+        new THREE.Vector3(i, size, -0.1),
+      ])
+      group.add(new THREE.Line(geo, mat))
+    }
+    return group
+  }, [])
+
+  return <primitive object={lines} position={[0, 0, -20]} />
 }
 
 
@@ -256,8 +260,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove }: {
       />
       <ambientLight intensity={0.1} />
       <CameraTracker onCameraMove={onCameraMove} />
-      <BackgroundParticles />
-      <gridHelper args={[60, 30, '#1a3a4a', '#1a3a4a']} position={[0, -12, 0]} />
+      <BackgroundGrid />
       <BackgroundGrid />
       <group ref={groupRef}>
         {graph.edges.map(edge => {
