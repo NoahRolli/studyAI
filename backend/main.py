@@ -33,6 +33,10 @@ from backend.models.mindmap_node import MindmapNode  # noqa: F401
 from backend.models.folder import Folder  # noqa: F401
 from backend.models.calendar_event import CalendarEvent  # noqa: F401
 from backend.models.note import Note  # noqa: F401
+from backend.models.metis_node import MetisNode  # noqa: F401
+from backend.models.metis_edge import MetisEdge  # noqa: F401
+from backend.models.metis_cluster import MetisCluster  # noqa: F401
+from backend.models.metis_cluster import MetisClusterMember  # noqa: F401
 from backend.journal.models.journal_entry import JournalEntry  # noqa: F401
 from backend.journal.models.medication import Medication  # noqa: F401
 from backend.journal.models.medication import IntakeLog  # noqa: F401
