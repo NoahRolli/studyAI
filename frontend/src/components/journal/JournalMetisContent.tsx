@@ -18,7 +18,6 @@ const MetisSphere3D = lazy(
 )
 
 // Journal-Metis Graph → MetisGraph Adapter
-// Filtert optional Public-Nodes raus, mappt String-IDs auf Numbers
 function adaptGraph(
   jGraph: JournalMetisGraph, showPublic: boolean,
 ): MetisGraph {
@@ -29,8 +28,6 @@ function adaptGraph(
   const edges = jGraph.edges.filter(
     e => nodeIds.has(e.source) && nodeIds.has(e.target)
   )
-
-  // ID-Map: String → fortlaufende Number
   const idMap = new Map<string, number>()
   nodes.forEach((n, i) => idMap.set(n.id, i + 1))
 
@@ -86,7 +83,6 @@ export default function JournalMetisContent() {
     }
   }, [])
 
-  // --- API Calls ---
   const loadGraph = useCallback(async () => {
     try {
       const data = await get<JournalMetisGraph>(
@@ -137,7 +133,6 @@ export default function JournalMetisContent() {
     setSelectedNode(found || null)
   }, [])
 
-  // Escape für Fullscreen
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && fullscreen) setFullscreen(false)
@@ -146,10 +141,8 @@ export default function JournalMetisContent() {
     return () => window.removeEventListener('keydown', h)
   }, [fullscreen])
 
-  // Adapted Graph
   const graph = adaptGraph(rawGraph, showPublic)
 
-  // Loading
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -160,63 +153,39 @@ export default function JournalMetisContent() {
     )
   }
 
-  // Wrapper: Fullscreen übernimmt ganzen Screen, sonst Tab-Content
   const wrapperClass = fullscreen
     ? 'fixed inset-0 z-50 flex flex-col bg-[var(--color-bg-deep)]'
     : 'flex flex-col gap-4'
-
   const graphClass = fullscreen
     ? 'flex-1 overflow-hidden relative'
     : 'overflow-hidden relative border border-[var(--color-border)] rounded-lg'
-
-  // Graph-Container-Höhe: maximale Nutzung, nur Header/Tabs abziehen
   const graphStyle = fullscreen ? {} : { height: 'calc(100vh - 220px)' }
 
   return (
     <div className={wrapperClass}>
-      {/* Header — wie v1: Titel + MetisToolbar */}
+      {/* Header — Titel + MetisToolbar (wie v1, ohne "JOURNAL" Label) */}
       <div className={`flex items-center justify-between ${fullscreen ? 'p-3' : ''}`}>
         {!fullscreen && (
-          <div>
-            <h2 className="hud-title text-glow text-xl">
-              {t.metis?.title || 'METIS'}
-            </h2>
-            <span style={{
-              fontFamily: 'Orbitron, monospace',
-              fontSize: '10px',
-              color: '#00d4ff',
-              letterSpacing: '2px',
-            }}>JOURNAL</span>
-          </div>
+          <h2 className="hud-title text-glow text-xl">
+            {t.metis?.title || 'METIS'}
+          </h2>
         )}
-        <div className="flex items-center gap-3">
-          {/* Public-Toggle vor der Toolbar */}
-          <button
-            className="hud-btn text-xs px-3 py-1"
-            style={{
-              opacity: showPublic ? 1 : 0.4,
-              borderColor: showPublic ? '#d4a574' : 'var(--color-border)',
-            }}
-            onClick={() => setShowPublic(!showPublic)}
-            title={showPublic ? 'Public ausblenden' : 'Public einblenden'}
-          >P</button>
-          <MetisToolbar
-            view={view}
-            onViewChange={setView}
-            onSync={handleSync}
-            onAutoLink={handleAutoLink}
-            onAutoCluster={handleAutoCluster}
-            syncing={syncing}
-            linking={linking}
-            clustering={clustering}
-            nodeCount={graph.nodes.length}
-            edgeCount={graph.edges.length}
-            clusterCount={graph.clusters.length}
-          />
-        </div>
+        <MetisToolbar
+          view={view}
+          onViewChange={setView}
+          onSync={handleSync}
+          onAutoLink={handleAutoLink}
+          onAutoCluster={handleAutoCluster}
+          syncing={syncing}
+          linking={linking}
+          clustering={clustering}
+          nodeCount={graph.nodes.length}
+          edgeCount={graph.edges.length}
+          clusterCount={graph.clusters.length}
+        />
       </div>
 
-      {/* Graph-Container — identisch wie v1 */}
+      {/* Graph-Container */}
       <div className={graphClass} style={graphStyle}>
         {graph.nodes.length === 0 ? (
           <div className="flex items-center justify-center h-full">
@@ -250,15 +219,31 @@ export default function JournalMetisContent() {
           />
         )}
 
-        {/* Fullscreen-Button — oben rechts wie v1 */}
+        {/* Overlay Controls — oben im Fenster */}
         {view !== 'list' && graph.nodes.length > 0 && (
-          <div className="absolute top-2 right-2 z-20">
-            <button
-              onClick={() => setFullscreen(!fullscreen)}
-              className="hud-btn text-xs px-2 py-1"
-              title={fullscreen ? 'Escape' : 'Fullscreen'}
-            >{fullscreen ? '✖' : '⛶'}</button>
-          </div>
+          <>
+            {/* P-Button oben links */}
+            <div className="absolute top-2 left-2 z-20">
+              <button
+                className="hud-btn text-xs px-2 py-1"
+                style={{
+                  opacity: showPublic ? 1 : 0.4,
+                  borderColor: showPublic
+                    ? '#d4a574' : 'var(--color-border)',
+                }}
+                onClick={() => setShowPublic(!showPublic)}
+                title="P"
+              >P</button>
+            </div>
+            {/* Fullscreen oben rechts */}
+            <div className="absolute top-2 right-2 z-20">
+              <button
+                onClick={() => setFullscreen(!fullscreen)}
+                className="hud-btn text-xs px-2 py-1"
+                title={fullscreen ? 'Escape' : 'Fullscreen'}
+              >{fullscreen ? '✖' : '⛶'}</button>
+            </div>
+          </>
         )}
 
         {/* MiniMap 3D */}
