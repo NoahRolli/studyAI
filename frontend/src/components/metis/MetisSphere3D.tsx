@@ -131,7 +131,7 @@ function BackgroundGrid() {
     const size = 50
     const step = 2.5
     const mat = new THREE.LineBasicMaterial({
-      color: '#1e4050', transparent: true, opacity: 0.35,
+      color: '#152530', transparent: true, opacity: 0.3,
       depthWrite: false,
     })
     // Horizontale Linien
@@ -269,7 +269,7 @@ export default function MetisSphere3D({ graph, onNodeClick, onCameraMove }: Prop
   return (
     <div className="w-full h-full" style={{ background: 'transparent' }}>
       <Canvas
-        camera={{ position: [0, 0, 28], fov: 42 }}
+        camera={{ position: [0, 0, 34], fov: 40 }}
         style={{ background: 'transparent' }}
         gl={{ antialias: true, alpha: true }}
       >
