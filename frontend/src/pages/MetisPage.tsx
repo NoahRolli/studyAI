@@ -28,6 +28,7 @@ export default function MetisPage() {
   const [clustering, setClustering] = useState(false)
   const [selectedNode, setSelectedNode] = useState<MetisNode | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
+  const [transparent, setTransparent] = useState(false)
 
   // Kamera-State für MiniMap
   const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 22 })
@@ -135,7 +136,7 @@ export default function MetisPage() {
 
   const graphClass = fullscreen
     ? 'flex-1 overflow-hidden relative'
-    : 'flex-1 hud-card overflow-hidden relative'
+    : transparent ? 'flex-1 overflow-hidden relative border border-[var(--color-border)] rounded-lg' : 'flex-1 hud-card overflow-hidden relative'
 
   return (
     <div className={wrapperClass}>
@@ -156,6 +157,8 @@ export default function MetisPage() {
           nodeCount={graph.nodes.length}
           edgeCount={graph.edges.length}
           clusterCount={graph.clusters.length}
+          transparent={transparent}
+          onTransparentChange={setTransparent}
         />
         {/* Fullscreen-Button */}
         {view !== 'list' && (
@@ -186,7 +189,9 @@ export default function MetisPage() {
             <MetisSphere3D
               graph={graph}
               onNodeClick={handleNodeClick}
+            transparent={transparent}
               onCameraMove={handleCameraMove}
+              transparent={transparent}
             />
           </Suspense>
         ) : (
@@ -194,6 +199,8 @@ export default function MetisPage() {
             graph={graph}
             onPositionUpdate={handlePositionUpdate}
             onNodeClick={handleNodeClick}
+            transparent={transparent}
+            transparent={transparent}
           />
         )}
 

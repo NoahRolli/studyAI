@@ -1,5 +1,5 @@
 // MetisToolbar — Steuerleiste für den Knowledge-Graph
-// View-Toggle als einheitliche Button-Gruppe, Action-Buttons rechts.
+// View-Toggle, Action-Buttons, Transparenz-Checkbox.
 
 import { useLanguage } from '../../hooks/useLanguage'
 import type { MetisViewMode } from '../../types/metis'
@@ -16,12 +16,15 @@ interface Props {
   nodeCount: number
   edgeCount: number
   clusterCount: number
+  transparent: boolean
+  onTransparentChange: (v: boolean) => void
 }
 
 export default function MetisToolbar({
   view, onViewChange, onSync, onAutoLink, onAutoCluster,
   syncing, linking, clustering,
   nodeCount, edgeCount, clusterCount,
+  transparent, onTransparentChange,
 }: Props) {
   const { t } = useLanguage()
 
@@ -40,7 +43,7 @@ export default function MetisToolbar({
         <span>{clusterCount} {t.metis.clusters}</span>
       </div>
 
-      {/* View-Toggle — einheitliche Gruppe */}
+      {/* View-Toggle */}
       <div
         className="flex rounded-md overflow-hidden"
         style={{ border: '1px solid var(--color-border)' }}
@@ -64,6 +67,22 @@ export default function MetisToolbar({
           </button>
         ))}
       </div>
+
+      {/* Transparenz-Toggle — nur bei 2D/3D */}
+      {view !== 'list' && (
+        <label
+          className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]
+            cursor-pointer select-none"
+        >
+          <input
+            type="checkbox"
+            checked={transparent}
+            onChange={(e) => onTransparentChange(e.target.checked)}
+            className="accent-[var(--color-primary)] w-3 h-3"
+          />
+          BG
+        </label>
+      )}
 
       {/* Action-Buttons */}
       <div className="flex gap-2">
