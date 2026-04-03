@@ -211,7 +211,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove }: {
     <>
       <OrbitControls
         enableDamping dampingFactor={0.05}
-        minDistance={3} maxDistance={30}
+        minDistance={5} maxDistance={50} zoomSpeed={0.5}
         onStart={() => { isInteracting.current = true }}
         onEnd={() => { isInteracting.current = false }}
       />
@@ -264,7 +264,7 @@ export default function MetisSphere3D({ graph, onNodeClick, onCameraMove }: Prop
   return (
     <div className="w-full h-full" style={{ background: 'transparent' }}>
       <Canvas
-        camera={{ position: [0, 0, 15], fov: 50 }}
+        camera={{ position: [0, 0, 22], fov: 45 }}
         style={{ background: 'transparent' }}
         gl={{ antialias: true, alpha: true }}
       >

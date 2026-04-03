@@ -1,6 +1,6 @@
 // MetisPage — Orchestrator für den Metis Knowledge-Graph
 // 3D-Sphäre (default), 2D-Graph, Listen-Ansicht.
-// Toolbar, Detail-Panel, MiniMap für 3D.
+// Toolbar, Detail-Panel, MiniMap, Fullscreen-Toggle.
 
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { get, post, put } from '../hooks/useAPI'
@@ -27,13 +27,13 @@ export default function MetisPage() {
   const [linking, setLinking] = useState(false)
   const [clustering, setClustering] = useState(false)
   const [selectedNode, setSelectedNode] = useState<MetisNode | null>(null)
+  const [fullscreen, setFullscreen] = useState(false)
 
-  // Kamera-State für MiniMap (useRef um Re-Renders zu vermeiden)
-  const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 15 })
+  // Kamera-State für MiniMap
+  const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 22 })
   const [, setCameraTick] = useState(0)
-
-  // Kamera-Update — throttled (alle 100ms)
   const lastCameraUpdate = useRef(0)
+
   const handleCameraMove = useCallback((
     azimuth: number, elevation: number, distance: number,
   ) => {
@@ -111,6 +111,15 @@ export default function MetisPage() {
     setSelectedNode(node || null)
   }, [graph.nodes])
 
+  // Fullscreen toggle mit Escape-Listener
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && fullscreen) setFullscreen(false)
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [fullscreen])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -119,10 +128,22 @@ export default function MetisPage() {
     )
   }
 
+  // Fullscreen-Wrapper Klassen
+  const wrapperClass = fullscreen
+    ? 'fixed inset-0 z-50 flex flex-col bg-[var(--color-bg-deep)]'
+    : 'flex flex-col h-full gap-4 p-4'
+
+  const graphClass = fullscreen
+    ? 'flex-1 overflow-hidden relative'
+    : 'flex-1 hud-card overflow-hidden relative'
+
   return (
-    <div className="flex flex-col h-full gap-4 p-4">
-      <div className="flex items-center justify-between">
-        <h1 className="hud-title text-glow text-2xl">{t.metis.title}</h1>
+    <div className={wrapperClass}>
+      {/* Header */}
+      <div className={`flex items-center justify-between ${fullscreen ? 'p-3' : ''}`}>
+        {!fullscreen && (
+          <h1 className="hud-title text-glow text-2xl">{t.metis.title}</h1>
+        )}
         <MetisToolbar
           view={view}
           onViewChange={setView}
@@ -136,9 +157,20 @@ export default function MetisPage() {
           edgeCount={graph.edges.length}
           clusterCount={graph.clusters.length}
         />
+        {/* Fullscreen-Button */}
+        {view !== 'list' && (
+          <button
+            onClick={() => setFullscreen(!fullscreen)}
+            className="hud-btn text-xs px-2 py-1"
+            title={fullscreen ? 'Escape' : 'Fullscreen'}
+          >
+            {fullscreen ? '\u2716' : '\u26F6'}
+          </button>
+        )}
       </div>
 
-      <div className="flex-1 hud-card overflow-hidden relative">
+      {/* Graph */}
+      <div className={graphClass}>
         {graph.nodes.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-[var(--color-text-muted)]">{t.metis.noNodes}</p>
