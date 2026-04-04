@@ -236,6 +236,8 @@ Regeln:
     result = []
     valid_node_ids = {n.id for n in nodes}
     for i, cdata in enumerate(clusters_data):
+        if not isinstance(cdata, dict):
+            continue
         cluster = MetisCluster(
             label=cdata.get("label", f"Cluster {i + 1}"),
             description=cdata.get("description"),

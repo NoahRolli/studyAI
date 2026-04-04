@@ -441,6 +441,8 @@ Regeln:
     result = []
 
     for i, cdata in enumerate(clusters_data):
+        if not isinstance(cdata, dict):
+            continue
         label_text = cdata.get("label", f"Cluster {i + 1}")
         desc_text = cdata.get("description", "")
         # Verschlüsseln
