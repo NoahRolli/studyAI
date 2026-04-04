@@ -64,7 +64,7 @@ function CalendarPage() {
       boxShadow: 'none',
     }
     return {
-      backgroundColor: 'rgba(13, 17, 23, 0.3)',
+      backgroundColor: 'var(--color-hover-bg)',
       border: '1px solid transparent', boxShadow: 'none',
     }
   }
