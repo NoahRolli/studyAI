@@ -1,13 +1,50 @@
 // MetisSphereNodes — 3D-Bausteine für die Metis-Sphäre
+// Labels via Sprite + CanvasTexture (kein DOM, rein GPU)
 // GlowNode, ClusterHub, GlowEdge, BackgroundGrid, CameraTracker
-// Ausgelagert aus MetisSphere3D für 200-Zeilen-Limit
 
 import { useRef, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 
-// --- GlowNode — weisser Kern, farbiger Glow, optionales Label ---
+// --- Sprite-Label via CanvasTexture (kein DOM!) ---
+function SpriteLabel({ position, text, color, fontSize, bold }: {
+  position: [number, number, number]
+  text: string
+  color: string
+  fontSize?: number
+  bold?: boolean
+}) {
+  const sprite = useMemo(() => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')!
+    const size = fontSize || 48
+    const weight = bold ? 'bold' : 'normal'
+    ctx.font = `${weight} ${size}px Orbitron, monospace`
+    const metrics = ctx.measureText(text)
+    const w = Math.ceil(metrics.width) + 16
+    const h = size + 16
+    canvas.width = w
+    canvas.height = h
+    ctx.font = `${weight} ${size}px Orbitron, monospace`
+    ctx.fillStyle = color
+    ctx.shadowColor = color
+    ctx.shadowBlur = 8
+    ctx.textBaseline = 'middle'
+    ctx.fillText(text, 8, h / 2)
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.minFilter = THREE.LinearFilter
+    const mat = new THREE.SpriteMaterial({
+      map: texture, transparent: true, depthWrite: false,
+    })
+    const s = new THREE.Sprite(mat)
+    s.scale.set(w / 80, h / 80, 1)
+    return s
+  }, [text, color, fontSize, bold])
+
+  return <primitive object={sprite} position={position} />
+}
+
+// --- GlowNode — weisser Kern, farbiger Glow, Sprite-Label ---
 export function GlowNode({ position, color, size, label, onClick, showLabel }: {
   position: [number, number, number]
   color: THREE.Color
@@ -23,36 +60,32 @@ export function GlowNode({ position, color, size, label, onClick, showLabel }: {
     if (glowRef.current) glowRef.current.scale.setScalar(1 + Math.sin(t) * 0.2)
   })
 
+  const hex = `#${color.getHexString()}`
+
   return (
     <group position={position}>
-      {/* Innerer Glow — farbig */}
+      {/* Innerer Glow */}
       <mesh ref={glowRef}>
         <sphereGeometry args={[size * 2, 16, 16]} />
-        <meshBasicMaterial color={color} transparent opacity={0.25}
+        <meshBasicMaterial color={color} transparent opacity={0.12}
           depthWrite={false} blending={THREE.AdditiveBlending} />
       </mesh>
-      {/* Kern — weiss */}
+      {/* Kern */}
       <mesh onClick={onClick}>
         <sphereGeometry args={[size, 16, 16]} />
         <meshBasicMaterial color={new THREE.Color('#ffffff')} />
       </mesh>
-      {/* Farbiger Ring */}
+      {/* Ring */}
       <mesh>
         <ringGeometry args={[size * 1.2, size * 1.6, 32]} />
-        <meshBasicMaterial color={color} transparent opacity={0.7}
+        <meshBasicMaterial color={color} transparent opacity={0.4}
           side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
-      {/* Label */}
+      {/* Sprite-Label */}
       {showLabel && (
-        <Html position={[size * 4, size * 1.5, 0]} style={{
-          color: `#${color.getHexString()}`,
-          fontSize: '11px', fontFamily: 'Orbitron, monospace',
-          whiteSpace: 'nowrap', pointerEvents: 'none', userSelect: 'none',
-          textShadow: `0 0 10px #${color.getHexString()}aa`,
-          letterSpacing: '0.5px',
-        }} distanceFactor={12}>
-          {label}
-        </Html>
+        <SpriteLabel
+          position={[size * 3, size * 1.5, 0]}
+          text={label} color={hex} />
       )}
     </group>
   )
@@ -65,7 +98,8 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
   size: number
   label: string
   showLabel: boolean
-  onClick?: () => void}) {
+  onClick?: () => void
+}) {
   const outerRef = useRef<THREE.Mesh>(null)
   const pulseRef = useRef<THREE.Mesh>(null)
 
@@ -81,6 +115,8 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
     }
   })
 
+  const hex = `#${color.getHexString()}`
+
   return (
     <group position={position}>
       {/* Äussere Aura */}
@@ -95,7 +131,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
         <meshBasicMaterial color={color} transparent opacity={0.2}
           depthWrite={false} blending={THREE.AdditiveBlending} />
       </mesh>
-      {/* Kern — Cluster-Farbe (nicht weiss wie bei Nodes) */}
+      {/* Kern — klickbar */}
       <mesh onClick={onClick}>
         <sphereGeometry args={[size, 24, 24]} />
         <meshBasicMaterial color={color} />
@@ -106,24 +142,17 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
         <meshBasicMaterial color={color} transparent opacity={0.5}
           side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
-      {/* Hub-Label — grösser, bold */}
+      {/* Sprite-Label */}
       {showLabel && (
-        <Html position={[size * 5, size * 2, 0]} style={{
-          color: `#${color.getHexString()}`,
-          fontSize: '13px', fontFamily: 'Orbitron, monospace',
-          fontWeight: 'bold', whiteSpace: 'nowrap',
-          pointerEvents: 'none', userSelect: 'none',
-          textShadow: `0 0 15px #${color.getHexString()}`,
-          letterSpacing: '1px',
-        }} distanceFactor={14}>
-          {label}
-        </Html>
+        <SpriteLabel
+          position={[size * 4, size * 2, 0]}
+          text={label} color={hex} fontSize={56} bold />
       )}
     </group>
   )
 }
 
-// --- GlowEdge — mit optionalem Dash für Hub-Verbindungen ---
+// --- GlowEdge ---
 export function GlowEdge({ start, end, color, strength, dashed }: {
   start: [number, number, number]
   end: [number, number, number]
