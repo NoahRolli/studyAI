@@ -281,6 +281,7 @@ const en = {
     notFound: 'Module not found.',
     uploadTitle: 'Upload Document',
     uploadHint: 'Supported formats: PDF, Word, PowerPoint, Excel, Markdown, TXT, Images (OCR)',
+    dropHere: "Drop file here...",
     uploadButton: 'Choose File',
     uploading: 'Uploading...',
     documentsTitle: 'Documents',

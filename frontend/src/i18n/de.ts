@@ -282,6 +282,7 @@ const de = {
     notFound: 'Modul nicht gefunden.',
     uploadTitle: 'Dokument hochladen',
     uploadHint: 'Unterstützte Formate: PDF, Word, PowerPoint, Excel, Markdown, TXT, Bilder (OCR)',
+    dropHere: "Datei hier ablegen...",
     uploadButton: 'Datei auswählen',
     uploading: 'Wird hochgeladen...',
     documentsTitle: 'Dokumente',
