@@ -1,6 +1,6 @@
 // MetisPage — Orchestrator für den Metis Knowledge-Graph
 // 3D-Sphäre (default), 2D-Graph, Listen-Ansicht.
-// Toolbar, Detail-Panel, MiniMap, Fullscreen-Toggle.
+// Toolbar, Detail-Panel, MiniMap, Fullscreen, Label-Toggle.
 
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { get, post, put } from '../hooks/useAPI'
@@ -28,7 +28,7 @@ export default function MetisPage() {
   const [clustering, setClustering] = useState(false)
   const [selectedNode, setSelectedNode] = useState<MetisNode | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
-  
+  const [showLabels, setShowLabels] = useState(true)
 
   // Kamera-State für MiniMap
   const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 22 })
@@ -129,11 +129,9 @@ export default function MetisPage() {
     )
   }
 
-  // Fullscreen-Wrapper Klassen
   const wrapperClass = fullscreen
     ? 'fixed inset-0 z-50 flex flex-col bg-[var(--color-bg-deep)]'
     : 'flex flex-col h-full gap-4 p-4'
-
   const graphClass = fullscreen
     ? 'flex-1 overflow-hidden relative'
     : 'flex-1 overflow-hidden relative border border-[var(--color-border)] rounded-lg'
@@ -179,6 +177,7 @@ export default function MetisPage() {
               onNodeClick={handleNodeClick}
               onCameraMove={handleCameraMove}
               transparent={true}
+              showLabels={showLabels}
             />
           </Suspense>
         ) : (
@@ -190,18 +189,27 @@ export default function MetisPage() {
           />
         )}
 
-        {/* Graph-Controls overlay — oben rechts im Fenster */}
+        {/* Overlay Controls */}
         {view !== 'list' && graph.nodes.length > 0 && (
-          <div className="absolute top-2 right-2 z-20 flex items-center gap-2">
-
-            <button
-              onClick={() => setFullscreen(!fullscreen)}
-              className="hud-btn text-xs px-2 py-1"
-              title={fullscreen ? 'Escape' : 'Fullscreen'}
-            >
-              {fullscreen ? '✖' : '⛶'}
-            </button>
-          </div>
+          <>
+            {/* Label-Toggle — oben links */}
+            <div className="absolute top-2 left-2 z-20">
+              <button
+                className="hud-btn text-xs px-2 py-1"
+                onClick={() => setShowLabels(!showLabels)}
+                style={{ opacity: showLabels ? 1 : 0.4 }}
+                title="Labels ein/aus"
+              >Aa</button>
+            </div>
+            {/* Fullscreen — oben rechts */}
+            <div className="absolute top-2 right-2 z-20">
+              <button
+                onClick={() => setFullscreen(!fullscreen)}
+                className="hud-btn text-xs px-2 py-1"
+                title={fullscreen ? 'Escape' : 'Fullscreen'}
+              >{fullscreen ? '✖' : '⛶'}</button>
+            </div>
+          </>
         )}
 
         {/* MiniMap für 3D */}
