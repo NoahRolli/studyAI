@@ -15,7 +15,7 @@ export function GlowNode({ position, color, size, label, onClick, showLabel }: {
   label: string
   onClick?: () => void
   showLabel: boolean
-}) {
+  onClick?: () => void}) {
   const glowRef = useRef<THREE.Mesh>(null)
 
   useFrame(({ clock }) => {
@@ -59,13 +59,13 @@ export function GlowNode({ position, color, size, label, onClick, showLabel }: {
 }
 
 // --- ClusterHub — grosser zentraler Knotenpunkt pro Cluster ---
-export function ClusterHub({ position, color, size, label, showLabel }: {
+export function ClusterHub({ position, color, size, label, showLabel, onClick }: {
   position: [number, number, number]
   color: THREE.Color
   size: number
   label: string
   showLabel: boolean
-}) {
+  onClick?: () => void}) {
   const outerRef = useRef<THREE.Mesh>(null)
   const pulseRef = useRef<THREE.Mesh>(null)
 
@@ -96,7 +96,7 @@ export function ClusterHub({ position, color, size, label, showLabel }: {
           depthWrite={false} blending={THREE.AdditiveBlending} />
       </mesh>
       {/* Kern — Cluster-Farbe (nicht weiss wie bei Nodes) */}
-      <mesh>
+      <mesh onClick={onClick}>
         <sphereGeometry args={[size, 24, 24]} />
         <meshBasicMaterial color={color} />
       </mesh>

@@ -28,7 +28,7 @@ export default function MetisPage() {
   const [clustering, setClustering] = useState(false)
   const [selectedNode, setSelectedNode] = useState<MetisNode | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
-  const [showLabels, setShowLabels] = useState(true)
+  const [showLabels, setShowLabels] = useState(false)
 
   // Kamera-State für MiniMap
   const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 22 })

@@ -1,6 +1,6 @@
 // MetisSphere3D — 3D Sphäre mit Cluster-Hubs, voller Rotation, Label-Toggle
 
-import { useRef, useMemo, useCallback } from 'react'
+import { useRef, useMemo, useCallback, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
@@ -35,6 +35,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
   const groupRef = useRef<THREE.Group>(null)
   const idleTime = useRef(0)
   const isInteracting = useRef(false)
+  const [selectedHub, setSelectedHub] = useState<string | null>(null)
 
   // Hub-Daten aus Cluster-Info
   const hubData = useMemo(() => {
@@ -141,7 +142,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
           if (!hp || !np) return null
           return <GlowEdge key={`${hub.id}-${nid}`}
             start={hp} end={np} color={hub.color}
-            strength={0.4} dashed />
+            strength={selectedHub === hub.id ? 0.9 : 0.4} dashed={selectedHub !== hub.id} />
         }))}
         {/* Cluster-Hub Nodes */}
         {hubData.map(hub => {
@@ -149,8 +150,9 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
           if (!pos) return null
           const size = 0.35 + hub.memberCount * 0.08
           return <ClusterHub key={hub.id} position={pos}
-            color={hub.color} size={Math.min(size, 0.9)}
-            label={hub.label} showLabel={showLabels} />
+            color={hub.color} size={Math.min(size, 1.1)}
+            label={hub.label} showLabel={showLabels}
+            onClick={() => setSelectedHub(selectedHub === hub.id ? null : hub.id)} />
         })}
         {/* Reguläre Nodes */}
         {graph.nodes.map(node => {
@@ -161,9 +163,9 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
             e => e.source_node_id === node.id
               || e.target_node_id === node.id,
           ).length
-          const size = 0.18 + conns * 0.06
+          const size = 0.10 + conns * 0.03
           return <GlowNode key={node.id} position={pos} color={color}
-            size={Math.min(size, 0.5)} label={node.title}
+            size={Math.min(size, 0.3)} label={node.title}
             onClick={() => onNodeClick?.(node.id)}
             showLabel={showLabels} />
         })}
@@ -182,7 +184,7 @@ interface Props {
 
 export default function MetisSphere3D({
   graph, onNodeClick, onCameraMove, transparent,
-  showLabels = true,
+  showLabels = false,
 }: Props) {
   const handleCameraMove = useCallback((a: number, e: number, d: number) => {
     onCameraMove?.(a, e, d)

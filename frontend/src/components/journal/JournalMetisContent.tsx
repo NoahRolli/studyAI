@@ -28,7 +28,7 @@ export default function JournalMetisContent() {
   const [selectedNode, setSelectedNode] = useState<MetisNode | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const [showPublic, setShowPublic] = useState(true)
-  const [showLabels, setShowLabels] = useState(true)
+  const [showLabels, setShowLabels] = useState(false)
 
   const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 22 })
   const [, setCameraTick] = useState(0)
