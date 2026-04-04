@@ -118,6 +118,23 @@ const de = {
     weekdays: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'],
   },
 
+  // Sport-Tracker
+  sport: {
+    toggle: "Sport-Tracking",
+    newTitle: "Neues Training",
+    editTitle: "Training bearbeiten",
+    typeLabel: "Sportart",
+    typePlaceholder: "Oder eigene Sportart...",
+    durationLabel: "Dauer (Minuten)",
+    intensityLabel: "Intensität",
+    noteLabel: "Notiz (optional)",
+    notePlaceholder: "Besonderheiten, Verletzungen...",
+    save: "Speichern",
+    create: "Erstellen",
+    cancel: "Abbrechen",
+    deleteConfirm: "Training wirklich löschen?",
+  },
+
   // Journal — Haupt
   journal: {
     title: 'Journal',

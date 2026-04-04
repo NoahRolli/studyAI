@@ -117,6 +117,23 @@ const en = {
     weekdays: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
   },
 
+  // Sport Tracker
+  sport: {
+    toggle: "Sport Tracking",
+    newTitle: "New Workout",
+    editTitle: "Edit Workout",
+    typeLabel: "Sport Type",
+    typePlaceholder: "Or custom sport...",
+    durationLabel: "Duration (minutes)",
+    intensityLabel: "Intensity",
+    noteLabel: "Note (optional)",
+    notePlaceholder: "Injuries, conditions...",
+    save: "Save",
+    create: "Create",
+    cancel: "Cancel",
+    deleteConfirm: "Really delete this workout?",
+  },
+
   // Journal — Main
   journal: {
     title: 'Journal',
