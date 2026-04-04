@@ -1,14 +1,15 @@
-// MetisSphere3D — 3D Knowledge-Graph Sphäre mit Three.js
-// JARVIS/Cryptaris-inspiriert. Intensive Farben, Glow, Partikel.
-// Auto-Rotation, Kamera-Tracking für MiniMap. Lazy-loaded.
+// MetisSphere3D — 3D Sphäre mit Cluster-Hubs, voller Rotation, Label-Toggle
 
 import { useRef, useMemo, useCallback } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Html } from '@react-three/drei'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import type { MetisGraph } from '../../types/metis'
+import {
+  GlowNode, ClusterHub, GlowEdge, BackgroundGrid, CameraTracker,
+} from './MetisSphereNodes'
 
-// Farben — kräftiger für 3D
+// Farben pro Node-Typ
 const COLORS: Record<string, THREE.Color> = {
   note: new THREE.Color('#90edb8'),
   summary: new THREE.Color('#e8b882'),
@@ -17,196 +18,105 @@ const COLORS: Record<string, THREE.Color> = {
   entry: new THREE.Color('#00d4ff'),
 }
 
-// --- GlowNode — intensiver, mehrschichtig ---
-function GlowNode({ position, color, size, label, onClick }: {
-  position: [number, number, number]
-  color: THREE.Color
-  size: number
-  label: string
-  onClick?: () => void
-}) {
-  const meshRef = useRef<THREE.Mesh>(null)
-  const glowRef = useRef<THREE.Mesh>(null)
-  const outerRef = useRef<THREE.Mesh>(null)
-  const pulseRef = useRef<THREE.Mesh>(null)
+// Fallback-Farben für Cluster-Hubs
+const HUB_FALLBACK = [
+  '#7dd4a3', '#d4a574', '#d4cc7d', '#7dd8e8', '#888888',
+]
+const GOLDEN = Math.PI * (3 - Math.sqrt(5))
 
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime * 1.5 + size * 10
-    const pulse = 1 + Math.sin(t) * 0.2
-    const slowPulse = 1 + Math.sin(t * 0.5) * 0.1
-    if (glowRef.current) glowRef.current.scale.setScalar(pulse)
-    if (outerRef.current) outerRef.current.scale.setScalar(slowPulse * 1.2)
-    if (pulseRef.current) {
-      const expand = 1 + Math.sin(t * 0.7) * 0.3
-      pulseRef.current.scale.setScalar(expand)
-      const mat = pulseRef.current.material as THREE.MeshBasicMaterial
-      mat.opacity = 0.03 + Math.sin(t * 0.7) * 0.02
-    }
-  })
-
-  return (
-    <group position={position}>
-
-      {/* Innerer Glow — farbig */}
-      <mesh ref={glowRef}>
-        <sphereGeometry args={[size * 2, 16, 16]} />
-        <meshBasicMaterial color={color} transparent opacity={0.25}
-          depthWrite={false} blending={THREE.AdditiveBlending} />
-      </mesh>
-
-      {/* Kern — weisser Punkt */}
-      <mesh ref={meshRef} onClick={onClick}>
-        <sphereGeometry args={[size, 16, 16]} />
-        <meshBasicMaterial color={new THREE.Color('#ffffff')} />
-      </mesh>
-
-      {/* Farbiger Ring */}
-      <mesh>
-        <ringGeometry args={[size * 1.2, size * 1.6, 32]} />
-        <meshBasicMaterial color={color} transparent opacity={0.7}
-          side={THREE.DoubleSide} depthWrite={false} />
-      </mesh>
-
-      {/* Label — Orbitron, leuchtend */}
-      <Html
-        position={[size * 4, size * 1.5, 0]}
-        style={{
-          color: `#${color.getHexString()}`,
-          fontSize: '11px',
-          fontFamily: 'Orbitron, monospace',
-          whiteSpace: 'nowrap',
-          textShadow: `0 0 10px #${color.getHexString()}aa, 0 0 20px #${color.getHexString()}50`,
-          pointerEvents: 'none',
-          userSelect: 'none',
-          letterSpacing: '0.5px',
-        }}
-        distanceFactor={12}
-      >
-        {label}
-      </Html>
-    </group>
-  )
-}
-
-// --- GlowEdge — dicker, leuchtender ---
-function GlowEdge({ start, end, color, strength }: {
-  start: [number, number, number]
-  end: [number, number, number]
-  color: THREE.Color
-  strength: number
-}) {
-  const ref = useRef<THREE.Line>(null)
-  const geometry = useMemo(() => {
-    return new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(...start), new THREE.Vector3(...end),
-    ])
-  }, [start, end])
-  const material = useMemo(() => {
-    return new THREE.LineBasicMaterial({
-      color, transparent: true,
-      opacity: 0.35 + strength * 0.55,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    })
-  }, [color, strength])
-  return <primitive ref={ref} object={new THREE.Line(geometry, material)} />
-}
-
-// --- Fixes Hintergrund-Grid — dreht sich NICHT mit ---
-function BackgroundGrid() {
-  const lines = useMemo(() => {
-    const group = new THREE.Group()
-    const size = 50
-    const step = 2.5
-    const mat = new THREE.LineBasicMaterial({
-      color: '#1a4050', transparent: true, opacity: 0.5,
-      depthWrite: false,
-    })
-    // Horizontale Linien
-    for (let i = -size; i <= size; i += step) {
-      const geo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-size, i, -0.1),
-        new THREE.Vector3(size, i, -0.1),
-      ])
-      group.add(new THREE.Line(geo, mat))
-    }
-    // Vertikale Linien
-    for (let i = -size; i <= size; i += step) {
-      const geo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(i, -size, -0.1),
-        new THREE.Vector3(i, size, -0.1),
-      ])
-      group.add(new THREE.Line(geo, mat))
-    }
-    return group
-  }, [])
-
-  return <primitive object={lines} position={[0, 0, -15]} />
-}
-
-
-// --- Kamera-Tracker ---
-function CameraTracker({ onCameraMove }: {
-  onCameraMove: (a: number, e: number, d: number) => void
-  transparent?: boolean
-}) {
-  const { camera } = useThree()
-  useFrame(() => {
-    const pos = camera.position
-    const dist = pos.length()
-    const azimuth = Math.atan2(pos.x, pos.z) * (180 / Math.PI)
-    const elevation = Math.asin(pos.y / dist) * (180 / Math.PI)
-    onCameraMove(azimuth, elevation, dist)
-  })
-  return null
-}
-
-// --- Szene ---
-function MetisScene({ graph, onNodeClick, onCameraMove, transparent }: {
+// --- Szene mit Cluster-Hub-Layout ---
+function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels }: {
   graph: MetisGraph
   onNodeClick?: (id: number) => void
   onCameraMove: (a: number, e: number, d: number) => void
   transparent?: boolean
+  showLabels: boolean
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const idleTime = useRef(0)
   const isInteracting = useRef(false)
 
-  const nodePositions = useMemo(() => {
-    const positions = new Map<number, [number, number, number]>()
+  // Hub-Daten aus Cluster-Info
+  const hubData = useMemo(() => {
+    if (!graph.clusters || graph.clusters.length === 0) return []
+    return graph.clusters.map((cluster, i) => ({
+      id: `hub-${cluster.id}`,
+      label: cluster.label || `Cluster ${i + 1}`,
+      color: new THREE.Color(
+        cluster.color || HUB_FALLBACK[i % HUB_FALLBACK.length],
+      ),
+      memberNodeIds: cluster.node_ids || [],
+      memberCount: (cluster.node_ids || []).length,
+    }))
+  }, [graph.clusters])
+
+  const { nodePositions, hubPositions } = useMemo(() => {
+    const nPos = new Map<number, [number, number, number]>()
+    const hPos = new Map<string, [number, number, number]>()
     const n = graph.nodes.length
-    const radius = 5 + Math.sqrt(n) * 0.8
-    const goldenAngle = Math.PI * (3 - Math.sqrt(5))
-    graph.nodes.forEach((node, i) => {
-      const y = 1 - (i / (n - 1 || 1)) * 2
+    const hCount = hubData.length
+    const radius = 5 + Math.sqrt(n + hCount) * 0.8
+
+    hubData.forEach((hub, i) => {
+      const y = hCount > 1 ? 1 - (i / (hCount - 1)) * 2 : 0
       const r = Math.sqrt(1 - y * y)
-      const theta = goldenAngle * i
-      positions.set(node.id, [
-        Math.cos(theta) * r * radius,
-        y * radius,
-        Math.sin(theta) * r * radius,
+      const theta = GOLDEN * i * 3
+      hPos.set(hub.id, [
+        Math.cos(theta) * r * radius * 0.5,
+        y * radius * 0.5,
+        Math.sin(theta) * r * radius * 0.5,
       ])
     })
-    return positions
-  }, [graph.nodes])
 
+    // Nodes positionieren — um ihren Hub herum oder global
+    graph.nodes.forEach((node, i) => {
+      const parentHub = hubData.find(
+        h => h.memberNodeIds.includes(node.id),
+      )
+      if (parentHub) {
+        const hubPos = hPos.get(parentHub.id) || [0, 0, 0]
+        const siblings = parentHub.memberNodeIds
+        const idx = siblings.indexOf(node.id)
+        const count = siblings.length
+        const spread = 2.5 + Math.sqrt(count) * 0.5
+        const ay = count > 1 ? 1 - (idx / (count - 1)) * 2 : 0
+        const ar = Math.sqrt(1 - ay * ay)
+        const aTheta = GOLDEN * idx
+        nPos.set(node.id, [
+          hubPos[0] + Math.cos(aTheta) * ar * spread,
+          hubPos[1] + ay * spread,
+          hubPos[2] + Math.sin(aTheta) * ar * spread,
+        ])
+      } else {
+        // Kein Cluster — globale Fibonacci-Sphäre
+        const y = n > 1 ? 1 - (i / (n - 1)) * 2 : 0
+        const r = Math.sqrt(1 - y * y)
+        const theta = GOLDEN * i
+        nPos.set(node.id, [
+          Math.cos(theta) * r * radius,
+          y * radius,
+          Math.sin(theta) * r * radius,
+        ])
+      }
+    })
+    return { nodePositions: nPos, hubPositions: hPos }
+  }, [graph.nodes, hubData])
+
+  // Auto-Rotation
   useFrame((_, delta) => {
     if (!groupRef.current) return
-    if (isInteracting.current) {
-      idleTime.current = 0
-    } else {
-      idleTime.current += delta
-    }
-    if (idleTime.current > 2) {
-      groupRef.current.rotation.y += delta * 0.06
-    }
+    if (isInteracting.current) { idleTime.current = 0 }
+    else { idleTime.current += delta }
+    if (idleTime.current > 2) groupRef.current.rotation.y += delta * 0.06
   })
 
   return (
     <>
+      {/* Volle 3D-Rotation — Polar 0 bis PI */}
       <OrbitControls
         enableDamping dampingFactor={0.05}
         minDistance={5} maxDistance={50} zoomSpeed={0.5}
+        minPolarAngle={0} maxPolarAngle={Math.PI}
         onStart={() => { isInteracting.current = true }}
         onEnd={() => { isInteracting.current = false }}
       />
@@ -214,45 +124,66 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent }: {
       <CameraTracker onCameraMove={onCameraMove} />
       {!transparent && <BackgroundGrid />}
       <group ref={groupRef}>
+        {/* Reguläre Edges */}
         {graph.edges.map(edge => {
-          const start = nodePositions.get(edge.source_node_id)
-          const end = nodePositions.get(edge.target_node_id)
-          if (!start || !end) return null
-          const color = edge.relation_type === 'wikilink'
+          const s = nodePositions.get(edge.source_node_id)
+          const e = nodePositions.get(edge.target_node_id)
+          if (!s || !e) return null
+          const c = edge.relation_type === 'wikilink'
             ? COLORS.wikilink : COLORS.ai
-          return (
-            <GlowEdge key={edge.id} start={start} end={end}
-              color={color} strength={edge.strength} />
-          )
+          return <GlowEdge key={edge.id} start={s} end={e}
+            color={c} strength={edge.strength} />
         })}
+        {/* Hub → Member Edges (gestrichelt) */}
+        {hubData.map(hub => hub.memberNodeIds.map(nid => {
+          const hp = hubPositions.get(hub.id)
+          const np = nodePositions.get(nid)
+          if (!hp || !np) return null
+          return <GlowEdge key={`${hub.id}-${nid}`}
+            start={hp} end={np} color={hub.color}
+            strength={0.4} dashed />
+        }))}
+        {/* Cluster-Hub Nodes */}
+        {hubData.map(hub => {
+          const pos = hubPositions.get(hub.id)
+          if (!pos) return null
+          const size = 0.35 + hub.memberCount * 0.08
+          return <ClusterHub key={hub.id} position={pos}
+            color={hub.color} size={Math.min(size, 0.9)}
+            label={hub.label} showLabel={showLabels} />
+        })}
+        {/* Reguläre Nodes */}
         {graph.nodes.map(node => {
           const pos = nodePositions.get(node.id)
           if (!pos) return null
           const color = COLORS[node.type] || COLORS.note
           const conns = graph.edges.filter(
-            e => e.source_node_id === node.id || e.target_node_id === node.id,
+            e => e.source_node_id === node.id
+              || e.target_node_id === node.id,
           ).length
           const size = 0.18 + conns * 0.06
-          return (
-            <GlowNode key={node.id} position={pos} color={color}
-              size={Math.min(size, 0.5)} label={node.title}
-              onClick={() => onNodeClick?.(node.id)} />
-          )
+          return <GlowNode key={node.id} position={pos} color={color}
+            size={Math.min(size, 0.5)} label={node.title}
+            onClick={() => onNodeClick?.(node.id)}
+            showLabel={showLabels} />
         })}
       </group>
     </>
   )
 }
 
-// --- Hauptkomponente ---
 interface Props {
   graph: MetisGraph
   onNodeClick?: (nodeId: number) => void
   onCameraMove?: (a: number, e: number, d: number) => void
   transparent?: boolean
+  showLabels?: boolean
 }
 
-export default function MetisSphere3D({ graph, onNodeClick, onCameraMove, transparent }: Props) {
+export default function MetisSphere3D({
+  graph, onNodeClick, onCameraMove, transparent,
+  showLabels = true,
+}: Props) {
   const handleCameraMove = useCallback((a: number, e: number, d: number) => {
     onCameraMove?.(a, e, d)
   }, [onCameraMove])
@@ -264,8 +195,9 @@ export default function MetisSphere3D({ graph, onNodeClick, onCameraMove, transp
         style={{ background: 'transparent' }}
         gl={{ antialias: true, alpha: true }}
       >
-        <MetisScene graph={graph} onNodeClick={onNodeClick} transparent={transparent}
-          onCameraMove={handleCameraMove} />
+        <MetisScene graph={graph} onNodeClick={onNodeClick}
+          transparent={transparent} onCameraMove={handleCameraMove}
+          showLabels={showLabels} />
       </Canvas>
     </div>
   )
