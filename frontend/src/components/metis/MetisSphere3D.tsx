@@ -1,9 +1,9 @@
-// MetisSphere3D — 3D Sphäre mit Cluster-Hubs, voller Rotation, Label-Toggle
+// MetisSphere3D — 3D Sphäre mit Cluster-Hubs, freier Trackball-Rotation
 // Unified Highlight: Hub- und Node-Klick heben Edges hervor
+// Eigene Rotation statt OrbitControls (keine Pol-Limits)
 
-import { useRef, useMemo, useCallback, useState } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
+import { useRef, useMemo, useCallback, useState, useEffect } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { MetisGraph } from '../../types/metis'
 import {
@@ -20,6 +20,105 @@ const COLORS: Record<string, THREE.Color> = {
 const HUB_FALLBACK = ['#7dd4a3', '#d4a574', '#d4cc7d', '#7dd8e8', '#888888']
 const GOLDEN = Math.PI * (3 - Math.sqrt(5))
 
+// --- Trackball-Steuerung: Gruppe drehen + Kamera zoomen ---
+function TrackballControls({ groupRef, onInteract }: {
+  groupRef: React.RefObject<THREE.Group | null>
+  onInteract: () => void
+}) {
+  const { gl, camera } = useThree()
+  const isDragging = useRef(false)
+  const prevMouse = useRef({ x: 0, y: 0 })
+
+  useEffect(() => {
+    const canvas = gl.domElement
+
+    // Maus-Events für Rotation
+    const onPointerDown = (e: PointerEvent) => {
+      isDragging.current = true
+      prevMouse.current = { x: e.clientX, y: e.clientY }
+      onInteract()
+    }
+    const onPointerMove = (e: PointerEvent) => {
+      if (!isDragging.current || !groupRef.current) return
+      onInteract()
+      const dx = (e.clientX - prevMouse.current.x) * 0.005
+      const dy = (e.clientY - prevMouse.current.y) * 0.005
+      prevMouse.current = { x: e.clientX, y: e.clientY }
+
+      // Quaternion-basierte Rotation (kein Gimbal Lock)
+      const qx = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0), dx,
+      )
+      const qy = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0), dy,
+      )
+      groupRef.current.quaternion.premultiply(qx)
+      groupRef.current.quaternion.premultiply(qy)
+    }
+    const onPointerUp = () => { isDragging.current = false }
+
+    // Touch-Events für Mobile
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        isDragging.current = true
+        prevMouse.current = {
+          x: e.touches[0].clientX, y: e.touches[0].clientY,
+        }
+        onInteract()
+      }
+    }
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isDragging.current || !groupRef.current) return
+      if (e.touches.length !== 1) return
+      onInteract()
+      const dx = (e.touches[0].clientX - prevMouse.current.x) * 0.005
+      const dy = (e.touches[0].clientY - prevMouse.current.y) * 0.005
+      prevMouse.current = {
+        x: e.touches[0].clientX, y: e.touches[0].clientY,
+      }
+      const qx = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0), dx,
+      )
+      const qy = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0), dy,
+      )
+      groupRef.current.quaternion.premultiply(qx)
+      groupRef.current.quaternion.premultiply(qy)
+    }
+    const onTouchEnd = () => { isDragging.current = false }
+
+    // Zoom via Scroll — Kamera Z-Position
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      onInteract()
+      const z = camera.position.z + e.deltaY * 0.03
+      camera.position.z = Math.max(15, Math.min(80, z))
+    }
+
+    canvas.addEventListener('pointerdown', onPointerDown)
+    canvas.addEventListener('pointermove', onPointerMove)
+    canvas.addEventListener('pointerup', onPointerUp)
+    canvas.addEventListener('pointerleave', onPointerUp)
+    canvas.addEventListener('touchstart', onTouchStart, { passive: true })
+    canvas.addEventListener('touchmove', onTouchMove, { passive: true })
+    canvas.addEventListener('touchend', onTouchEnd)
+    canvas.addEventListener('wheel', onWheel, { passive: false })
+
+    return () => {
+      canvas.removeEventListener('pointerdown', onPointerDown)
+      canvas.removeEventListener('pointermove', onPointerMove)
+      canvas.removeEventListener('pointerup', onPointerUp)
+      canvas.removeEventListener('pointerleave', onPointerUp)
+      canvas.removeEventListener('touchstart', onTouchStart)
+      canvas.removeEventListener('touchmove', onTouchMove)
+      canvas.removeEventListener('touchend', onTouchEnd)
+      canvas.removeEventListener('wheel', onWheel)
+    }
+  }, [gl, camera, groupRef, onInteract])
+
+  return null
+}
+
 function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels }: {
   graph: MetisGraph
   onNodeClick?: (id: number) => void
@@ -29,10 +128,13 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const idleTime = useRef(0)
-  const isInteracting = useRef(false)
-  // Highlighted Node-IDs (für Edge-Glow bei Hub- oder Node-Klick)
   const [clickedId, setClickedId] = useState<number | null>(null)
   const [activeHub, setActiveHub] = useState<string | null>(null)
+
+  // Interaktion setzt idle zurück
+  const handleInteract = useCallback(() => {
+    idleTime.current = 0
+  }, [])
 
   const hubData = useMemo(() => {
     if (!graph.clusters || graph.clusters.length === 0) return []
@@ -47,7 +149,6 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
     }))
   }, [graph.clusters])
 
-  // Hub-Klick: Member-IDs highlighten + Detail-Panel
   const handleHubClick = useCallback((hubId: string, memberIds: number[]) => {
     if (activeHub === hubId) {
       setActiveHub(null)
@@ -59,7 +160,6 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
     }
   }, [activeHub, onNodeClick])
 
-  // Node-Klick: Toggle Highlight
   const handleNodeClick = useCallback((nodeId: number) => {
     if (clickedId === nodeId) {
       setClickedId(null)
@@ -69,11 +169,12 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
     }
     onNodeClick?.(nodeId)
   }, [clickedId, onNodeClick])
-  // Prüft ob eine Edge den geklickten Node direkt berührt
+
   const isEdgeHighlighted = useCallback((srcId: number, tgtId: number) => {
     if (!clickedId) return false
     return srcId === clickedId || tgtId === clickedId
   }, [clickedId])
+
   const { nodePositions, hubPositions } = useMemo(() => {
     const nPos = new Map<number, [number, number, number]>()
     const hPos = new Map<string, [number, number, number]>()
@@ -120,25 +221,25 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
     return { nodePositions: nPos, hubPositions: hPos }
   }, [graph.nodes, hubData])
 
+  // Auto-Rotation nach 2s Inaktivität
   useFrame((_, delta) => {
     if (!groupRef.current) return
-    if (isInteracting.current) { idleTime.current = 0 }
-    else { idleTime.current += delta }
-    if (idleTime.current > 2) groupRef.current.rotation.y += delta * 0.06
+    idleTime.current += delta
+    if (idleTime.current > 2) {
+      const q = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0), delta * 0.06,
+      )
+      groupRef.current.quaternion.premultiply(q)
+    }
   })
 
   return (
     <>
-      <OrbitControls enableDamping dampingFactor={0.05}
-        minDistance={5} maxDistance={50} zoomSpeed={0.5}
-        minPolarAngle={0} maxPolarAngle={Math.PI}
-        onStart={() => { isInteracting.current = true }}
-        onEnd={() => { isInteracting.current = false }} />
+      <TrackballControls groupRef={groupRef} onInteract={handleInteract} />
       <ambientLight intensity={0.1} />
       <CameraTracker onCameraMove={onCameraMove} />
       {!transparent && <BackgroundGrid />}
       <group ref={groupRef}>
-        {/* Reguläre Edges — highlight wenn beide Nodes selected */}
         {graph.edges.map(edge => {
           const s = nodePositions.get(edge.source_node_id)
           const e = nodePositions.get(edge.target_node_id)
@@ -148,7 +249,6 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
           return <GlowEdge key={edge.id} start={s} end={e}
             color={c} strength={hl ? 5.0 : edge.strength} />
         })}
-        {/* Hub → Member Edges */}
         {hubData.map(hub => hub.memberNodeIds.map(nid => {
           const hp = hubPositions.get(hub.id)
           const np = nodePositions.get(nid)
@@ -158,7 +258,6 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
             start={hp} end={np} color={hub.color}
             strength={hl ? 5.0 : 0.1} dashed={!hl} />
         }))}
-        {/* Cluster-Hubs */}
         {hubData.map(hub => {
           const pos = hubPositions.get(hub.id)
           if (!pos) return null
@@ -168,14 +267,12 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
             label={hub.label} showLabel={showLabels}
             onClick={() => handleHubClick(hub.id, hub.memberNodeIds)} />
         })}
-        {/* Reguläre Nodes */}
         {graph.nodes.map(node => {
           const pos = nodePositions.get(node.id)
           if (!pos) return null
           const color = COLORS[node.type] || COLORS.note
-          const size = 0.12
           return <GlowNode key={node.id} position={pos} color={color}
-            size={Math.min(size, 0.3)} label={node.title}
+            size={0.12} label={node.title}
             onClick={() => handleNodeClick(node.id)}
             showLabel={false} />
         })}
@@ -202,7 +299,7 @@ export default function MetisSphere3D({
 
   return (
     <div className="w-full h-full" style={{ background: 'transparent' }}>
-      <Canvas camera={{ position: [0, 0, 34], fov: 40 }}
+      <Canvas camera={{ position: [0, 0, 50], fov: 36 }}
         style={{ background: 'transparent' }}
         gl={{ antialias: true, alpha: true }}>
         <MetisScene graph={graph} onNodeClick={onNodeClick}
