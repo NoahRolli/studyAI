@@ -9,12 +9,11 @@ import LanguageToggle from '../components/LanguageToggle'
 import ThemeSelector from '../components/ThemeSelector'
 import WelcomeCards from '../components/welcome/WelcomeCards'
 
-// Animations-Phasen (ms)
+// Animations-Phasen (ms) — Total ~2.5s
 const TITLE_FADE_IN = 0
-const TITLE_HOLD = 400
-const TITLE_MOVE_START = TITLE_HOLD
-const TITLE_MOVE_DURATION = 500
-const CARDS_START = TITLE_MOVE_START + 200
+const TITLE_MOVE_START = 800
+const TITLE_MOVE_DURATION = 700
+const CARDS_START = TITLE_MOVE_START + 400
 
 function WelcomePage() {
   const { t } = useLanguage()
@@ -22,7 +21,7 @@ function WelcomePage() {
   const [cardsVisible, setCardsVisible] = useState(false)
 
   useEffect(() => {
-    // Phase 1: Titel zentriert anzeigen
+    // Phase 1: Titel zentriert halten
     const moveTimer = setTimeout(() => {
       setPhase('moving')
     }, TITLE_MOVE_START)
@@ -53,11 +52,10 @@ function WelcomePage() {
         left: '50%',
         transform: 'translate(-50%, -50%)',
         opacity: 1,
-        transition: `opacity 0.3s ease`,
+        transition: 'opacity 0.5s ease',
         zIndex: 10,
       }
     }
-    // moving + done: gleiche Zielposition
     return {
       position: 'fixed',
       top: '0',
@@ -65,15 +63,15 @@ function WelcomePage() {
       transform: 'translate(-50%, 0)',
       paddingTop: '4rem',
       opacity: 1,
-      transition: `top ${TITLE_MOVE_DURATION}ms ease-out, transform ${TITLE_MOVE_DURATION}ms ease-out, padding ${TITLE_MOVE_DURATION}ms ease-out`,
+      transition: `top ${TITLE_MOVE_DURATION}ms ease-in-out, transform ${TITLE_MOVE_DURATION}ms ease-in-out, padding ${TITLE_MOVE_DURATION}ms ease-in-out`,
       zIndex: 10,
     }
   }
 
-  // Karten + Footer: unsichtbar bis Animation fertig
+  // Karten-Container: unsichtbar bis Animation fertig
   const contentStyle = (): React.CSSProperties => ({
     opacity: phase === 'done' ? 1 : 0,
-    transition: 'opacity 0.3s ease',
+    transition: 'opacity 0.4s ease',
   })
 
   return (
@@ -88,7 +86,7 @@ function WelcomePage() {
           className="hud-title text-glow text-5xl font-bold mb-3 tracking-widest animate-fade-in"
           style={{
             color: 'var(--color-primary)',
-            animationDuration: '0.4s',
+            animationDuration: '0.6s',
             animationDelay: `${TITLE_FADE_IN}ms`,
           }}
         >
@@ -98,15 +96,15 @@ function WelcomePage() {
           className="text-sm tracking-wide animate-fade-in"
           style={{
             color: 'var(--color-text-muted)',
-            animationDuration: '0.4s',
-            animationDelay: '150ms',
+            animationDuration: '0.6s',
+            animationDelay: '250ms',
           }}
         >
           {t.welcome.subtitle}
         </p>
       </div>
 
-      {/* Platzhalter für Titel (damit Content nicht springt) */}
+      {/* Platzhalter für Titel */}
       <div className="mb-12" style={{ height: '80px' }} />
 
       {/* Karten + Agenda */}
