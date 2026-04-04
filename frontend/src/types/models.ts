@@ -13,11 +13,11 @@ export interface Module {
   id: number
   name: string
   description: string
-  color: string              // Hex-Farbe, z.B. "#4a90d9"
-  created_at: string         // ISO-Datum vom Backend
-  updated_at: string
+  color: string
+  sort_order: number
+  is_pinned: boolean
+  created_at: string
 }
-
 // Payload zum Erstellen/Aktualisieren eines Moduls
 // Enthält nur die Felder die der User eingibt (ohne id, timestamps)
 export interface ModuleCreate {
@@ -176,10 +176,11 @@ export interface MedicationSettingsResponse {
 export interface Folder {
   id: number
   name: string
-  parent_id: number | null    // null = Root-Level
+  parent_id: number | null
+  sort_order: number
+  is_pinned: boolean
   created_at: string
 }
-
 // Payload zum Erstellen eines neuen Ordners
 export interface FolderCreate {
   name: string
