@@ -1,10 +1,10 @@
 // Metis TypeScript Types — Knowledge-Graph Datenstrukturen
 // Werden von MetisPage und allen Metis-Komponenten verwendet.
 
-// Ein Node im Knowledge-Graph (Note oder Summary)
+// Ein Node im Knowledge-Graph (Note, Summary oder Entry)
 export interface MetisNode {
   id: number
-  type: 'note' | 'summary'
+  type: 'note' | 'summary' | 'entry'
   source_id: number
   title: string
   pos_x: number | null
