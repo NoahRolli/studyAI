@@ -15,7 +15,7 @@ export function GlowNode({ position, color, size, label, onClick, showLabel }: {
   label: string
   onClick?: () => void
   showLabel: boolean
-  onClick?: () => void}) {
+}) {
   const glowRef = useRef<THREE.Mesh>(null)
 
   useFrame(({ clock }) => {
