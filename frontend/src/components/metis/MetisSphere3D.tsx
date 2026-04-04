@@ -173,10 +173,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
           const pos = nodePositions.get(node.id)
           if (!pos) return null
           const color = COLORS[node.type] || COLORS.note
-          const conns = graph.edges.filter(
-            e => e.source_node_id === node.id || e.target_node_id === node.id,
-          ).length
-          const size = 0.10 + conns * 0.03
+          const size = 0.12
           return <GlowNode key={node.id} position={pos} color={color}
             size={Math.min(size, 0.3)} label={node.title}
             onClick={() => handleNodeClick(node.id)}
