@@ -39,6 +39,7 @@ class EdgeCreate(BaseModel):
 def _node_to_dict(node: MetisNode, db: Session) -> dict:
     """Konvertiert einen MetisNode zu einem Dict mit Quell-Titel."""
     title = ""
+    module_id = None
     if node.type == "note":
         note = db.query(Note).filter(Note.id == node.source_id).first()
         title = note.title if note else "(gelöscht)"
@@ -51,6 +52,7 @@ def _node_to_dict(node: MetisNode, db: Session) -> dict:
                 Document.id == summary.document_id
             ).first()
             title = doc.filename if doc else f"Summary #{node.source_id}"
+            module_id = doc.module_id if doc else None
         else:
             title = "(gelöscht)"
 
@@ -61,6 +63,7 @@ def _node_to_dict(node: MetisNode, db: Session) -> dict:
         "title": title,
         "pos_x": node.pos_x,
         "pos_y": node.pos_y,
+        "module_id": module_id,
         "embedding_stale": node.embedding_stale,
         "cluster_ids": [m.cluster_id for m in node.cluster_memberships],
     }
