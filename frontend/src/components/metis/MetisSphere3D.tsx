@@ -1,6 +1,6 @@
 // MetisSphere3D — 3D Sphäre mit Cluster-Hubs, freier Trackball-Rotation
-// Unified Highlight: Hub- und Node-Klick heben Edges hervor
-// Eigene Rotation statt OrbitControls (keine Pol-Limits)
+// Quaternion-basiert (kein Gimbal Lock, keine Pol-Limits)
+// Drag vs Click: Klick nur wenn Maus < 5px bewegt
 
 import { useRef, useMemo, useCallback, useState, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
@@ -19,33 +19,42 @@ const COLORS: Record<string, THREE.Color> = {
 }
 const HUB_FALLBACK = ['#7dd4a3', '#d4a574', '#d4cc7d', '#7dd8e8', '#888888']
 const GOLDEN = Math.PI * (3 - Math.sqrt(5))
+const CLICK_THRESHOLD = 5
 
-// --- Trackball-Steuerung: Gruppe drehen + Kamera zoomen ---
-function TrackballControls({ groupRef, onInteract }: {
+// --- Trackball: Gruppe drehen + Kamera zoomen ---
+function TrackballControls({ groupRef, onInteract, isDraggingRef }: {
   groupRef: React.RefObject<THREE.Group | null>
   onInteract: () => void
+  isDraggingRef: React.MutableRefObject<boolean>
 }) {
   const { gl, camera } = useThree()
-  const isDragging = useRef(false)
+  const isPointerDown = useRef(false)
+  const startMouse = useRef({ x: 0, y: 0 })
   const prevMouse = useRef({ x: 0, y: 0 })
 
   useEffect(() => {
     const canvas = gl.domElement
 
-    // Maus-Events für Rotation
     const onPointerDown = (e: PointerEvent) => {
-      isDragging.current = true
+      isPointerDown.current = true
+      isDraggingRef.current = false
+      startMouse.current = { x: e.clientX, y: e.clientY }
       prevMouse.current = { x: e.clientX, y: e.clientY }
       onInteract()
     }
+
     const onPointerMove = (e: PointerEvent) => {
-      if (!isDragging.current || !groupRef.current) return
+      if (!isPointerDown.current || !groupRef.current) return
+      // Prüfe ob genug Distanz für Drag
+      const totalDx = e.clientX - startMouse.current.x
+      const totalDy = e.clientY - startMouse.current.y
+      if (Math.sqrt(totalDx * totalDx + totalDy * totalDy) > CLICK_THRESHOLD) {
+        isDraggingRef.current = true
+      }
       onInteract()
       const dx = (e.clientX - prevMouse.current.x) * 0.005
       const dy = (e.clientY - prevMouse.current.y) * 0.005
       prevMouse.current = { x: e.clientX, y: e.clientY }
-
-      // Quaternion-basierte Rotation (kein Gimbal Lock)
       const qx = new THREE.Quaternion().setFromAxisAngle(
         new THREE.Vector3(0, 1, 0), dx,
       )
@@ -55,21 +64,34 @@ function TrackballControls({ groupRef, onInteract }: {
       groupRef.current.quaternion.premultiply(qx)
       groupRef.current.quaternion.premultiply(qy)
     }
-    const onPointerUp = () => { isDragging.current = false }
 
-    // Touch-Events für Mobile
+    const onPointerUp = () => {
+      isPointerDown.current = false
+      // isDraggingRef bleibt true bis nächster pointerdown
+    }
+
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 1) {
-        isDragging.current = true
+        isPointerDown.current = true
+        isDraggingRef.current = false
+        startMouse.current = {
+          x: e.touches[0].clientX, y: e.touches[0].clientY,
+        }
         prevMouse.current = {
           x: e.touches[0].clientX, y: e.touches[0].clientY,
         }
         onInteract()
       }
     }
+
     const onTouchMove = (e: TouchEvent) => {
-      if (!isDragging.current || !groupRef.current) return
+      if (!isPointerDown.current || !groupRef.current) return
       if (e.touches.length !== 1) return
+      const totalDx = e.touches[0].clientX - startMouse.current.x
+      const totalDy = e.touches[0].clientY - startMouse.current.y
+      if (Math.sqrt(totalDx * totalDx + totalDy * totalDy) > CLICK_THRESHOLD) {
+        isDraggingRef.current = true
+      }
       onInteract()
       const dx = (e.touches[0].clientX - prevMouse.current.x) * 0.005
       const dy = (e.touches[0].clientY - prevMouse.current.y) * 0.005
@@ -85,9 +107,9 @@ function TrackballControls({ groupRef, onInteract }: {
       groupRef.current.quaternion.premultiply(qx)
       groupRef.current.quaternion.premultiply(qy)
     }
-    const onTouchEnd = () => { isDragging.current = false }
 
-    // Zoom via Scroll — Kamera Z-Position
+    const onTouchEnd = () => { isPointerDown.current = false }
+
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
       onInteract()
@@ -114,24 +136,25 @@ function TrackballControls({ groupRef, onInteract }: {
       canvas.removeEventListener('touchend', onTouchEnd)
       canvas.removeEventListener('wheel', onWheel)
     }
-  }, [gl, camera, groupRef, onInteract])
+  }, [gl, camera, groupRef, onInteract, isDraggingRef])
 
   return null
 }
 
-function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels }: {
+function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
+  showLabels, isDraggingRef }: {
   graph: MetisGraph
   onNodeClick?: (id: number) => void
   onCameraMove: (a: number, e: number, d: number) => void
   transparent?: boolean
   showLabels: boolean
+  isDraggingRef: React.MutableRefObject<boolean>
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const idleTime = useRef(0)
   const [clickedId, setClickedId] = useState<number | null>(null)
   const [activeHub, setActiveHub] = useState<string | null>(null)
 
-  // Interaktion setzt idle zurück
   const handleInteract = useCallback(() => {
     idleTime.current = 0
   }, [])
@@ -149,7 +172,9 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
     }))
   }, [graph.clusters])
 
+  // Hub-Klick: nur wenn kein Drag
   const handleHubClick = useCallback((hubId: string, memberIds: number[]) => {
+    if (isDraggingRef.current) return
     if (activeHub === hubId) {
       setActiveHub(null)
       setClickedId(null)
@@ -158,9 +183,11 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
       setClickedId(null)
       if (memberIds.length > 0) onNodeClick?.(memberIds[0])
     }
-  }, [activeHub, onNodeClick])
+  }, [activeHub, onNodeClick, isDraggingRef])
 
+  // Node-Klick: nur wenn kein Drag
   const handleNodeClick = useCallback((nodeId: number) => {
+    if (isDraggingRef.current) return
     if (clickedId === nodeId) {
       setClickedId(null)
     } else {
@@ -168,7 +195,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
       setActiveHub(null)
     }
     onNodeClick?.(nodeId)
-  }, [clickedId, onNodeClick])
+  }, [clickedId, onNodeClick, isDraggingRef])
 
   const isEdgeHighlighted = useCallback((srcId: number, tgtId: number) => {
     if (!clickedId) return false
@@ -221,7 +248,6 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
     return { nodePositions: nPos, hubPositions: hPos }
   }, [graph.nodes, hubData])
 
-  // Auto-Rotation nach 2s Inaktivität
   useFrame((_, delta) => {
     if (!groupRef.current) return
     idleTime.current += delta
@@ -235,7 +261,8 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
 
   return (
     <>
-      <TrackballControls groupRef={groupRef} onInteract={handleInteract} />
+      <TrackballControls groupRef={groupRef} onInteract={handleInteract}
+        isDraggingRef={isDraggingRef} />
       <ambientLight intensity={0.1} />
       <CameraTracker onCameraMove={onCameraMove} />
       {!transparent && <BackgroundGrid />}
@@ -293,6 +320,7 @@ export default function MetisSphere3D({
   graph, onNodeClick, onCameraMove, transparent,
   showLabels = false,
 }: Props) {
+  const isDraggingRef = useRef(false)
   const handleCameraMove = useCallback((a: number, e: number, d: number) => {
     onCameraMove?.(a, e, d)
   }, [onCameraMove])
@@ -304,7 +332,7 @@ export default function MetisSphere3D({
         gl={{ antialias: true, alpha: true }}>
         <MetisScene graph={graph} onNodeClick={onNodeClick}
           transparent={transparent} onCameraMove={handleCameraMove}
-          showLabels={showLabels} />
+          showLabels={showLabels} isDraggingRef={isDraggingRef} />
       </Canvas>
     </div>
   )
