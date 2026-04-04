@@ -1,5 +1,5 @@
 /* Animationen — Keyframes, Glow-Puls, Fade-In, Grid-Hintergrund
-   Theme-Overrides für Dark (monochromer Glow) */
+   Theme-Overrides für Dark + HUD Dark */
 
 /* Glow-Puls — für aktive Elemente */
 @keyframes glow-pulse {
@@ -34,7 +34,7 @@
   100% { transform: translateY(100vh); }
 }
 
-/* Grid-Hintergrund */
+/* Grid-Hintergrund — HUD Default */
 .hud-grid-bg {
   background-image:
     linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
@@ -42,10 +42,18 @@
   background-size: 40px 40px;
 }
 
-/* Dark: Grid monochrom, etwas stärker */
+/* Dark: Grid monochrom */
 [data-theme="dark"] .hud-grid-bg {
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* HUD Dark: Grid cyan auf schwarzem BG */
+[data-theme="hudDark"] .hud-grid-bg {
+  background-image:
+    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
   background-size: 40px 40px;
 }
