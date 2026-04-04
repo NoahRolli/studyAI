@@ -1,6 +1,6 @@
 // MetisNodeDetail — Detail-Panel bei Klick auf einen Node
 // Zeigt Titel, Typ, Cluster, Verbindungen.
-// "Quelle öffnen" Button navigiert zur Note/Summary.
+// "Quelle öffnen" navigiert direkt zur Note/Entry/Summary.
 
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -16,7 +16,8 @@ interface Props {
 // Farben pro Typ
 const TYPE_COLORS: Record<string, string> = {
   note: '#7dd4a3',
-  summary: '#d4a574', entry: '#00d4ff',
+  summary: '#d4a574',
+  entry: '#00d4ff',
 }
 
 export default function MetisNodeDetail({ node, graph, onClose }: Props) {
@@ -45,15 +46,25 @@ export default function MetisNodeDetail({ node, graph, onClose }: Props) {
     return graph.clusters.filter(c => c.node_ids.includes(node.id))
   }, [node, graph])
 
-  // Navigation zur Quelle
+  // Direkte Navigation zur Quelle
   const handleOpenSource = () => {
+    const sid = node.source_id
     if (node.type === 'note') {
-      navigate('/notes')
+      navigate(`/notes?open=${sid}`)
+    } else if (node.type === 'entry') {
+      navigate(`/journal?entry=${sid}`)
     } else {
       navigate('/dashboard')
     }
     onClose()
   }
+
+  // Typ-Label
+  const typeLabel = node.type === 'note'
+    ? t.metis.nodeNote
+    : node.type === 'entry'
+      ? t.metis.nodeEntry || 'Entry'
+      : t.metis.nodeSummary
 
   return (
     <div
@@ -72,7 +83,7 @@ export default function MetisNodeDetail({ node, graph, onClose }: Props) {
           className="text-[10px] uppercase tracking-widest font-medium"
           style={{ color: TYPE_COLORS[node.type] }}
         >
-          {node.type === 'note' ? t.metis.nodeNote : t.metis.nodeSummary}
+          {typeLabel}
         </span>
         <button
           onClick={onClose}
