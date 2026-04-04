@@ -49,7 +49,7 @@ def get_entries(db: Session = Depends(get_journal_db)):
 @router.post("/")
 async def create_entry(
     data: EntryCreate,
-    language: str = Query(default="de", regex="^(de|en)$"),
+    language: str = Query(default="de", pattern="^(de|en)$"),
     db: Session = Depends(get_journal_db),
 ):
     require_unlocked()
