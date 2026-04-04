@@ -1,8 +1,8 @@
 // NotesList — Linke Spalte des Notizen-Moduls
-// Suchfeld, Neu-Button und scrollbare Notiz-Liste
-// Gepinnte Notizen werden mit Pin-Symbol markiert
-// Ausgewählte Notiz wird visuell hervorgehoben
+// Suchfeld, Sortierung, Neu-Button und scrollbare Notiz-Liste
+// Gepinnte Notizen werden immer oben angezeigt
 
+import { useState, useMemo } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
 
 interface NoteListItem {
@@ -29,13 +29,24 @@ function NotesList({
   onSelectNote, onCreateNote, onDeleteNote, onTogglePin,
 }: NotesListProps) {
   const { t } = useLanguage()
+  const [sortNewest, setSortNewest] = useState(true)
 
-  // Suche filtern
-  const filtered = search.trim()
-    ? notes.filter((n) =>
-        n.title.toLowerCase().includes(search.toLowerCase())
-      )
-    : notes
+  // Filtern + Sortieren (Pinned immer oben)
+  const filtered = useMemo(() => {
+    let result = search.trim()
+      ? notes.filter(n =>
+          n.title.toLowerCase().includes(search.toLowerCase())
+        )
+      : notes
+    result = [...result].sort((a, b) => {
+      // Pinned immer zuerst
+      if (a.is_pinned && !b.is_pinned) return -1
+      if (!a.is_pinned && b.is_pinned) return 1
+      const cmp = a.updated_at.localeCompare(b.updated_at)
+      return sortNewest ? -cmp : cmp
+    })
+    return result
+  }, [notes, search, sortNewest])
 
   return (
     <div className="w-72 flex-shrink-0 flex flex-col gap-3 overflow-hidden">
@@ -47,14 +58,25 @@ function NotesList({
         </button>
       </div>
 
-      {/* Suchfeld */}
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
-        placeholder={t.notes.searchPlaceholder}
-        className="hud-input text-sm"
-      />
+      {/* Suchfeld + Sort-Toggle */}
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={search}
+          onChange={e => onSearchChange(e.target.value)}
+          placeholder={t.notes.searchPlaceholder}
+          className="hud-input text-sm flex-1"
+        />
+        <button
+          onClick={() => setSortNewest(!sortNewest)}
+          className="hud-btn text-xs px-2 py-1.5"
+          title={sortNewest
+            ? (t.notes.sortOldest || 'Älteste zuerst')
+            : (t.notes.sortNewest || 'Neueste zuerst')}
+        >
+          {sortNewest ? '↓' : '↑'}
+        </button>
+      </div>
 
       {/* Notiz-Liste */}
       <div className="flex-1 overflow-y-auto flex flex-col gap-1">
@@ -63,7 +85,7 @@ function NotesList({
             {t.notes.noNotes}
           </p>
         )}
-        {filtered.map((note) => (
+        {filtered.map(note => (
           <div
             key={note.id}
             onClick={() => onSelectNote(note.id)}
@@ -95,7 +117,7 @@ function NotesList({
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100
               transition-all duration-200">
               <button
-                onClick={(e) => { e.stopPropagation(); onTogglePin(note.id) }}
+                onClick={e => { e.stopPropagation(); onTogglePin(note.id) }}
                 className="text-xs px-1.5 py-0.5 rounded transition-all duration-200
                   hover:bg-[rgba(0,212,255,0.1)]"
                 style={{
@@ -104,17 +126,13 @@ function NotesList({
                     : 'var(--color-text-muted)',
                 }}
                 title={note.is_pinned ? 'Unpin' : 'Pin'}
-              >
-                &#9650;
-              </button>
+              >&#9650;</button>
               <button
-                onClick={(e) => { e.stopPropagation(); onDeleteNote(note.id) }}
+                onClick={e => { e.stopPropagation(); onDeleteNote(note.id) }}
                 className="text-xs px-1.5 py-0.5 rounded transition-all duration-200
                   text-[var(--color-text-muted)] hover:text-[var(--color-danger)]
                   hover:bg-[rgba(255,59,92,0.1)]"
-              >
-                X
-              </button>
+              >X</button>
             </div>
           </div>
         ))}
