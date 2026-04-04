@@ -16,7 +16,7 @@ interface Props {
 // Farben pro Typ
 const TYPE_COLORS: Record<string, string> = {
   note: '#7dd4a3',
-  summary: '#d4a574', entry: '#00d4ff', entry: '#00d4ff',
+  summary: '#d4a574', entry: '#00d4ff',
 }
 
 export default function MetisNodeDetail({ node, graph, onClose }: Props) {
