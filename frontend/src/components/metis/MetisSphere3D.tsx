@@ -31,7 +31,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
   const idleTime = useRef(0)
   const isInteracting = useRef(false)
   // Highlighted Node-IDs (für Edge-Glow bei Hub- oder Node-Klick)
-  const [hlIds, setHlIds] = useState<Set<number>>(new Set())
+  const [clickedId, setClickedId] = useState<number | null>(null)
   const [activeHub, setActiveHub] = useState<string | null>(null)
 
   const hubData = useMemo(() => {
@@ -51,32 +51,29 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
   const handleHubClick = useCallback((hubId: string, memberIds: number[]) => {
     if (activeHub === hubId) {
       setActiveHub(null)
-      setHlIds(new Set())
+      setClickedId(null)
     } else {
       setActiveHub(hubId)
-      setHlIds(new Set(memberIds))
+      setClickedId(null)
       if (memberIds.length > 0) onNodeClick?.(memberIds[0])
     }
   }, [activeHub, onNodeClick])
 
-  // Node-Klick: diesen Node + verbundene Nodes highlighten
+  // Node-Klick: Toggle Highlight
   const handleNodeClick = useCallback((nodeId: number) => {
-    const connIds = new Set<number>([nodeId])
-    graph.edges.forEach(e => {
-      if (e.source_node_id === nodeId) connIds.add(e.target_node_id)
-      if (e.target_node_id === nodeId) connIds.add(e.source_node_id)
-    })
-    setHlIds(connIds)
-    setActiveHub(null)
+    if (clickedId === nodeId) {
+      setClickedId(null)
+    } else {
+      setClickedId(nodeId)
+      setActiveHub(null)
+    }
     onNodeClick?.(nodeId)
-  }, [graph.edges, onNodeClick])
-
-  // Prüft ob eine Edge zu highlighteten Nodes gehört
+  }, [clickedId, onNodeClick])
+  // Prüft ob eine Edge den geklickten Node direkt berührt
   const isEdgeHighlighted = useCallback((srcId: number, tgtId: number) => {
-    if (hlIds.size === 0) return false
-    return hlIds.has(srcId) && hlIds.has(tgtId)
-  }, [hlIds])
-
+    if (!clickedId) return false
+    return srcId === clickedId || tgtId === clickedId
+  }, [clickedId])
   const { nodePositions, hubPositions } = useMemo(() => {
     const nPos = new Map<number, [number, number, number]>()
     const hPos = new Map<string, [number, number, number]>()
