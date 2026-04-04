@@ -2,7 +2,7 @@
    Futuristisches HUD-Design mit Cyan-Akzenten
    Verwendet CSS Custom Properties für konsistente Farben
    Tailwind v4 wird über @import geladen
-   Themes: HUD (default) + Professional (gedämpft) */
+   Themes: HUD (default) + Dark (gedämpft) */
 
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
@@ -47,44 +47,43 @@
 }
 
 /* ============================================
-   Theme: Professional — Gedämpft, seriöser
+   Theme: Dark — Gedämpft, seriöser
    Teal statt Cyan, kein Glow, subtile Borders
    ============================================ */
-[data-theme="professional"] {
-  /* Primärfarben — Teal/Petrol, weniger grell */
-  --color-primary: #5ba4b5;
-  --color-primary-dim: #5ba4b580;
-  --color-primary-glow: 0 0 8px rgba(91, 164, 181, 0.15);
-  --color-primary-glow-strong: 0 0 12px rgba(91, 164, 181, 0.2);
+[data-theme="dark"] {
+  /* Primärfarben — Neutrales Weiss, kein Farbakzent */
+  --color-primary: #c8cdd3;
+  --color-primary-dim: #c8cdd380;
+  --color-primary-glow: none;
+  --color-primary-glow-strong: none;
 
-  /* Hintergründe — etwas wärmer/weicher */
-  --color-bg-deep: #0f1318;
-  --color-bg-base: #13181f;
-  --color-bg-surface: #1a1f28;
-  --color-bg-elevated: #212832;
+  /* Hintergründe — Tiefes Schwarz */
+  --color-bg-deep: #0a0a0a;
+  --color-bg-base: #0f0f0f;
+  --color-bg-surface: #161616;
+  --color-bg-elevated: #1c1c1c;
 
-  /* Borders — subtiler */
-  --color-border: #2a3040;
-  --color-border-glow: #5ba4b520;
+  /* Borders — Feine graue Linien */
+  --color-border: #2a2a2a;
+  --color-border-glow: #ffffff10;
 
-  /* Text — etwas weicher */
-  --color-text-primary: #d4dbe6;
-  --color-text-secondary: #8490a3;
-  --color-text-muted: #505a6b;
+  /* Text — Weiss + Graustufen */
+  --color-text-primary: #e8e8e8;
+  --color-text-secondary: #888888;
+  --color-text-muted: #505050;
 
-  /* Status — gedämpfter */
-  --color-success: #34d399;
+  /* Status */
+  --color-success: #4ade80;
   --color-danger: #f87171;
   --color-warning: #fbbf24;
 
-  /* Heading-Font: Inter statt Orbitron */
-  --font-heading: 'Inter', system-ui, sans-serif;
+  /* Font: Monospace, technisch */
+  --font-heading: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
 
-  /* Glow runterdrehen */
-  --glow-opacity: 0.3;
-  --card-blur: 8px;
+  /* Kein Glow */
+  --glow-opacity: 0;
+  --card-blur: 0px;
 }
-
 /* ============================================
    Basis-Styles — Body, Scrollbar, Auswahl
    ============================================ */
@@ -114,8 +113,8 @@ body {
   background: rgba(0, 212, 255, 0.3);
   color: white;
 }
-[data-theme="professional"] ::selection {
-  background: rgba(91, 164, 181, 0.3);
+[data-theme="dark"] ::selection {
+  background: rgba(200, 205, 211, 0.25);
 }
 
 /* ============================================
@@ -141,12 +140,12 @@ body {
   box-shadow: var(--color-primary-glow);
 }
 
-/* Professional: Kein Glassmorphism, solidere Karten */
-[data-theme="professional"] .hud-card {
+/* Dark: Kein Glassmorphism, solidere Karten */
+[data-theme="dark"] .hud-card {
   background: var(--color-bg-surface);
   backdrop-filter: none;
 }
-[data-theme="professional"] .hud-card:hover {
+[data-theme="dark"] .hud-card:hover {
   border-color: var(--color-border-glow);
   box-shadow: var(--color-primary-glow);
 }
@@ -174,14 +173,14 @@ body {
   cursor: not-allowed;
 }
 
-/* Professional: Buttons weniger sci-fi */
-[data-theme="professional"] .hud-btn {
+/* Dark: Buttons weniger sci-fi */
+[data-theme="dark"] .hud-btn {
   background: var(--color-bg-elevated);
   border-color: var(--color-border);
   letter-spacing: 0.02em;
 }
-[data-theme="professional"] .hud-btn:hover {
-  background: rgba(91, 164, 181, 0.15);
+[data-theme="dark"] .hud-btn:hover {
+  background: rgba(200, 205, 211, 0.1);
 }
 
 /* HUD-Button Variante: Primär (ausgefüllt) */
@@ -205,7 +204,7 @@ body {
   background: rgba(255, 59, 92, 0.2);
   box-shadow: 0 0 20px rgba(255, 59, 92, 0.3);
 }
-[data-theme="professional"] .hud-btn-danger:hover {
+[data-theme="dark"] .hud-btn-danger:hover {
   box-shadow: 0 0 8px rgba(248, 113, 113, 0.15);
 }
 
@@ -227,11 +226,11 @@ body {
 .hud-input::placeholder {
   color: var(--color-text-muted);
 }
-[data-theme="professional"] .hud-input {
+[data-theme="dark"] .hud-input {
   background: var(--color-bg-base);
 }
-[data-theme="professional"] .hud-input:focus {
-  box-shadow: 0 0 6px rgba(91, 164, 181, 0.1);
+[data-theme="dark"] .hud-input:focus {
+  box-shadow: 0 0 6px rgba(200, 205, 211, 0.08);
 }
 
 /* HUD-Überschriften — Font aus CSS-Variable */
@@ -240,18 +239,17 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-[data-theme="professional"] .hud-title {
-  letter-spacing: 0.03em;
-  text-transform: none;
-  font-weight: 600;
+[data-theme="dark"] .hud-title {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
 }
-
 /* Glühender Text — für Akzente und Highlights */
 .text-glow {
   color: var(--color-primary);
   text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
 }
-[data-theme="professional"] .text-glow {
+[data-theme="dark"] .text-glow {
   text-shadow: none;
 }
 
@@ -267,8 +265,8 @@ body {
 .animate-glow-pulse {
   animation: glow-pulse 3s ease-in-out infinite;
 }
-/* Professional: Kein Glow-Puls */
-[data-theme="professional"] .animate-glow-pulse {
+/* Dark: Kein Glow-Puls */
+[data-theme="dark"] .animate-glow-pulse {
   animation: none;
 }
 
@@ -300,11 +298,11 @@ body {
     linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
   background-size: 40px 40px;
 }
-/* Professional: Grid-Hintergrund in Teal statt Cyan */
-[data-theme="professional"] .hud-grid-bg {
+/* Dark: Grid-Hintergrund monochrom */
+[data-theme="dark"] .hud-grid-bg {
   background-image:
-    linear-gradient(rgba(91, 164, 181, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(91, 164, 181, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
@@ -334,16 +332,16 @@ body {
   border: 1px solid var(--color-border-glow);
 }
 
-[data-theme="professional"] .hud-tab {
+[data-theme="dark"] .hud-tab {
   letter-spacing: 0.03em;
   text-transform: none;
   font-size: 0.8rem;
 }
-[data-theme="professional"] .hud-tab:hover {
-  background: rgba(91, 164, 181, 0.08);
+[data-theme="dark"] .hud-tab:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
-[data-theme="professional"] .hud-tab-active {
-  background: rgba(91, 164, 181, 0.12);
+[data-theme="dark"] .hud-tab-active {
+  background: rgba(255, 255, 255, 0.08);
   border-color: var(--color-border-glow);
 }
 /* --- TipTap Editor Styles --- */
