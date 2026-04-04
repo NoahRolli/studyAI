@@ -67,7 +67,7 @@ export function GlowNode({ position, color, size, label, onClick, showLabel }: {
       {/* Innerer Glow */}
       <mesh ref={glowRef}>
         <sphereGeometry args={[size * 2, 16, 16]} />
-        <meshBasicMaterial color={color} transparent opacity={0.12}
+        <meshBasicMaterial color={color} transparent opacity={0.06}
           depthWrite={false} blending={THREE.AdditiveBlending} />
       </mesh>
       {/* Kern */}
@@ -78,7 +78,7 @@ export function GlowNode({ position, color, size, label, onClick, showLabel }: {
       {/* Ring */}
       <mesh>
         <ringGeometry args={[size * 1.2, size * 1.6, 32]} />
-        <meshBasicMaterial color={color} transparent opacity={0.4}
+        <meshBasicMaterial color={color} transparent opacity={0.2}
           side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
       {/* Sprite-Label */}
@@ -166,12 +166,12 @@ export function GlowEdge({ start, end, color, strength, dashed }: {
     ])
     const mat = dashed
       ? new THREE.LineDashedMaterial({
-          color, transparent: true, opacity: 0.2 + strength * 0.3,
+          color, transparent: true, opacity: 0.1 + strength * 0.2,
           depthWrite: false, blending: THREE.AdditiveBlending,
           dashSize: 0.3, gapSize: 0.2,
         })
       : new THREE.LineBasicMaterial({
-          color, transparent: true, opacity: 0.35 + strength * 0.55,
+          color, transparent: true, opacity: 0.15 + strength * 0.25,
           depthWrite: false, blending: THREE.AdditiveBlending,
         })
     const l = new THREE.Line(geo, mat)

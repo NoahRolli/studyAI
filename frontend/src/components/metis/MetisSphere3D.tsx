@@ -142,7 +142,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
           if (!hp || !np) return null
           return <GlowEdge key={`${hub.id}-${nid}`}
             start={hp} end={np} color={hub.color}
-            strength={selectedHub === hub.id ? 1.0 : 0.3} dashed={selectedHub !== hub.id} />
+            strength={selectedHub === hub.id ? 1.0 : 0.15} dashed={selectedHub !== hub.id} />
         }))}
         {/* Cluster-Hub Nodes */}
         {hubData.map(hub => {
