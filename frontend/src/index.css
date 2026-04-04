@@ -1,51 +1,44 @@
-/* Pallas — Globale Styles
-   Futuristisches HUD-Design mit Cyan-Akzenten
-   Verwendet CSS Custom Properties für konsistente Farben
-   Tailwind v4 wird über @import geladen
-   Themes: HUD (default) + Dark (gedämpft) */
+/* Pallas — Hauptstylesheet
+   Importiert Fonts, Tailwind und modulare CSS-Dateien
+   Definiert Theme-Variablen: HUD, Dark, HUD Dark */
 
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
+@import "./styles/hud-components.css";
+@import "./styles/animations.css";
+@import "./styles/editor.css";
 
 /* ============================================
    Theme: HUD (Default) — Cyan-Glow, futuristisch
    ============================================ */
 :root {
-  /* Primärfarben — Cyan/Teal Akzente */
   --color-primary: #00d4ff;
   --color-primary-dim: #00d4ff80;
   --color-primary-glow: 0 0 20px rgba(0, 212, 255, 0.3);
   --color-primary-glow-strong: 0 0 30px rgba(0, 212, 255, 0.5);
 
-  /* Hintergrund-Stufen — von dunkel nach etwas heller */
   --color-bg-deep: #0a0e17;
   --color-bg-base: #0d1117;
   --color-bg-surface: #141b27;
   --color-bg-elevated: #1a2332;
 
-  /* Border-Farben */
   --color-border: #1e2d3d;
   --color-border-glow: #00d4ff30;
 
-  /* Text-Farben */
   --color-text-primary: #e2e8f0;
   --color-text-secondary: #8892a4;
   --color-text-muted: #4a5568;
 
-  /* Status-Farben */
   --color-success: #00ff88;
   --color-danger: #ff3b5c;
   --color-warning: #ffaa00;
 
-  /* Font-Overrides für Themes */
   --font-heading: 'Orbitron', monospace;
   --font-body: 'Inter', system-ui, sans-serif;
 
-  /* Glow-Intensität (steuerbar pro Theme) */
   --glow-opacity: 1;
   --card-blur: 12px;
 
-  /* Interaktions-Farben */
   --color-hover-bg: rgba(0, 212, 255, 0.05);
   --color-active-bg: rgba(0, 212, 255, 0.1);
   --color-glow-soft: rgba(0, 212, 255, 0.1);
@@ -57,69 +50,57 @@
 }
 
 /* ============================================
-   Theme: Dark — Gedämpft, seriöser
-   Teal statt Cyan, kein Glow, subtile Borders
+   Theme: Dark — Monochromes HUD (weiss/grau mit Glow)
    ============================================ */
 [data-theme="dark"] {
-  /* Primärfarben — Neutrales Weiss, kein Farbakzent */
-  --color-primary: #c8cdd3;
-  --color-primary-dim: #c8cdd380;
-  --color-primary-glow: none;
-  --color-primary-glow-strong: none;
+  --color-primary: #d0d4da;
+  --color-primary-dim: #d0d4da60;
+  --color-primary-glow: 0 0 15px rgba(208, 212, 218, 0.15);
+  --color-primary-glow-strong: 0 0 25px rgba(208, 212, 218, 0.25);
 
-  /* Hintergründe — Tiefes Schwarz */
-  --color-bg-deep: #0a0a0a;
-  --color-bg-base: #0f0f0f;
-  --color-bg-surface: #161616;
-  --color-bg-elevated: #1c1c1c;
+  --color-bg-deep: #08080a;
+  --color-bg-base: #0c0c0e;
+  --color-bg-surface: #131316;
+  --color-bg-elevated: #1a1a1e;
 
-  /* Borders — Feine graue Linien */
-  --color-border: #2a2a2a;
-  --color-border-glow: #ffffff10;
+  --color-border: #2a2a2e;
+  --color-border-glow: #ffffff18;
 
-  /* Text — Weiss + Graustufen */
   --color-text-primary: #e8e8e8;
-  --color-text-secondary: #888888;
-  --color-text-muted: #505050;
+  --color-text-secondary: #8a8a8a;
+  --color-text-muted: #505055;
 
-  /* Status */
   --color-success: #4ade80;
   --color-danger: #f87171;
   --color-warning: #fbbf24;
 
-  /* Font: Monospace, technisch */
   --font-heading: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
 
-  /* Kein Glow */
-  --glow-opacity: 0;
-
-  /* Interaktions-Farben */
-  --color-hover-bg: rgba(200, 205, 211, 0.05);
-  --color-active-bg: rgba(200, 205, 211, 0.1);
-  --color-glow-soft: rgba(200, 205, 211, 0.1);
-  --color-glow-medium: rgba(200, 205, 211, 0.15);
-  --color-highlight-bg: rgba(200, 205, 211, 0.06);
-  --color-highlight-border: rgba(200, 205, 211, 0.2);
-  --color-highlight-strong: rgba(200, 205, 211, 0.35);
-  --color-highlight-glow: rgba(200, 205, 211, 0.1);
+  --glow-opacity: 0.5;
   --card-blur: 0px;
+
+  --color-hover-bg: rgba(208, 212, 218, 0.05);
+  --color-active-bg: rgba(208, 212, 218, 0.1);
+  --color-glow-soft: rgba(208, 212, 218, 0.08);
+  --color-glow-medium: rgba(208, 212, 218, 0.12);
+  --color-highlight-bg: rgba(208, 212, 218, 0.06);
+  --color-highlight-border: rgba(208, 212, 218, 0.2);
+  --color-highlight-strong: rgba(208, 212, 218, 0.35);
+  --color-highlight-glow: rgba(208, 212, 218, 0.1);
 }
 
 /* ============================================
-   Theme: HUD Dark — Cyan-Glow auf schwarzem Hintergrund
+   Theme: HUD Dark — Cyan-Glow auf schwarzem BG
    ============================================ */
 [data-theme="hudDark"] {
-  /* Hintergründe — Tiefes Schwarz wie Dark */
   --color-bg-deep: #0a0a0a;
   --color-bg-base: #0f0f0f;
   --color-bg-surface: #161616;
   --color-bg-elevated: #1c1c1c;
 
-  /* Borders — Dunkler als HUD */
   --color-border: #1e2a2e;
   --color-border-glow: #00d4ff20;
 
-  /* Interaktions-Farben — wie HUD */
   --color-hover-bg: rgba(0, 212, 255, 0.05);
   --color-active-bg: rgba(0, 212, 255, 0.1);
   --color-glow-soft: rgba(0, 212, 255, 0.1);
@@ -129,6 +110,7 @@
   --color-highlight-strong: rgba(0, 255, 255, 0.5);
   --color-highlight-glow: rgba(0, 255, 255, 0.15);
 }
+
 /* ============================================
    Basis-Styles — Body, Scrollbar, Auswahl
    ============================================ */
@@ -138,379 +120,10 @@ body {
   font-family: var(--font-body);
 }
 
-/* Scrollbar — dünn, mit Akzent */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--color-bg-deep);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary-dim);
-}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--color-bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-primary-dim); }
 
-/* Text-Auswahl */
-::selection {
-  background: rgba(0, 212, 255, 0.3);
-  color: white;
-}
-[data-theme="dark"] ::selection {
-  background: rgba(200, 205, 211, 0.25);
-}
-
-/* ============================================
-   HUD-Komponenten — Wiederverwendbare Klassen
-   ============================================ */
-
-/* Glassmorphism-Karte — halbtransparent mit Blur */
-.hud-card {
-  background: linear-gradient(
-    135deg,
-    rgba(20, 27, 39, 0.8),
-    rgba(26, 35, 50, 0.6)
-  );
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  backdrop-filter: blur(var(--card-blur));
-  transition: all 0.3s ease;
-}
-
-/* Hover-Effekt: Glow am Rand */
-.hud-card:hover {
-  border-color: var(--color-border-glow);
-  box-shadow: var(--color-primary-glow);
-}
-
-/* Dark: Kein Glassmorphism, solidere Karten */
-[data-theme="dark"] .hud-card {
-  background: var(--color-bg-surface);
-  backdrop-filter: none;
-}
-[data-theme="dark"] .hud-card:hover {
-  border-color: var(--color-border-glow);
-  box-shadow: var(--color-primary-glow);
-}
-
-/* HUD Dark: Schwarze Karten statt bläulich, aber mit Glow */
-[data-theme="hudDark"] .hud-card {
-  background: var(--color-bg-surface);
-  backdrop-filter: none;
-}
-
-/* HUD-Button — Standard (halbtransparent) */
-.hud-btn {
-  background: rgba(0, 212, 255, 0.1);
-  border: 1px solid var(--color-border-glow);
-  color: var(--color-primary);
-  padding: 8px 20px;
-  border-radius: 6px;
-  font-family: var(--font-heading);
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-.hud-btn:hover {
-  background: rgba(0, 212, 255, 0.2);
-  box-shadow: var(--color-primary-glow);
-}
-.hud-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-/* Dark: Buttons weniger sci-fi */
-[data-theme="dark"] .hud-btn {
-  background: var(--color-bg-elevated);
-  border-color: var(--color-border);
-  letter-spacing: 0.02em;
-}
-[data-theme="dark"] .hud-btn:hover {
-  background: rgba(200, 205, 211, 0.1);
-}
-
-/* HUD-Button Variante: Primär (ausgefüllt) */
-.hud-btn-primary {
-  background: rgba(0, 212, 255, 0.15);
-  border: 1px solid var(--color-primary);
-  color: var(--color-primary);
-}
-.hud-btn-primary:hover {
-  background: rgba(0, 212, 255, 0.3);
-  box-shadow: var(--color-primary-glow-strong);
-}
-
-/* HUD-Button Variante: Danger (rot) */
-.hud-btn-danger {
-  background: rgba(255, 59, 92, 0.1);
-  border: 1px solid rgba(255, 59, 92, 0.3);
-  color: var(--color-danger);
-}
-.hud-btn-danger:hover {
-  background: rgba(255, 59, 92, 0.2);
-  box-shadow: 0 0 20px rgba(255, 59, 92, 0.3);
-}
-[data-theme="dark"] .hud-btn-danger:hover {
-  box-shadow: 0 0 8px rgba(248, 113, 113, 0.15);
-}
-
-/* HUD-Input — Eingabefelder */
-.hud-input {
-  background: rgba(13, 17, 23, 0.8);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 8px 16px;
-  color: var(--color-text-primary);
-  transition: all 0.3s ease;
-  width: 100%;
-}
-.hud-input:focus {
-  outline: none;
-  border-color: var(--color-primary-dim);
-  box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
-}
-.hud-input::placeholder {
-  color: var(--color-text-muted);
-}
-[data-theme="dark"] .hud-input {
-  background: var(--color-bg-base);
-}
-[data-theme="dark"] .hud-input:focus {
-  box-shadow: 0 0 6px rgba(200, 205, 211, 0.08);
-}
-
-/* HUD-Überschriften — Font aus CSS-Variable */
-.hud-title {
-  font-family: var(--font-heading);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-[data-theme="dark"] .hud-title {
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-/* Glühender Text — für Akzente und Highlights */
-.text-glow {
-  color: var(--color-primary);
-  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-}
-[data-theme="dark"] .text-glow {
-  text-shadow: none;
-}
-
-/* ============================================
-   Animationen
-   ============================================ */
-
-/* Subtiler Glow-Puls — für aktive Elemente */
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.2); }
-  50% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.4); }
-}
-.animate-glow-pulse {
-  animation: glow-pulse 3s ease-in-out infinite;
-}
-/* Dark: Kein Glow-Puls */
-[data-theme="dark"] .animate-glow-pulse {
-  animation: none;
-}
-
-/* Fade-In von unten — für Karten und Inhalte */
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.animate-fade-in {
-  animation: fade-in-up 0.4s ease-out;
-}
-
-/* Scan-Linie — horizontale Linie die sich bewegt (dekorativ) */
-@keyframes scan-line {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
-}
-
-/* Grid-Hintergrund — subtiles Raster */
-.hud-grid-bg {
-  background-image:
-    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-/* Dark: Grid-Hintergrund monochrom */
-[data-theme="dark"] .hud-grid-bg {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-/* ============================================
-   Tab-Navigation
-   ============================================ */
-.hud-tab {
-  padding: 8px 16px;
-  font-family: var(--font-heading);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  border-radius: 4px;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-}
-.hud-tab:hover {
-  color: var(--color-text-secondary);
-  background: rgba(0, 212, 255, 0.05);
-}
-.hud-tab-active {
-  color: var(--color-primary);
-  background: rgba(0, 212, 255, 0.1);
-  border: 1px solid var(--color-border-glow);
-}
-
-[data-theme="dark"] .hud-tab {
-  letter-spacing: 0.03em;
-  text-transform: none;
-  font-size: 0.8rem;
-}
-[data-theme="dark"] .hud-tab:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-[data-theme="dark"] .hud-tab-active {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--color-border-glow);
-}
-/* --- TipTap Editor Styles --- */
-.tiptap {
-  color: var(--color-text-secondary);
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  line-height: 1.7;
-}
-.tiptap:focus {
-  outline: none;
-}
-.tiptap h1, .tiptap h2, .tiptap h3 {
-  color: var(--color-text-primary);
-  font-family: var(--font-heading);
-  margin: 1rem 0 0.5rem;
-}
-.tiptap h1 { font-size: 1.5rem; }
-.tiptap h2 { font-size: 1.25rem; }
-.tiptap h3 { font-size: 1.1rem; }
-.tiptap p {
-  margin: 0.4rem 0;
-}
-.tiptap ul, .tiptap ol {
-  padding-left: 1.5rem;
-  margin: 0.4rem 0;
-}
-.tiptap ul { list-style: disc; }
-.tiptap ol { list-style: decimal; }
-.tiptap li { margin: 0.15rem 0; }
-.tiptap ul[data-type="taskList"] {
-  list-style: none;
-  padding-left: 0;
-}
-.tiptap ul[data-type="taskList"] li {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.tiptap ul[data-type="taskList"] li label input[type="checkbox"] {
-  accent-color: var(--color-primary);
-  margin-top: 0;
-}
-.tiptap blockquote {
-  border-left: 3px solid var(--color-primary);
-  padding-left: 1rem;
-  margin: 0.5rem 0;
-  color: var(--color-text-muted);
-  font-style: italic;
-}
-.tiptap pre {
-  background: var(--color-bg-deep);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
-  margin: 0.5rem 0;
-  overflow-x: auto;
-}
-.tiptap pre code {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.8rem;
-  color: var(--color-primary);
-}
-.tiptap code {
-  background: var(--color-bg-surface);
-  padding: 0.15rem 0.4rem;
-  border-radius: 3px;
-  font-size: 0.8rem;
-  color: var(--color-primary);
-}
-.tiptap hr {
-  border: none;
-  border-top: 1px solid var(--color-border);
-  margin: 1rem 0;
-}
-.tiptap img {
-  max-width: 100%;
-  border-radius: 6px;
-  margin: 0.5rem 0;
-}
-.tiptap p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  float: left;
-  color: var(--color-text-muted);
-  pointer-events: none;
-  height: 0;
-  opacity: 0.5;
-}
-
-/* WikiLink — [[Notiz-Titel]] im TipTap Editor */
-.wiki-link {
-  color: var(--color-primary);
-  cursor: pointer;
-  border-bottom: 1px dashed var(--color-primary);
-  transition: opacity 0.2s;
-}
-.wiki-link:hover {
-  opacity: 0.7;
-}
-
-/* Metis — ReactFlow Controls + MiniMap HUD-Styling */
-.metis-controls button {
-  background: var(--color-bg-surface) !important;
-  border-color: var(--color-border) !important;
-  color: var(--color-text-secondary) !important;
-  border-radius: 4px !important;
-}
-.metis-controls button:hover {
-  background: var(--color-bg-elevated) !important;
-  color: var(--color-primary) !important;
-}
-.metis-controls {
-  border: none !important;
-  box-shadow: none !important;
-}
-.metis-minimap {
-  background: var(--color-bg-deep) !important;
-  border: 1px solid var(--color-border) !important;
-  border-radius: 8px !important;
-  overflow: hidden !important;
-}
+::selection { background: rgba(0, 212, 255, 0.3); color: white; }
+[data-theme="dark"] ::selection { background: rgba(200, 205, 211, 0.25); }
