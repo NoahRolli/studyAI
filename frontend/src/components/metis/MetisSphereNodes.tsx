@@ -100,7 +100,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
   useFrame(({ clock }) => {
     const t = clock.elapsedTime * 0.8
     if (outerRef.current) {
-      outerRef.current.scale.setScalar(1 + Math.sin(t) * 0.15)
+      outerRef.current.scale.setScalar(1 + Math.sin(t) * 0.05)
     }
     if (pulseRef.current) {
       pulseRef.current.scale.setScalar(1 + Math.sin(t * 0.5) * 0.2)
@@ -115,7 +115,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
     <group position={position}>
       {/* Glow-Hülle */}
       <mesh ref={outerRef}>
-        <sphereGeometry args={[size * 1.8, 12, 12]} />
+        <sphereGeometry args={[size * 1.2, 12, 12]} />
         <meshBasicMaterial color={color} transparent opacity={0.2}
           depthWrite={false} blending={THREE.AdditiveBlending} />
       </mesh>
