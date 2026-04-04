@@ -5,6 +5,7 @@
 // Cmd+K: QuickSwitcher Modal für schnelle Navigation
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { get, post, put, del } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import NotesList from '../components/notes/NotesList'
@@ -40,6 +41,7 @@ function NotesPage() {
 
   // Auto-Save Timer Ref
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   // --- Cmd+K Keyboard Shortcut ---
   useEffect(() => {
@@ -52,6 +54,15 @@ function NotesPage() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  // --- ?open=ID Deep-Link von Metis ---
+  useEffect(() => {
+    const openId = searchParams.get("open")
+    if (openId) {
+      loadNote(Number(openId))
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams])
 
   // --- API-Aufrufe ---
   async function loadNotes() {
@@ -93,6 +104,15 @@ function NotesPage() {
     } catch { /* Fehler ignorieren */ }
     setSaving(false)
   }, [])
+
+  // --- ?open=ID Deep-Link von Metis ---
+  useEffect(() => {
+    const openId = searchParams.get("open")
+    if (openId) {
+      loadNote(Number(openId))
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams])
 
   async function deleteNote(id: number) {
     if (!confirm(t.notes.deleteConfirm)) return
@@ -145,9 +165,27 @@ function NotesPage() {
 
   // --- Lifecycle ---
   useEffect(() => { loadNotes() }, [])
+
+  // --- ?open=ID Deep-Link von Metis ---
+  useEffect(() => {
+    const openId = searchParams.get("open")
+    if (openId) {
+      loadNote(Number(openId))
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams])
   useEffect(() => {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
   }, [])
+
+  // --- ?open=ID Deep-Link von Metis ---
+  useEffect(() => {
+    const openId = searchParams.get("open")
+    if (openId) {
+      loadNote(Number(openId))
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams])
 
   return (
     <div className="animate-fade-in flex gap-6 h-[calc(100vh-3rem)]">
