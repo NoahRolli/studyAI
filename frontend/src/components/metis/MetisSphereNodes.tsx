@@ -75,12 +75,6 @@ export function GlowNode({ position, color, size, label, onClick, showLabel }: {
         <sphereGeometry args={[size, 8, 8]} />
         <meshBasicMaterial color={new THREE.Color('#ffffff')} />
       </mesh>
-      {/* Ring */}
-      <mesh>
-        <ringGeometry args={[size * 1.2, size * 1.6, 32]} />
-        <meshBasicMaterial color={color} transparent opacity={0.2}
-          side={THREE.DoubleSide} depthWrite={false} />
-      </mesh>
       {/* Sprite-Label */}
       {showLabel && (
         <SpriteLabel
@@ -135,12 +129,6 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
       <mesh onClick={onClick}>
         <sphereGeometry args={[size, 12, 12]} />
         <meshBasicMaterial color={color} />
-      </mesh>
-      {/* Doppelter Ring */}
-      <mesh>
-        <ringGeometry args={[size * 2, size * 2.3, 48]} />
-        <meshBasicMaterial color={color} transparent opacity={0.5}
-          side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
       {/* Sprite-Label */}
       {showLabel && (
