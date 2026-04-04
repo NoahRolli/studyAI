@@ -195,6 +195,12 @@ body {
   box-shadow: var(--color-primary-glow);
 }
 
+/* HUD Dark: Schwarze Karten statt bläulich, aber mit Glow */
+[data-theme="hudDark"] .hud-card {
+  background: var(--color-bg-surface);
+  backdrop-filter: none;
+}
+
 /* HUD-Button — Standard (halbtransparent) */
 .hud-btn {
   background: rgba(0, 212, 255, 0.1);
