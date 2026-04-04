@@ -85,7 +85,7 @@ function WelcomePage() {
         <h1
           className="hud-title text-glow text-5xl font-bold mb-3 tracking-widest animate-fade-in"
           style={{
-            color: "#00d4ff",
+            color: "#00d4ff", fontFamily: "'Orbitron', monospace",
             animationDuration: '0.6s',
             animationDelay: `${TITLE_FADE_IN}ms`,
           }}
