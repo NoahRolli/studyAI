@@ -1,6 +1,5 @@
 // JournalMetisContent — Verschlüsselter Knowledge-Graph als Journal-Tab
 // Merged View: Journal-Einträge (Cyan) + öffentliche Nodes (transparent)
-// Wiederverwendet MetisToolbar, MetisSphere3D, MetisGraph2D etc. wie v1
 
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { get, post } from '../../hooks/useAPI'
@@ -10,48 +9,11 @@ import MetisToolbar from '../metis/MetisToolbar'
 import MetisListView from '../metis/MetisListView'
 import MetisNodeDetail from '../metis/MetisNodeDetail'
 import MetisMiniMap3D from '../metis/MetisMiniMap3D'
-import type { MetisGraph, MetisViewMode, MetisNode } from '../../types/metis'
+import { adaptGraph } from '../metis/journalMetisAdapter'
+import type { MetisViewMode, MetisNode } from '../../types/metis'
 import type { JournalMetisGraph } from '../../types/metis'
 
-const MetisSphere3D = lazy(
-  () => import('../metis/MetisSphere3D')
-)
-
-// Journal-Metis Graph → MetisGraph Adapter
-function adaptGraph(
-  jGraph: JournalMetisGraph, showPublic: boolean,
-): MetisGraph {
-  const nodes = showPublic
-    ? jGraph.nodes
-    : jGraph.nodes.filter(n => n.realm === 'journal')
-  const nodeIds = new Set(nodes.map(n => n.id))
-  const edges = jGraph.edges.filter(
-    e => nodeIds.has(e.source) && nodeIds.has(e.target)
-  )
-  const idMap = new Map<string, number>()
-  nodes.forEach((n, i) => idMap.set(n.id, i + 1))
-
-  return {
-    nodes: nodes.map(n => ({
-      id: idMap.get(n.id) || 0,
-      type: n.realm === 'journal' ? 'entry' as any : n.type as any,
-      source_id: n.source_id,
-      title: n.label,
-      pos_x: n.pos_x,
-      pos_y: n.pos_y,
-      embedding_stale: false,
-      cluster_ids: [],
-    })),
-    edges: edges.map(e => ({
-      id: idMap.get(e.id) || 0,
-      source_node_id: idMap.get(e.source) || 0,
-      target_node_id: idMap.get(e.target) || 0,
-      relation_type: 'related' as const,
-      strength: e.strength,
-    })),
-    clusters: [],
-  }
-}
+const MetisSphere3D = lazy(() => import('../metis/MetisSphere3D'))
 
 export default function JournalMetisContent() {
   const { t } = useLanguage()
@@ -66,8 +28,8 @@ export default function JournalMetisContent() {
   const [selectedNode, setSelectedNode] = useState<MetisNode | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const [showPublic, setShowPublic] = useState(true)
+  const [showLabels, setShowLabels] = useState(true)
 
-  // Kamera für MiniMap
   const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 22 })
   const [, setCameraTick] = useState(0)
   const lastCameraUpdate = useRef(0)
@@ -85,15 +47,11 @@ export default function JournalMetisContent() {
 
   const loadGraph = useCallback(async () => {
     try {
-      const data = await get<JournalMetisGraph>(
-        '/api/journal/metis/graph',
-      )
+      const data = await get<JournalMetisGraph>('/api/journal/metis/graph')
       setRawGraph(data)
     } catch (err) {
       console.error('Journal Metis load failed:', err)
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }, [])
 
   useEffect(() => { loadGraph() }, [loadGraph])
@@ -103,9 +61,8 @@ export default function JournalMetisContent() {
     try {
       await post('/api/journal/metis/sync')
       await loadGraph()
-    } catch (err) {
-      console.error('Sync failed:', err)
-    } finally { setSyncing(false) }
+    } catch (err) { console.error('Sync failed:', err) }
+    finally { setSyncing(false) }
   }, [loadGraph])
 
   const handleAutoLink = useCallback(async () => {
@@ -113,9 +70,8 @@ export default function JournalMetisContent() {
     try {
       await post('/api/journal/metis/auto-link')
       await loadGraph()
-    } catch (err) {
-      console.error('Auto-link failed:', err)
-    } finally { setLinking(false) }
+    } catch (err) { console.error('Auto-link failed:', err) }
+    finally { setLinking(false) }
   }, [loadGraph])
 
   const handleAutoCluster = useCallback(async () => {
@@ -123,15 +79,16 @@ export default function JournalMetisContent() {
     try {
       await post('/api/journal/metis/auto-cluster')
       await loadGraph()
-    } catch (err) {
-      console.error('Auto-cluster failed:', err)
-    } finally { setClustering(false) }
+    } catch (err) { console.error('Auto-cluster failed:', err) }
+    finally { setClustering(false) }
   }, [loadGraph])
+
+  const graph = adaptGraph(rawGraph, showPublic)
 
   const handleNodeClick = useCallback((nodeId: number) => {
     const found = graph.nodes.find(n => n.id === nodeId)
     setSelectedNode(found || null)
-  }, [])
+  }, [graph.nodes])
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -141,14 +98,10 @@ export default function JournalMetisContent() {
     return () => window.removeEventListener('keydown', h)
   }, [fullscreen])
 
-  const graph = adaptGraph(rawGraph, showPublic)
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-[var(--color-text-muted)]">
-          {t.common.loading}
-        </p>
+        <p className="text-[var(--color-text-muted)]">{t.common.loading}</p>
       </div>
     )
   }
@@ -163,7 +116,6 @@ export default function JournalMetisContent() {
 
   return (
     <div className={wrapperClass}>
-      {/* Header — Titel + MetisToolbar (wie v1, ohne "JOURNAL" Label) */}
       <div className={`flex items-center justify-between ${fullscreen ? 'p-3' : ''}`}>
         {!fullscreen && (
           <h2 className="hud-title text-glow text-xl">
@@ -171,21 +123,15 @@ export default function JournalMetisContent() {
           </h2>
         )}
         <MetisToolbar
-          view={view}
-          onViewChange={setView}
-          onSync={handleSync}
-          onAutoLink={handleAutoLink}
+          view={view} onViewChange={setView}
+          onSync={handleSync} onAutoLink={handleAutoLink}
           onAutoCluster={handleAutoCluster}
-          syncing={syncing}
-          linking={linking}
-          clustering={clustering}
-          nodeCount={graph.nodes.length}
-          edgeCount={graph.edges.length}
+          syncing={syncing} linking={linking} clustering={clustering}
+          nodeCount={graph.nodes.length} edgeCount={graph.edges.length}
           clusterCount={graph.clusters.length}
         />
       </div>
 
-      {/* Graph-Container */}
       <div className={graphClass} style={graphStyle}>
         {graph.nodes.length === 0 ? (
           <div className="flex items-center justify-center h-full">
@@ -198,47 +144,38 @@ export default function JournalMetisContent() {
         ) : view === '3d' ? (
           <Suspense fallback={
             <div className="flex items-center justify-center h-full">
-              <p className="text-[var(--color-text-muted)]">
-                {t.common.loading}
-              </p>
+              <p className="text-[var(--color-text-muted)]">{t.common.loading}</p>
             </div>
           }>
-            <MetisSphere3D
-              graph={graph}
-              onNodeClick={handleNodeClick}
-              onCameraMove={handleCameraMove}
-              transparent={true}
-            />
+            <MetisSphere3D graph={graph} onNodeClick={handleNodeClick}
+              onCameraMove={handleCameraMove} transparent={true}
+              showLabels={showLabels} />
           </Suspense>
         ) : (
-          <MetisGraph2D
-            graph={graph}
-            onPositionUpdate={() => {}}
-            onNodeClick={handleNodeClick}
-            transparent={true}
-          />
+          <MetisGraph2D graph={graph} onPositionUpdate={() => {}}
+            onNodeClick={handleNodeClick} transparent={true} />
         )}
 
-        {/* Overlay Controls — oben im Fenster */}
+        {/* Overlay: V1 + Labels oben links, Fullscreen oben rechts */}
         {view !== 'list' && graph.nodes.length > 0 && (
           <>
-            {/* P-Button oben links */}
-            <div className="absolute top-2 left-2 z-20">
-              <button
-                className="hud-btn text-xs px-2 py-1"
+            <div className="absolute top-2 left-2 z-20 flex flex-col gap-1">
+              <button className="hud-btn text-xs px-2 py-1"
                 style={{
                   opacity: showPublic ? 1 : 0.4,
                   borderColor: showPublic
                     ? 'var(--color-primary)' : 'var(--color-border)',
                 }}
-                onClick={() => setShowPublic(!showPublic)}
-                title="V1"
+                onClick={() => setShowPublic(!showPublic)} title="V1"
               >V1</button>
+              <button className="hud-btn text-xs px-2 py-1"
+                onClick={() => setShowLabels(!showLabels)}
+                style={{ opacity: showLabels ? 1 : 0.4 }}
+                title="Labels ein/aus"
+              >Aa</button>
             </div>
-            {/* Fullscreen oben rechts */}
             <div className="absolute top-2 right-2 z-20">
-              <button
-                onClick={() => setFullscreen(!fullscreen)}
+              <button onClick={() => setFullscreen(!fullscreen)}
                 className="hud-btn text-xs px-2 py-1"
                 title={fullscreen ? 'Escape' : 'Fullscreen'}
               >{fullscreen ? '✖' : '⛶'}</button>
@@ -246,23 +183,16 @@ export default function JournalMetisContent() {
           </>
         )}
 
-        {/* MiniMap 3D */}
         {view === '3d' && graph.nodes.length > 0 && (
-          <MetisMiniMap3D
-            graph={graph}
+          <MetisMiniMap3D graph={graph}
             cameraAzimuth={cameraRef.current.azimuth}
             cameraElevation={cameraRef.current.elevation}
-            cameraDistance={cameraRef.current.distance}
-          />
+            cameraDistance={cameraRef.current.distance} />
         )}
 
-        {/* Detail Panel */}
         {selectedNode && (
-          <MetisNodeDetail
-            node={selectedNode}
-            graph={graph}
-            onClose={() => setSelectedNode(null)}
-          />
+          <MetisNodeDetail node={selectedNode} graph={graph}
+            onClose={() => setSelectedNode(null)} />
         )}
       </div>
     </div>
