@@ -1,5 +1,6 @@
 // JournalMetisContent — Verschlüsselter Knowledge-Graph als Journal-Tab
 // Merged View: Journal-Einträge (Cyan) + öffentliche Nodes (transparent)
+// Keine State-Updates für Kamera — MiniMap liest direkt aus Ref
 
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { get, post } from '../../hooks/useAPI'
@@ -30,19 +31,15 @@ export default function JournalMetisContent() {
   const [showPublic, setShowPublic] = useState(true)
   const [showLabels, setShowLabels] = useState(false)
 
-  const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 22 })
-  const [, setCameraTick] = useState(0)
-  const lastCameraUpdate = useRef(0)
+  // Kamera-Ref — kein State, kein Re-Render
+  const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 50 })
+  const minimapRef = useRef<{ update: () => void }>(null)
 
+  // Kamera-Update ohne State — nur Ref aktualisieren
   const handleCameraMove = useCallback((
     az: number, el: number, dist: number,
   ) => {
     cameraRef.current = { azimuth: az, elevation: el, distance: dist }
-    const now = Date.now()
-    if (now - lastCameraUpdate.current > 100) {
-      lastCameraUpdate.current = now
-      setCameraTick(p => p + 1)
-    }
   }, [])
 
   const loadGraph = useCallback(async () => {
@@ -156,7 +153,7 @@ export default function JournalMetisContent() {
             onNodeClick={handleNodeClick} transparent={true} />
         )}
 
-        {/* Overlay: V1 + Labels oben links, Fullscreen oben rechts */}
+        {/* Overlay-Buttons */}
         {view !== 'list' && graph.nodes.length > 0 && (
           <>
             <div className="absolute top-2 left-2 z-20 flex flex-col gap-1">
