@@ -21,7 +21,7 @@ function TBtn({
       className="px-2 py-1 rounded text-xs transition-all duration-200"
       style={{
         color: active ? 'var(--color-primary)' : 'var(--color-text-muted)',
-        background: active ? 'rgba(0, 212, 255, 0.1)' : 'transparent',
+        background: active ? 'var(--color-active-bg)' : 'transparent',
       }}
     >
       {children}

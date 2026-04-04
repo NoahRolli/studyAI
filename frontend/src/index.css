@@ -44,6 +44,16 @@
   /* Glow-Intensität (steuerbar pro Theme) */
   --glow-opacity: 1;
   --card-blur: 12px;
+
+  /* Interaktions-Farben */
+  --color-hover-bg: rgba(0, 212, 255, 0.05);
+  --color-active-bg: rgba(0, 212, 255, 0.1);
+  --color-glow-soft: rgba(0, 212, 255, 0.1);
+  --color-glow-medium: rgba(0, 212, 255, 0.15);
+  --color-highlight-bg: rgba(0, 255, 255, 0.06);
+  --color-highlight-border: rgba(0, 255, 255, 0.3);
+  --color-highlight-strong: rgba(0, 255, 255, 0.5);
+  --color-highlight-glow: rgba(0, 255, 255, 0.15);
 }
 
 /* ============================================
@@ -82,6 +92,16 @@
 
   /* Kein Glow */
   --glow-opacity: 0;
+
+  /* Interaktions-Farben */
+  --color-hover-bg: rgba(200, 205, 211, 0.05);
+  --color-active-bg: rgba(200, 205, 211, 0.1);
+  --color-glow-soft: rgba(200, 205, 211, 0.1);
+  --color-glow-medium: rgba(200, 205, 211, 0.15);
+  --color-highlight-bg: rgba(200, 205, 211, 0.06);
+  --color-highlight-border: rgba(200, 205, 211, 0.2);
+  --color-highlight-strong: rgba(200, 205, 211, 0.35);
+  --color-highlight-glow: rgba(200, 205, 211, 0.1);
   --card-blur: 0px;
 }
 /* ============================================

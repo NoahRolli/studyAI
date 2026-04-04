@@ -29,7 +29,7 @@ function LanguageToggle() {
               ? 'var(--color-primary)'
               : 'var(--color-text-muted)',
             backgroundColor: language === key
-              ? 'rgba(0, 212, 255, 0.1)'
+              ? 'var(--color-active-bg)'
               : 'transparent',
             border: language === key
               ? '1px solid var(--color-border-glow)'

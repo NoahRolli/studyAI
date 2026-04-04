@@ -350,7 +350,7 @@ function Dashboard() {
               <DroppableFolder id={`drop-folder-${folder.id}`}>
                 <div onClick={() => openFolder(folder.id)} className="hud-card p-5 cursor-pointer">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-lg" style={{ color: 'var(--color-primary)', textShadow: '0 0 8px rgba(0, 212, 255, 0.5)' }}>📁</span>
+                    <span className="text-lg" style={{ color: 'var(--color-primary)', textShadow: 'var(--color-primary-glow)' }}>📁</span>
                     <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>{folder.name}</h3>
                   </div>
                   <div className="flex items-center justify-between">
@@ -377,7 +377,7 @@ function Dashboard() {
             <DraggableCard key={`module-${module.id}`} id={`module-${module.id}`} type="module">
               <Link to={`/modules/${module.id}`} className="hud-card p-5 block">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="text-lg" style={{ color: 'var(--color-text-secondary)', textShadow: '0 0 6px rgba(0, 212, 255, 0.3)' }}>📄</span>
+                  <span className="text-lg" style={{ color: 'var(--color-text-secondary)', textShadow: '0 0 6px var(--color-highlight-border)' }}>📄</span>
                   <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>{module.name}</h3>
                 </div>
                 <p className="text-sm mb-3 pl-8" style={{ color: 'var(--color-text-secondary)' }}>{module.description}</p>
@@ -405,7 +405,7 @@ function Dashboard() {
           {dragLabel && (
             <div
               className="hud-card px-4 py-3 text-sm font-medium"
-              style={{ color: 'var(--color-primary)', boxShadow: '0 0 30px rgba(0, 212, 255, 0.4)', pointerEvents: 'none' }}
+              style={{ color: 'var(--color-primary)', boxShadow: '0 0 30px var(--color-highlight-strong)', pointerEvents: 'none' }}
             >
               {dragLabel}
             </div>

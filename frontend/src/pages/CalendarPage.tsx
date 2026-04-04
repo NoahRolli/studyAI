@@ -146,22 +146,22 @@ function CalendarPage() {
 
     if (selected) {
       return {
-        backgroundColor: 'rgba(0, 255, 255, 0.12)',
-        border: '1px solid rgba(0, 255, 255, 0.5)',
-        boxShadow: '0 0 15px rgba(0, 255, 255, 0.15)',
+        backgroundColor: 'var(--color-active-bg)',
+        border: '1px solid var(--color-highlight-strong)',
+        boxShadow: '0 0 15px var(--color-highlight-glow)',
       }
     }
     if (hovered) {
       return {
-        backgroundColor: 'rgba(0, 255, 255, 0.05)',
-        border: '1px solid rgba(0, 255, 255, 0.3)',
-        boxShadow: '0 0 15px rgba(0, 255, 255, 0.1)',
+        backgroundColor: 'var(--color-hover-bg)',
+        border: '1px solid var(--color-highlight-border)',
+        boxShadow: '0 0 15px var(--color-glow-soft)',
       }
     }
     if (today) {
       return {
-        backgroundColor: 'rgba(0, 255, 255, 0.06)',
-        border: '1px solid rgba(0, 255, 255, 0.3)',
+        backgroundColor: 'var(--color-highlight-bg)',
+        border: '1px solid var(--color-highlight-border)',
         boxShadow: 'none',
       }
     }
@@ -272,7 +272,7 @@ function CalendarPage() {
               {dayEvents.map((evt) => (
                 <div key={evt.id}
                   className="flex items-center gap-2 p-2 rounded-md
-                    transition-all duration-200 hover:bg-[rgba(0,212,255,0.05)]">
+                    transition-all duration-200 hover:bg-[var(--color-hover-bg)]">
                   {/* Farb-Indikator */}
                   <div className="w-1.5 h-8 rounded-full flex-shrink-0"
                     style={{ backgroundColor: COLOR_MAP[evt.color] || COLOR_MAP.cyan }} />
@@ -292,7 +292,7 @@ function CalendarPage() {
                   {/* Wiederkehrend-Badge */}
                   {evt.recurrence !== 'none' && (
                     <span className="text-xs px-1.5 py-0.5 rounded" style={{
-                      color: 'var(--color-text-muted)', backgroundColor: 'rgba(0,212,255,0.08)', fontSize: '0.6rem',
+                      color: 'var(--color-text-muted)', backgroundColor: 'var(--color-hover-bg)', fontSize: '0.6rem',
                     }}>↻</span>
                   )}
 

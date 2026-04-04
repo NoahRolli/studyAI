@@ -81,8 +81,8 @@ function JournalSearch({ entries, onSelectEntry }: JournalSearchProps) {
           className="absolute top-full left-0 mt-1 w-72 max-h-64 overflow-y-auto rounded-lg z-50"
           style={{
             backgroundColor: 'var(--color-bg-surface)',
-            border: '1px solid rgba(0, 255, 255, 0.3)',
-            boxShadow: '0 0 20px rgba(0, 255, 255, 0.1)',
+            border: '1px solid var(--color-highlight-border)',
+            boxShadow: '0 0 20px var(--color-glow-soft)',
           }}
         >
           {results.length === 0 ? (
@@ -105,7 +105,7 @@ function JournalSearch({ entries, onSelectEntry }: JournalSearchProps) {
                   className="w-full text-left px-3 py-2.5 transition-colors"
                   style={{ borderBottom: '1px solid var(--color-border)' }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(0, 255, 255, 0.05)'
+                    e.currentTarget.style.backgroundColor = 'var(--color-hover-bg)'
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = 'transparent'

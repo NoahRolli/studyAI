@@ -167,7 +167,7 @@ function JournalMindmapPage() {
           />
           <MiniMap
             position="bottom-right"
-            nodeColor={() => 'rgba(0, 212, 255, 0.6)'}
+            nodeColor={() => 'var(--color-highlight-strong)'}
             maskColor="rgba(10, 14, 23, 0.8)"
             style={{
               background: 'var(--color-bg-base)',
@@ -177,7 +177,7 @@ function JournalMindmapPage() {
           />
           <Background
             variant={BackgroundVariant.Dots}
-            color="rgba(0, 212, 255, 0.1)"
+            color="var(--color-glow-soft)"
             gap={25}
             size={1}
           />

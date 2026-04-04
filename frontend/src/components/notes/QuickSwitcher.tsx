@@ -116,7 +116,7 @@ function QuickSwitcher({ notes, onSelect, onCreate, onClose }: QuickSwitcherProp
                   ? 'var(--color-primary)'
                   : 'var(--color-text-secondary)',
                 backgroundColor: idx === activeIdx
-                  ? 'rgba(0, 212, 255, 0.1)'
+                  ? 'var(--color-active-bg)'
                   : 'transparent',
               }}
             >

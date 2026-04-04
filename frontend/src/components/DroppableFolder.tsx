@@ -23,8 +23,8 @@ function DroppableFolder({ id, children }: DroppableFolderProps) {
       ref={setNodeRef}
       style={{
         // Glow-Effekt wenn ein Element drüber gezogen wird
-        boxShadow: isOver ? '0 0 25px rgba(0, 212, 255, 0.5), inset 0 0 15px rgba(0, 212, 255, 0.1)' : 'none',
-        borderColor: isOver ? 'rgba(0, 212, 255, 0.6)' : undefined,
+        boxShadow: isOver ? '0 0 25px var(--color-highlight-strong), inset 0 0 15px var(--color-active-bg)' : 'none',
+        borderColor: isOver ? 'var(--color-highlight-strong)' : undefined,
         transition: 'all 0.2s ease',
       }}
     >

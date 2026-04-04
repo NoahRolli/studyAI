@@ -102,26 +102,26 @@ function CalendarGrid({
               }`}
               style={{
                 backgroundColor: isSelected
-                  ? 'rgba(0, 255, 255, 0.12)'
+                  ? 'var(--color-active-bg)'
                   : isToday
-                    ? 'rgba(0, 255, 255, 0.06)'
+                    ? 'var(--color-highlight-bg)'
                     : 'rgba(13, 17, 23, 0.3)',
                 border: isSelected
-                  ? '1px solid rgba(0, 255, 255, 0.5)'
+                  ? '1px solid var(--color-highlight-strong)'
                   : isToday
-                    ? '1px solid rgba(0, 255, 255, 0.3)'
+                    ? '1px solid var(--color-highlight-border)'
                     : '1px solid transparent',
               }}
               onMouseEnter={(e) => {
                 if (!isFuture && !isSelected) {
-                  e.currentTarget.style.backgroundColor = 'rgba(0, 255, 255, 0.05)'
-                  e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 255, 255, 0.1)'
+                  e.currentTarget.style.backgroundColor = 'var(--color-hover-bg)'
+                  e.currentTarget.style.boxShadow = '0 0 15px var(--color-glow-soft)'
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isFuture && !isSelected) {
                   e.currentTarget.style.backgroundColor = isToday
-                    ? 'rgba(0, 255, 255, 0.06)'
+                    ? 'var(--color-highlight-bg)'
                     : 'rgba(13, 17, 23, 0.3)'
                   e.currentTarget.style.boxShadow = 'none'
                 }

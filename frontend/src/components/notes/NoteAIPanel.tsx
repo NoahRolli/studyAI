@@ -180,7 +180,7 @@ function NoteAIPanel({ noteId, onNavigate }: NoteAIPanelProps) {
                 className="text-xs px-2 py-0.5 rounded"
                 style={{
                   color: 'var(--color-primary)',
-                  backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                  backgroundColor: 'var(--color-active-bg)',
                 }}
               >
                 [[{s.title}]]

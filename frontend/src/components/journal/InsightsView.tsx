@@ -74,11 +74,11 @@ function InsightsView({ results, loading, errors, onLoadInsight }: InsightsViewP
               className="hud-card p-4 w-full text-left transition-all duration-200"
               style={{
                 borderColor: results[mod.key]
-                  ? 'rgba(0, 255, 255, 0.3)'
+                  ? 'var(--color-highlight-border)'
                   : undefined,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 255, 255, 0.1)'
+                e.currentTarget.style.boxShadow = '0 0 15px var(--color-glow-soft)'
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.boxShadow = 'none'

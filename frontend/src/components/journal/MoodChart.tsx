@@ -79,7 +79,7 @@ function MoodChart({ entries, moods, loading }: MoodChartProps) {
       <div className="hud-card p-4">
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 212, 255, 0.08)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-hover-bg)" />
             <XAxis
               dataKey="date"
               stroke="var(--color-border)"

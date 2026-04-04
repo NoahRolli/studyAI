@@ -198,7 +198,7 @@ function CalendarEventForm({ data, isEdit, onSave, onCancel, onDelete }: Props) 
                 textTransform: 'uppercase',
                 color: 'var(--color-text-secondary)',
                 borderColor: recOpen ? 'var(--color-border-glow)' : 'var(--color-border)',
-                background: recOpen ? 'rgba(0, 212, 255, 0.05)' : 'var(--color-bg-surface)',
+                background: recOpen ? 'var(--color-hover-bg)' : 'var(--color-bg-surface)',
               }}
             >
               {t.mainCalendar.recurrenceTypes[form.recurrence as keyof typeof t.mainCalendar.recurrenceTypes]}
@@ -209,7 +209,7 @@ function CalendarEventForm({ data, isEdit, onSave, onCancel, onDelete }: Props) 
                 style={{
                   backgroundColor: 'var(--color-bg-elevated)',
                   borderColor: 'var(--color-border-glow)',
-                  boxShadow: '0 0 15px rgba(0, 212, 255, 0.15)',
+                  boxShadow: '0 0 15px var(--color-glow-medium)',
                 }}
               >
                 {recOptions.map(([key, label]) => (
@@ -223,10 +223,10 @@ function CalendarEventForm({ data, isEdit, onSave, onCancel, onDelete }: Props) 
                       letterSpacing: '0.05em',
                       textTransform: 'uppercase',
                       color: key === form.recurrence ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                      background: key === form.recurrence ? 'rgba(0, 212, 255, 0.1)' : 'transparent',
+                      background: key === form.recurrence ? 'var(--color-active-bg)' : 'transparent',
                     }}
                     onMouseEnter={(e) => {
-                      if (key !== form.recurrence) e.currentTarget.style.background = 'rgba(0, 212, 255, 0.05)'
+                      if (key !== form.recurrence) e.currentTarget.style.background = 'var(--color-hover-bg)'
                     }}
                     onMouseLeave={(e) => {
                       if (key !== form.recurrence) e.currentTarget.style.background = 'transparent'

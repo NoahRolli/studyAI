@@ -123,8 +123,8 @@ function Sidebar() {
   const linkStyle = ({ isActive }: { isActive: boolean }) =>
     `block px-3 py-2.5 rounded-md transition-all duration-300 text-sm tracking-wide whitespace-nowrap overflow-hidden ${
       isActive
-        ? 'text-[var(--color-primary)] bg-[rgba(0,212,255,0.1)] border border-[var(--color-border-glow)]'
-        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[rgba(0,212,255,0.05)] border border-transparent'
+        ? 'text-[var(--color-primary)] bg-[var(--color-active-bg)] border border-[var(--color-border-glow)]'
+        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-bg)] border border-transparent'
     }`
 
   // Ollama-Status Farbe: Grün = MacBook, Orange = Server, Rot = Offline
@@ -170,7 +170,7 @@ function Sidebar() {
           <button
             onClick={toggleCollapsed}
             className="p-1.5 rounded-md transition-all duration-300
-              hover:bg-[rgba(0,212,255,0.1)]"
+              hover:bg-[var(--color-active-bg)]"
             style={{ color: 'var(--color-text-muted)' }}
             title={collapsed ? t.sidebar.expand : t.sidebar.collapse}
           >

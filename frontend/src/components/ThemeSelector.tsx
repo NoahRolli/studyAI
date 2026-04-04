@@ -38,7 +38,7 @@ function ThemeSelector() {
           textTransform: 'uppercase',
           color: 'var(--color-text-secondary)',
           borderColor: open ? 'var(--color-border-glow)' : 'var(--color-border)',
-          background: open ? 'rgba(0, 212, 255, 0.05)' : 'transparent',
+          background: open ? 'var(--color-hover-bg)' : 'transparent',
         }}
       >
         {/* Farbiger Punkt als Theme-Indikator */}
@@ -77,12 +77,12 @@ function ThemeSelector() {
                   ? 'var(--color-primary)'
                   : 'var(--color-text-secondary)',
                 background: key === theme
-                  ? 'rgba(0, 212, 255, 0.1)'
+                  ? 'var(--color-active-bg)'
                   : 'transparent',
               }}
               onMouseEnter={(e) => {
                 if (key !== theme) {
-                  e.currentTarget.style.background = 'rgba(0, 212, 255, 0.05)'
+                  e.currentTarget.style.background = 'var(--color-hover-bg)'
                 }
               }}
               onMouseLeave={(e) => {

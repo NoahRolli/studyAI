@@ -66,8 +66,8 @@ function CalendarDayModal({
         className="hud-card p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto animate-fade-in"
         onClick={(e) => e.stopPropagation()}
         style={{
-          boxShadow: '0 0 30px rgba(0, 255, 255, 0.15)',
-          border: '1px solid rgba(0, 255, 255, 0.3)',
+          boxShadow: '0 0 30px var(--color-highlight-glow)',
+          border: '1px solid var(--color-highlight-border)',
         }}
       >
         {/* Header */}

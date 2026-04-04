@@ -277,7 +277,7 @@ function ModuleDetail() {
                         key={i}
                         className="text-xs px-2 py-1 rounded border"
                         style={{
-                          backgroundColor: 'rgba(0, 212, 255, 0.05)',
+                          backgroundColor: 'var(--color-hover-bg)',
                           borderColor: 'var(--color-border-glow)',
                           color: 'var(--color-text-secondary)',
                         }}
