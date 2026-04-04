@@ -1,0 +1,172 @@
+/* HUD-Komponenten — Karten, Buttons, Inputs, Tabs, Titel
+   Theme-Overrides für Dark (monochromer HUD-Stil) und HUD Dark */
+
+/* --- Glassmorphism-Karte --- */
+.hud-card {
+  background: linear-gradient(135deg, rgba(20, 27, 39, 0.8), rgba(26, 35, 50, 0.6));
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  backdrop-filter: blur(var(--card-blur));
+  transition: all 0.3s ease;
+}
+.hud-card:hover {
+  border-color: var(--color-border-glow);
+  box-shadow: var(--color-primary-glow);
+}
+
+/* Dark: Solide Karten, monochromer Glow */
+[data-theme="dark"] .hud-card {
+  background: var(--color-bg-surface);
+  backdrop-filter: none;
+}
+[data-theme="dark"] .hud-card:hover {
+  border-color: var(--color-border-glow);
+  box-shadow: var(--color-primary-glow);
+}
+
+/* HUD Dark: Schwarze Karten mit Cyan-Glow */
+[data-theme="hudDark"] .hud-card {
+  background: var(--color-bg-surface);
+  backdrop-filter: none;
+}
+
+/* --- HUD-Button --- */
+.hud-btn {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid var(--color-border-glow);
+  color: var(--color-primary);
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+.hud-btn:hover {
+  background: rgba(0, 212, 255, 0.2);
+  box-shadow: var(--color-primary-glow);
+}
+.hud-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Dark: Monochrom — HUD-Struktur beibehalten */
+[data-theme="dark"] .hud-btn {
+  background: var(--color-bg-elevated);
+  border-color: var(--color-border);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+[data-theme="dark"] .hud-btn:hover {
+  background: rgba(208, 212, 218, 0.1);
+  box-shadow: var(--color-primary-glow);
+}
+
+/* Button-Variante: Primär */
+.hud-btn-primary {
+  background: rgba(0, 212, 255, 0.15);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+}
+.hud-btn-primary:hover {
+  background: rgba(0, 212, 255, 0.3);
+  box-shadow: var(--color-primary-glow-strong);
+}
+
+/* Button-Variante: Danger */
+.hud-btn-danger {
+  background: rgba(255, 59, 92, 0.1);
+  border: 1px solid rgba(255, 59, 92, 0.3);
+  color: var(--color-danger);
+}
+.hud-btn-danger:hover {
+  background: rgba(255, 59, 92, 0.2);
+  box-shadow: 0 0 20px rgba(255, 59, 92, 0.3);
+}
+[data-theme="dark"] .hud-btn-danger:hover {
+  box-shadow: 0 0 12px rgba(248, 113, 113, 0.2);
+}
+
+/* --- HUD-Input --- */
+.hud-input {
+  background: rgba(13, 17, 23, 0.8);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px 16px;
+  color: var(--color-text-primary);
+  transition: all 0.3s ease;
+  width: 100%;
+}
+.hud-input:focus {
+  outline: none;
+  border-color: var(--color-primary-dim);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
+}
+.hud-input::placeholder { color: var(--color-text-muted); }
+
+[data-theme="dark"] .hud-input { background: var(--color-bg-base); }
+[data-theme="dark"] .hud-input:focus {
+  box-shadow: var(--color-primary-glow);
+}
+
+/* --- HUD-Überschriften --- */
+.hud-title {
+  font-family: var(--font-heading);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+[data-theme="dark"] .hud-title {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* --- Glühender Text --- */
+.text-glow {
+  color: var(--color-primary);
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+[data-theme="dark"] .text-glow {
+  text-shadow: 0 0 8px rgba(208, 212, 218, 0.3);
+}
+
+/* --- Tab-Navigation --- */
+.hud-tab {
+  padding: 8px 16px;
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+.hud-tab:hover {
+  color: var(--color-text-secondary);
+  background: rgba(0, 212, 255, 0.05);
+}
+.hud-tab-active {
+  color: var(--color-primary);
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid var(--color-border-glow);
+}
+
+/* Dark: HUD-Struktur, monochrom */
+[data-theme="dark"] .hud-tab {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+[data-theme="dark"] .hud-tab:hover {
+  background: rgba(208, 212, 218, 0.05);
+}
+[data-theme="dark"] .hud-tab-active {
+  background: rgba(208, 212, 218, 0.08);
+  border-color: var(--color-border-glow);
+}
