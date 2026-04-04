@@ -1,7 +1,8 @@
-// EntryList — Zeigt Journal-Einträge als Liste
+// EntryList — Journal-Einträge mit Suche und Sortierung
 // SICHERHEIT: Zeigt nur Datum + Titel — kein Content in der Übersicht!
 // Content wird erst sichtbar wenn man den Eintrag zum Bearbeiten öffnet
 
+import { useState, useMemo } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { JournalEntry, JournalEntryCreate } from '../../types/models'
 import EntryForm from './EntryForm'
@@ -17,17 +18,29 @@ interface EntryListProps {
 }
 
 function EntryList({
-  entries,
-  editingId,
-  editEntry,
-  onStartEdit,
-  onSaveEdit,
-  onCancelEdit,
-  onDelete,
+  entries, editingId, editEntry,
+  onStartEdit, onSaveEdit, onCancelEdit, onDelete,
 }: EntryListProps) {
   const { t } = useLanguage()
+  const [search, setSearch] = useState('')
+  const [sortNewest, setSortNewest] = useState(true)
 
-  // Leerer Zustand
+  // Filtern + Sortieren
+  const filtered = useMemo(() => {
+    let result = entries
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      result = result.filter(e =>
+        e.title.toLowerCase().includes(q)
+        || e.date.includes(q)
+      )
+    }
+    return [...result].sort((a, b) => {
+      const cmp = a.date.localeCompare(b.date)
+      return sortNewest ? -cmp : cmp
+    })
+  }, [entries, search, sortNewest])
+
   if (entries.length === 0) {
     return (
       <div className="text-center py-16">
@@ -43,9 +56,36 @@ function EntryList({
 
   return (
     <div className="space-y-3">
-      {entries.map((entry) => (
+      {/* Suchfeld + Sort-Toggle */}
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder={t.entryList.searchPlaceholder || 'Einträge suchen...'}
+          className="hud-input text-sm flex-1"
+        />
+        <button
+          onClick={() => setSortNewest(!sortNewest)}
+          className="hud-btn text-xs px-2 py-1.5 flex items-center gap-1"
+          title={sortNewest
+            ? (t.entryList.sortOldest || 'Älteste zuerst')
+            : (t.entryList.sortNewest || 'Neueste zuerst')}
+        >
+          {sortNewest ? '↓' : '↑'}
+        </button>
+      </div>
+
+      {/* Ergebnis-Info bei aktiver Suche */}
+      {search.trim() && (
+        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+          {filtered.length} / {entries.length}
+        </p>
+      )}
+
+      {/* Einträge */}
+      {filtered.map(entry => (
         <div key={entry.id} className="hud-card p-4 animate-fade-in">
-          {/* Edit-Mode: EntryForm eingebettet */}
           {editingId === entry.id ? (
             <EntryForm
               initialData={editEntry}
@@ -54,19 +94,14 @@ function EntryList({
               onCancel={onCancelEdit}
             />
           ) : (
-            /* Normale Ansicht: Nur Datum + Titel (kein Content!) */
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span
-                  className="text-xs"
-                  style={{ color: 'var(--color-text-muted)' }}
-                >
+                <span className="text-xs"
+                  style={{ color: 'var(--color-text-muted)' }}>
                   {entry.date}
                 </span>
-                <h3
-                  className="text-sm font-medium"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
+                <h3 className="text-sm font-medium"
+                  style={{ color: 'var(--color-text-primary)' }}>
                   {entry.title}
                 </h3>
               </div>
@@ -77,18 +112,14 @@ function EntryList({
                     text-[var(--color-text-muted)] hover:text-[var(--color-primary)]
                     hover:bg-[rgba(125,216,232,0.1)]"
                   title={t.common.edit}
-                >
-                  ✎
-                </button>
+                >✎</button>
                 <button
                   onClick={() => onDelete(entry.id)}
                   className="text-xs px-1.5 py-0.5 rounded transition-all duration-200
                     text-[var(--color-text-muted)] hover:text-[var(--color-danger)]
                     hover:bg-[rgba(255,59,92,0.1)]"
                   title={t.common.delete}
-                >
-                  X
-                </button>
+                >X</button>
               </div>
             </div>
           )}
