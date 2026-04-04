@@ -20,7 +20,7 @@ const COLORS = {
   note: '#7dd4a3',
   summary: '#d4a574',
   wikilink: '#d4cc7d',
-  ai: '#888888',
+  ai: '#888888', entry: '#00d4ff',
 }
 
 interface Props {

@@ -8,7 +8,7 @@ import type { MetisGraph } from '../../types/metis'
 // Farben pro Typ
 const COLORS = {
   note: '#7dd4a3',
-  summary: '#d4a574',
+  summary: '#d4a574', entry: '#00d4ff',
 }
 
 interface Props {
