@@ -173,6 +173,8 @@ def delete_folder(folder_id: int, db: Session = Depends(get_db)):
     if not folder:
         raise HTTPException(status_code=404, detail="Ordner nicht gefunden")
 
+    folder_name = folder.name
+
     def collect_subfolder_ids(parent: int) -> list[int]:
         sub_ids = []
         subs = db.query(Folder).filter(Folder.parent_id == parent).all()
@@ -185,7 +187,7 @@ def delete_folder(folder_id: int, db: Session = Depends(get_db)):
     db.query(Module).filter(Module.folder_id.in_(all_folder_ids)).delete(synchronize_session=False)
     db.query(Folder).filter(Folder.id.in_(all_folder_ids)).delete(synchronize_session=False)
     db.commit()
-    return {"message": f"Ordner '{folder.name}' und Inhalt gelöscht"}
+    return {"message": f"Ordner '{folder_name}' und Inhalt gelöscht"}
 
 
 @router.put("/move-module/{module_id}")
