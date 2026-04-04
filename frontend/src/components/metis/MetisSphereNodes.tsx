@@ -113,12 +113,6 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
 
   return (
     <group position={position}>
-      {/* Äussere Aura */}
-      <mesh ref={pulseRef}>
-        <sphereGeometry args={[size * 3, 12, 12]} />
-        <meshBasicMaterial color={color} transparent opacity={0.06}
-          depthWrite={false} blending={THREE.AdditiveBlending} />
-      </mesh>
       {/* Glow-Hülle */}
       <mesh ref={outerRef}>
         <sphereGeometry args={[size * 1.8, 12, 12]} />
