@@ -104,6 +104,31 @@
   --color-highlight-glow: rgba(200, 205, 211, 0.1);
   --card-blur: 0px;
 }
+
+/* ============================================
+   Theme: HUD Dark — Cyan-Glow auf schwarzem Hintergrund
+   ============================================ */
+[data-theme="hudDark"] {
+  /* Hintergründe — Tiefes Schwarz wie Dark */
+  --color-bg-deep: #0a0a0a;
+  --color-bg-base: #0f0f0f;
+  --color-bg-surface: #161616;
+  --color-bg-elevated: #1c1c1c;
+
+  /* Borders — Dunkler als HUD */
+  --color-border: #1e2a2e;
+  --color-border-glow: #00d4ff20;
+
+  /* Interaktions-Farben — wie HUD */
+  --color-hover-bg: rgba(0, 212, 255, 0.05);
+  --color-active-bg: rgba(0, 212, 255, 0.1);
+  --color-glow-soft: rgba(0, 212, 255, 0.1);
+  --color-glow-medium: rgba(0, 212, 255, 0.15);
+  --color-highlight-bg: rgba(0, 255, 255, 0.06);
+  --color-highlight-border: rgba(0, 255, 255, 0.3);
+  --color-highlight-strong: rgba(0, 255, 255, 0.5);
+  --color-highlight-glow: rgba(0, 255, 255, 0.15);
+}
 /* ============================================
    Basis-Styles — Body, Scrollbar, Auswahl
    ============================================ */

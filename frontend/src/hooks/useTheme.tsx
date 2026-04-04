@@ -10,6 +10,7 @@ import type { ReactNode } from 'react'
 export const THEMES = {
   hud: 'HUD',
   dark: 'Dark',
+  hudDark: 'HUD Dark',
 } as const
 
 export type ThemeKey = keyof typeof THEMES
