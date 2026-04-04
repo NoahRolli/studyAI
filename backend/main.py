@@ -23,6 +23,7 @@ from backend.journal.models.journal_database import JournalBase
 from backend.journal.api.calendar import router as journal_calendar_router
 from backend.journal.api.insights import router as journal_insights_router
 from backend.journal.api.journal_metis import router as journal_metis_router
+from backend.journal.api.journal_metis_ai import router as journal_metis_ai_router
 from backend.auth.auth_middleware import router as auth_router
 from backend.auth.auth_middleware import require_auth
 from backend.api.ollama_status import router as ollama_status_router
@@ -123,6 +124,7 @@ app.include_router(journal_medications_router)
 app.include_router(journal_calendar_router)
 app.include_router(journal_insights_router)
 app.include_router(journal_metis_router)
+app.include_router(journal_metis_ai_router)
 app.include_router(ollama_status_router)
 app.include_router(notes_ai_router)
 app.include_router(metis_router)
