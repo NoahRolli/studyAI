@@ -18,6 +18,23 @@ export function adaptGraph(
   const idMap = new Map<string, number>()
   nodes.forEach((n, i) => idMap.set(n.id, i + 1))
 
+  // Cluster filtern + mappen (nur Cluster mit sichtbaren Nodes)
+  const clusters = (jGraph.clusters || [])
+    .filter(c => showPublic || c.realm === 'journal')
+    .map((c, i) => {
+      const mappedIds = (c.node_ids || [])
+        .filter(nid => idMap.has(nid))
+        .map(nid => idMap.get(nid)!)
+      return {
+        id: i + 1,
+        label: c.label || `Cluster ${i + 1}`,
+        description: null,
+        color: c.color || null,
+        node_ids: mappedIds,
+      }
+    })
+    .filter(c => c.node_ids.length > 0)
+
   return {
     nodes: nodes.map(n => ({
       id: idMap.get(n.id) || 0,
@@ -36,6 +53,6 @@ export function adaptGraph(
       relation_type: 'related' as const,
       strength: e.strength,
     })),
-    clusters: [],
+    clusters,
   }
 }
