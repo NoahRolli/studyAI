@@ -63,15 +63,29 @@ export function useDashboard() {
   }
 
   async function deleteFolder(folderId: number) {
-    await del(`/api/folders/${folderId}`)
-    await loadContents()
+    try {
+      setError(null)
+      await del(`/api/folders/${folderId}`)
+      const query = currentFolderId !== null ? `?parent_id=${currentFolderId}` : ""
+      const data = await get<FolderContents>(`/api/folders/contents${query}`)
+      setFolders(data.folders)
+      setModules(data.modules)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed")
+    }
   }
-
   async function deleteModule(moduleId: number) {
-    await del(`/api/modules/${moduleId}`)
-    await loadContents()
+    try {
+      setError(null)
+      await del(`/api/modules/${moduleId}`)
+      const query = currentFolderId !== null ? `?parent_id=${currentFolderId}` : ""
+      const data = await get<FolderContents>(`/api/folders/contents${query}`)
+      setFolders(data.folders)
+      setModules(data.modules)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed")
+    }
   }
-
   // --- Pin ---
   async function togglePinFolder(folderId: number) {
     await put(`/api/folders/${folderId}/pin`, {})
