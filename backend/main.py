@@ -13,6 +13,7 @@ from backend.api.summaries import router as summaries_router
 from backend.api.mindmap import router as mindmap_router
 from backend.api.folders import router as folders_router
 from backend.api.calendar import router as calendar_router
+from backend.api.sport import router as sport_router
 from backend.api.notes import router as notes_router
 from backend.journal.api.auth import router as journal_auth_router
 from backend.journal.api.entries import router as journal_entries_router
@@ -36,6 +37,7 @@ from backend.models.summary import Summary  # noqa: F401
 from backend.models.mindmap_node import MindmapNode  # noqa: F401
 from backend.models.folder import Folder  # noqa: F401
 from backend.models.calendar_event import CalendarEvent  # noqa: F401
+from backend.models.sport_entry import SportEntry  # noqa: F401
 from backend.models.note import Note  # noqa: F401
 from backend.models.metis_node import MetisNode  # noqa: F401
 from backend.models.metis_edge import MetisEdge  # noqa: F401
@@ -116,6 +118,7 @@ app.include_router(summaries_router)
 app.include_router(mindmap_router)
 app.include_router(folders_router)
 app.include_router(calendar_router)
+app.include_router(sport_router)
 app.include_router(notes_router)
 app.include_router(journal_auth_router)
 app.include_router(journal_entries_router)
