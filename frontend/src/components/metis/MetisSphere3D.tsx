@@ -142,7 +142,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
           if (!hp || !np) return null
           return <GlowEdge key={`${hub.id}-${nid}`}
             start={hp} end={np} color={hub.color}
-            strength={selectedHub === hub.id ? 1.0 : 0.15} dashed={selectedHub !== hub.id} />
+            strength={selectedHub === hub.id ? 3.0 : 0.15} dashed={selectedHub !== hub.id} />
         }))}
         {/* Cluster-Hub Nodes */}
         {hubData.map(hub => {
@@ -167,7 +167,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent, showLabels 
           return <GlowNode key={node.id} position={pos} color={color}
             size={Math.min(size, 0.3)} label={node.title}
             onClick={() => onNodeClick?.(node.id)}
-            showLabel={showLabels} />
+            showLabel={false} />
         })}
       </group>
     </>

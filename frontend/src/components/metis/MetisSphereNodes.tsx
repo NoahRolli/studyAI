@@ -166,12 +166,12 @@ export function GlowEdge({ start, end, color, strength, dashed }: {
     ])
     const mat = dashed
       ? new THREE.LineDashedMaterial({
-          color, transparent: true, opacity: 0.1 + strength * 0.2,
+          color, transparent: true, opacity: 0.05 + strength * 0.1,
           depthWrite: false, blending: THREE.AdditiveBlending,
           dashSize: 0.3, gapSize: 0.2,
         })
       : new THREE.LineBasicMaterial({
-          color, transparent: true, opacity: 0.15 + strength * 0.25,
+          color, transparent: true, opacity: 0.07 + strength * 0.12,
           depthWrite: false, blending: THREE.AdditiveBlending,
         })
     const l = new THREE.Line(geo, mat)
