@@ -174,6 +174,9 @@ const en = {
   entryList: {
     emptyTitle: 'No entries yet.',
     emptyHint: 'Click "+ New Entry" to get started.',
+    searchPlaceholder: 'Search entries...',
+    sortNewest: 'Newest first',
+    sortOldest: 'Oldest first',
   },
 
   // Calendar (Journal)
@@ -330,6 +333,8 @@ const en = {
     newNote: 'New Note',
     untitled: 'Untitled',
     searchPlaceholder: 'Search notes...',
+    sortNewest: 'Newest first',
+    sortOldest: 'Oldest first',
     noNotes: 'No notes yet',
     noNoteSelected: 'Select a note or create a new one',
     deleteConfirm: 'Really delete this note?',

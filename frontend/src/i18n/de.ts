@@ -175,6 +175,9 @@ const de = {
   entryList: {
     emptyTitle: 'Noch keine Einträge.',
     emptyHint: 'Klicke auf "+ Neuer Eintrag" um zu beginnen.',
+    searchPlaceholder: 'Einträge suchen...',
+    sortNewest: 'Neueste zuerst',
+    sortOldest: 'Älteste zuerst',
   },
 
   // Kalender (Journal)
@@ -331,6 +334,8 @@ const de = {
     newNote: 'Neue Notiz',
     untitled: 'Ohne Titel',
     searchPlaceholder: 'Notizen durchsuchen...',
+    sortNewest: 'Neueste zuerst',
+    sortOldest: 'Älteste zuerst',
     noNotes: 'Noch keine Notizen vorhanden',
     noNoteSelected: 'Notiz auswählen oder neue erstellen',
     deleteConfirm: 'Notiz wirklich löschen?',
