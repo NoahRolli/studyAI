@@ -6,6 +6,7 @@ export interface MetisNode {
   id: number
   type: 'note' | 'summary' | 'entry'
   source_id: number
+  module_id?: number | null
   title: string
   pos_x: number | null
   pos_y: number | null
@@ -48,6 +49,7 @@ export interface JournalMetisNode {
   id: string           // "j-5" (journal) oder "p-3" (public)
   type: string         // "entry", "note", "summary"
   source_id: number
+  module_id?: number | null
   label: string
   pos_x: number | null
   pos_y: number | null

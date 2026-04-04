@@ -53,6 +53,8 @@ export default function MetisNodeDetail({ node, graph, onClose }: Props) {
       navigate(`/notes?open=${sid}`)
     } else if (node.type === 'entry') {
       navigate(`/journal?entry=${sid}`)
+    } else if (node.type === 'summary' && node.module_id) {
+      navigate(`/modules/${node.module_id}`)
     } else {
       navigate('/dashboard')
     }
