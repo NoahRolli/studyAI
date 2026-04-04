@@ -66,13 +66,13 @@ export function GlowNode({ position, color, size, label, onClick, showLabel }: {
     <group position={position}>
       {/* Innerer Glow */}
       <mesh ref={glowRef}>
-        <sphereGeometry args={[size * 2, 16, 16]} />
+        <sphereGeometry args={[size * 2, 8, 8]} />
         <meshBasicMaterial color={color} transparent opacity={0.06}
           depthWrite={false} blending={THREE.AdditiveBlending} />
       </mesh>
       {/* Kern */}
       <mesh onClick={onClick}>
-        <sphereGeometry args={[size, 16, 16]} />
+        <sphereGeometry args={[size, 8, 8]} />
         <meshBasicMaterial color={new THREE.Color('#ffffff')} />
       </mesh>
       {/* Ring */}
@@ -121,19 +121,19 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
     <group position={position}>
       {/* Äussere Aura */}
       <mesh ref={pulseRef}>
-        <sphereGeometry args={[size * 3, 24, 24]} />
+        <sphereGeometry args={[size * 3, 12, 12]} />
         <meshBasicMaterial color={color} transparent opacity={0.06}
           depthWrite={false} blending={THREE.AdditiveBlending} />
       </mesh>
       {/* Glow-Hülle */}
       <mesh ref={outerRef}>
-        <sphereGeometry args={[size * 1.8, 24, 24]} />
+        <sphereGeometry args={[size * 1.8, 12, 12]} />
         <meshBasicMaterial color={color} transparent opacity={0.2}
           depthWrite={false} blending={THREE.AdditiveBlending} />
       </mesh>
       {/* Kern — klickbar */}
       <mesh onClick={onClick}>
-        <sphereGeometry args={[size, 24, 24]} />
+        <sphereGeometry args={[size, 12, 12]} />
         <meshBasicMaterial color={color} />
       </mesh>
       {/* Doppelter Ring */}
