@@ -33,7 +33,6 @@ export default function JournalMetisContent() {
 
   // Kamera-Ref — kein State, kein Re-Render
   const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 50 })
-  const minimapRef = useRef<{ update: () => void }>(null)
 
   // Kamera-Update ohne State — nur Ref aktualisieren
   const handleCameraMove = useCallback((
