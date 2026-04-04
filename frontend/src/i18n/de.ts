@@ -372,6 +372,7 @@ const de = {
     unclustered: 'Nicht zugeordnet',
     nodeNote: 'Notiz',
     nodeSummary: 'Zusammenfassung',
+    nodeEntry: 'Eintrag',
     edgeWikilink: 'WikiLink',
     edgeRelated: 'Verwandt',
     edgeBuildsOn: 'Baut auf',

@@ -371,6 +371,7 @@ const en = {
     unclustered: 'Unclustered',
     nodeNote: 'Note',
     nodeSummary: 'Summary',
+    nodeEntry: 'Entry',
     edgeWikilink: 'WikiLink',
     edgeRelated: 'Related',
     edgeBuildsOn: 'Builds on',
