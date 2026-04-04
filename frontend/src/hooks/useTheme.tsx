@@ -1,15 +1,15 @@
 // useTheme — Theme-Management für Pallas
 // Speichert aktives Theme in localStorage unter 'pallas-theme'
 // Setzt data-theme Attribut auf <html> für CSS-Variable-Overrides
-// Erweiterbar: Einfach neues Theme in THEMES + CSS-Block hinzufügen
+// Themes: HUD (cyan glow) + Dark (monochrom, kein glow)
 
 import { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
 
-// Verfügbare Themes — hier neue hinzufügen
+// Verfügbare Themes
 export const THEMES = {
   hud: 'HUD',
-  professional: 'Professional',
+  dark: 'Dark',
 } as const
 
 export type ThemeKey = keyof typeof THEMES
@@ -22,7 +22,6 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | null>(null)
 
-// localStorage Key
 const STORAGE_KEY = 'pallas-theme'
 
 // Theme auf <html> setzen — aktiviert die CSS-Variablen
@@ -33,18 +32,17 @@ function applyTheme(theme: ThemeKey) {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeKey>(() => {
     const stored = localStorage.getItem(STORAGE_KEY)
-    // Prüfen ob gespeichertes Theme gültig ist
+    // Migration: professional → dark
+    if (stored === 'professional') return 'dark'
     if (stored && stored in THEMES) return stored as ThemeKey
     return 'hud'
   })
 
-  // Theme bei Änderung anwenden + speichern
   useEffect(() => {
     applyTheme(theme)
     localStorage.setItem(STORAGE_KEY, theme)
   }, [theme])
 
-  // Beim ersten Laden Theme setzen
   useEffect(() => {
     applyTheme(theme)
   }, [])
