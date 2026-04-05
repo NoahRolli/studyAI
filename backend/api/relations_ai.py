@@ -118,6 +118,9 @@ async def detect_relations(db: Session = Depends(get_db)):
     if len(nodes) < 2:
         return {"suggested": 0, "message": "Zu wenige Nodes für Analyse"}
 
+
+    # Gültige Node-Keys für Validierung (verhindert Ollama-Halluzinationen)
+    valid_keys = {f"{n['type']}:{n['id']}" for n in nodes}
     # Relationstypen laden
     types = db.query(RelationType).all()
     type_map = {t.name: t.id for t in types}
@@ -197,6 +200,9 @@ Nur Relationen mit klarer Begründung. Qualität vor Quantität."""
         if (s_type, s_id, t_type, t_id) in existing:
             continue
 
+        # Node-Existenz validieren (keine halluzierten IDs)
+        if f"{s_type}:{s_id}" not in valid_keys or f"{t_type}:{t_id}" not in valid_keys:
+            continue
         # Selbstreferenz verhindern
         if s_type == t_type and s_id == t_id:
             continue
