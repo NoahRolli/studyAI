@@ -123,7 +123,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
     for (let i = 0; i < count; i++) {
       const mat = new THREE.SpriteMaterial({
         map: tex, transparent: true,
-        opacity: 0.4 + Math.random() * 0.3,
+        opacity: 0.7 + Math.random() * 0.3,
         depthWrite: false, blending: THREE.NormalBlending,
       })
       const sprite = new THREE.Sprite(mat)
@@ -153,7 +153,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
       )
       // Leichtes Pulsieren der Opazität
       const mat = p.sprite.material as THREE.SpriteMaterial
-      mat.opacity = (0.4 + Math.random() * 0.05) + Math.sin(t * p.speed + i) * 0.1
+      mat.opacity = (0.7 + Math.random() * 0.05) + Math.sin(t * p.speed + i) * 0.12
     })
   })
 
