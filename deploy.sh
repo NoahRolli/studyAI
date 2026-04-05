@@ -1,6 +1,7 @@
 #!/bin/bash
 # Pallas Deployment Script — MacBook → Olymp Server
 # Baut das Frontend, kopiert alles auf den Server, startet den Container
+# Nutzt rsync statt scp (stabiler über VPN, resume bei Abbruch)
 # Ausführen auf dem MacBook: bash deploy.sh
 
 set -e
@@ -14,22 +15,21 @@ cd frontend
 npm run build
 cd ..
 
-# 2. Dateien auf den Server kopieren
+# 2. Dateien auf den Server kopieren (rsync = komprimiert, resume-fähig)
 echo "[2/4] Dateien auf Olymp kopieren..."
 
-# Projekt-Verzeichnis auf dem Server sicherstellen
 ssh olymp "mkdir -p ~/pallas/frontend-dist"
 
-# Frontend-Build kopieren
-scp -r frontend/dist/* olymp:~/pallas/frontend-dist/
+# Frontend-Build
+rsync -az --delete -e "ssh -p 2222" frontend/dist/ prometheus@192.168.0.10:~/pallas/frontend-dist/
 
-# Backend kopieren
-scp -r backend olymp:~/pallas/
+# Backend (nur .py Dateien, keine __pycache__)
+rsync -az --delete --exclude='__pycache__' --exclude='*.pyc' \
+  -e "ssh -p 2222" backend/ prometheus@192.168.0.10:~/pallas/backend/
 
-# Docker-Dateien kopieren
-scp Dockerfile olymp:~/pallas/
-scp docker-compose.yml olymp:~/pallas/
-scp docker-compose.override.yml olymp:~/pallas/
+# Docker-Dateien
+rsync -az -e "ssh -p 2222" Dockerfile docker-compose.yml docker-compose.override.yml \
+  prometheus@192.168.0.10:~/pallas/
 
 # 3. Container auf dem Server bauen und starten
 echo "[3/4] Docker Container bauen und starten..."
@@ -41,4 +41,3 @@ ssh olymp "docker ps --filter name=pallas"
 
 echo ""
 echo "=== Deployment abgeschlossen ==="
-echo "Pallas erreichbar unter: http://192.168.0.10:8001"
