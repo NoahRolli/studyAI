@@ -9,6 +9,10 @@ from pydantic import BaseModel
 from typing import Optional
 from backend.models.database import get_db
 from backend.models.relation import Relation, RelationType
+from backend.models.note import Note
+from backend.models.summary import Summary
+from backend.models.document import Document
+from backend.models.module import Module
 
 router = APIRouter(prefix="/api/relations", tags=["relations"])
 type_router = APIRouter(prefix="/api/relation-types", tags=["relations"])
@@ -83,7 +87,8 @@ def get_relations(
     relations = q.order_by(Relation.created_at.desc()).all()
     # Typ-Info mitlesen
     type_map = {t.id: t for t in db.query(RelationType).all()}
-    return [_serialize_relation(r, type_map) for r in relations]
+    title_cache = _build_title_cache(db)
+    return [_serialize_relation(r, type_map, title_cache) for r in relations]
 
 
 @router.post("")
@@ -99,7 +104,8 @@ def create_relation(data: RelationCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(rel)
     type_map = {t.id: t for t in db.query(RelationType).all()}
-    return _serialize_relation(rel, type_map)
+    tc = _build_title_cache(db)
+    return _serialize_relation(rel, type_map, tc)
 
 
 @router.put("/{relation_id}")
@@ -117,7 +123,8 @@ def update_relation(
     db.commit()
     db.refresh(rel)
     type_map = {t.id: t for t in db.query(RelationType).all()}
-    return _serialize_relation(rel, type_map)
+    tc = _build_title_cache(db)
+    return _serialize_relation(rel, type_map, tc)
 
 
 @router.delete("/{relation_id}")
@@ -185,14 +192,35 @@ def create_relation_type(data: RelationTypeCreate, db: Session = Depends(get_db)
     return {"id": rt.id, "name": rt.name, "label_de": rt.label_de}
 
 
-# --- Hilfsfunktion ---
-def _serialize_relation(rel: Relation, type_map: dict) -> dict:
-    """Relation als Dict mit Typ-Info serialisieren"""
+# --- Hilfsfunktionen ---
+def _build_title_cache(db: Session) -> dict:
+    """Titel-Cache für alle Node-Typen aufbauen"""
+    cache = {}
+    for note in db.query(Note).all():
+        cache[f"note:{note.id}"] = note.title
+    for summary in db.query(Summary).all():
+        doc = db.query(Document).filter(Document.id == summary.document_id).first()
+        cache[f"summary:{summary.id}"] = doc.filename if doc else f"Summary {summary.id}"
+    for module in db.query(Module).all():
+        cache[f"module:{module.id}"] = module.title
+    return cache
+
+
+def _serialize_relation(rel: Relation, type_map: dict, title_cache: dict = {}) -> dict:
+    """Relation als Dict mit Typ-Info und Node-Titeln serialisieren"""
     rt = type_map.get(rel.relation_type_id)
     return {
         "id": rel.id,
         "source_type": rel.source_type, "source_id": rel.source_id,
+        "source_title": title_cache.get(
+            f"{rel.source_type}:{rel.source_id}",
+            f"{rel.source_type} #{rel.source_id}",
+        ),
         "target_type": rel.target_type, "target_id": rel.target_id,
+        "target_title": title_cache.get(
+            f"{rel.target_type}:{rel.target_id}",
+            f"{rel.target_type} #{rel.target_id}",
+        ),
         "relation_type": {
             "id": rt.id, "name": rt.name,
             "label_de": rt.label_de, "label_en": rt.label_en,

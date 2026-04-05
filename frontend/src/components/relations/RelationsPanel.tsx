@@ -108,7 +108,8 @@ export default function RelationsPanel({ noteId, onNavigate }: Props) {
   const confirmed = visible.filter(r => r.status === 'confirmed')
 
   // Ziel-Label (Note/Summary/Module + ID)
-  const nodeLabel = (type: string, id: number) => {
+  const nodeLabel = (type: string, id: number, title?: string) => {
+    if (title) return title
     const labels: Record<string, string> = {
       note: 'Note', summary: 'Summary', module: 'Module',
     }
@@ -116,11 +117,11 @@ export default function RelationsPanel({ noteId, onNavigate }: Props) {
   }
 
   // Welche Seite ist das Gegenstück zu dieser Note?
-  const otherSide = (r: RelationData) => {
+  const otherSide = (r: RelationData): { type: string; id: number; title: string; direction: string } => {
     if (r.source_type === 'note' && r.source_id === noteId) {
-      return { type: r.target_type, id: r.target_id, direction: '→' }
+      return { type: r.target_type, id: r.target_id, title: r.target_title, direction: '→' }
     }
-    return { type: r.source_type, id: r.source_id, direction: '←' }
+    return { type: r.source_type, id: r.source_id, title: r.source_title, direction: '←' }
   }
 
   return (
@@ -161,7 +162,7 @@ export default function RelationsPanel({ noteId, onNavigate }: Props) {
                   style={{ color: 'var(--color-text-primary)' }}
                   onClick={() => other.type === 'note' && onNavigate?.(other.id)}
                   title={r.reason || undefined}>
-                  {nodeLabel(other.type, other.id)}
+                  {nodeLabel(other.type, other.id, other.title)}
                 </button>
                 <span className="text-xs ml-1"
                   style={{ color: 'var(--color-text-muted)' }}>
@@ -192,7 +193,7 @@ export default function RelationsPanel({ noteId, onNavigate }: Props) {
                 </span>
                 <span style={{ color: 'var(--color-text-primary)' }}
                   title={r.reason || undefined}>
-                  {nodeLabel(other.type, other.id)}
+                  {nodeLabel(other.type, other.id, other.title)}
                 </span>
                 {r.reason && (
                   <span className="text-xs truncate max-w-32"

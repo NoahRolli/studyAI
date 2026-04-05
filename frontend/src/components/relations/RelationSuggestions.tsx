@@ -92,7 +92,8 @@ export default function RelationSuggestions({ onChanged }: Props) {
   const typeLabel = (rt: RelationData['relation_type']) =>
     rt ? (language === 'de' ? rt.label_de : rt.label_en) : '?'
 
-  const nodeLabel = (type: string, id: number) => {
+  const nodeLabel = (type: string, id: number, title?: string) => {
+    if (title) return title
     const labels: Record<string, string> = {
       note: 'Note', summary: 'Summary', module: 'Module',
     }
@@ -167,7 +168,7 @@ export default function RelationSuggestions({ onChanged }: Props) {
               {/* Tripel-Darstellung */}
               <div className="flex items-center gap-2 text-sm flex-wrap">
                 <span style={{ color: 'var(--color-text-primary)' }}>
-                  {nodeLabel(s.source_type, s.source_id)}
+                  {nodeLabel(s.source_type, s.source_id, s.source_title)}
                 </span>
                 <span className="font-semibold px-2 py-0.5 rounded text-xs"
                   style={{
@@ -177,7 +178,7 @@ export default function RelationSuggestions({ onChanged }: Props) {
                   {typeLabel(s.relation_type)}
                 </span>
                 <span style={{ color: 'var(--color-text-primary)' }}>
-                  {nodeLabel(s.target_type, s.target_id)}
+                  {nodeLabel(s.target_type, s.target_id, s.target_title)}
                 </span>
               </div>
 

@@ -14,8 +14,10 @@ export interface RelationData {
   id: number
   source_type: string
   source_id: number
+  source_title: string
   target_type: string
   target_id: number
+  target_title: string
   relation_type: {
     id: number
     name: string
@@ -31,8 +33,10 @@ export interface RelationData {
 export interface RelationCreate {
   source_type: string
   source_id: number
+  source_title: string
   target_type: string
   target_id: number
+  target_title: string
   relation_type_id: number
   reason?: string
 }

@@ -85,7 +85,8 @@ export default function OntologyPage() {
   const typeLabel = (rt: RelationData['relation_type']) =>
     rt ? (language === 'de' ? rt.label_de : rt.label_en) : '?'
 
-  const nodeLabel = (type: string, id: number) => {
+  const nodeLabel = (type: string, id: number, title?: string) => {
+    if (title) return title
     const labels: Record<string, string> = {
       note: 'Note', summary: 'Summary', module: 'Module',
     }
@@ -188,7 +189,7 @@ export default function OntologyPage() {
                   }}>
                   {/* Subjekt */}
                   <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                    {nodeLabel(r.source_type, r.source_id)}
+                    {nodeLabel(r.source_type, r.source_id, r.source_title)}
                   </span>
                   {/* Prädikat */}
                   <span className="px-2 py-0.5 rounded text-xs font-semibold"
@@ -201,7 +202,7 @@ export default function OntologyPage() {
                   </span>
                   {/* Objekt */}
                   <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                    {nodeLabel(r.target_type, r.target_id)}
+                    {nodeLabel(r.target_type, r.target_id, r.target_title)}
                   </span>
                   {/* Begründung */}
                   {r.reason && (
@@ -235,7 +236,7 @@ export default function OntologyPage() {
                       color: 'var(--color-text-primary)',
                       border: '1px solid var(--color-border)',
                     }}>
-                    {nodeLabel(n.type, n.id)}
+                    {nodeLabel(n.type, n.id, n.title)}
                     <span className="ml-1" style={{ color: 'var(--color-text-muted)' }}>
                       ({n.relationCount})
                     </span>
