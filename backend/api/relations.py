@@ -202,7 +202,7 @@ def _build_title_cache(db: Session) -> dict:
         doc = db.query(Document).filter(Document.id == summary.document_id).first()
         cache[f"summary:{summary.id}"] = doc.filename if doc else f"Summary {summary.id}"
     for module in db.query(Module).all():
-        cache[f"module:{module.id}"] = module.title
+        cache[f"module:{module.id}"] = module.name
     return cache
 
 
