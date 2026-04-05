@@ -85,7 +85,25 @@ export function GlowNode({ position, color, size, label, onClick, showLabel }: {
   )
 }
 
-// --- ClusterHub — Nebel/Wolken-Cluster statt solider Kugel ---
+// --- Nebel-Textur via Canvas (weicher Gauss-Punkt) ---
+function createNebulaTexture(color: string): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas')
+  canvas.width = 128; canvas.height = 128
+  const ctx = canvas.getContext('2d')!
+  const cx = 64, cy = 64
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 64)
+  grad.addColorStop(0, color + 'cc')
+  grad.addColorStop(0.3, color + '66')
+  grad.addColorStop(0.6, color + '22')
+  grad.addColorStop(1, color + '00')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, 128, 128)
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.needsUpdate = true
+  return tex
+}
+
+// --- ClusterHub — Weltraum-Nebel aus Sprite-Partikeln ---
 export function ClusterHub({ position, color, size, label, showLabel, onClick }: {
   position: [number, number, number]
   color: THREE.Color
@@ -94,50 +112,62 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
   showLabel: boolean
   onClick?: () => void
 }) {
-  const layerRefs = useRef<THREE.Mesh[]>([])
+  const groupRef = useRef<THREE.Group>(null)
 
-  // Nebel-Schichten: verschiedene Grössen, Offsets, Geschwindigkeiten
-  const layers = useMemo(() => [
-    { scale: 1.0, speed: 0.4, opacity: 0.12, offset: [0, 0, 0] },
-    { scale: 1.4, speed: 0.25, opacity: 0.07, offset: [0.3, -0.2, 0.1] },
-    { scale: 1.8, speed: 0.15, opacity: 0.04, offset: [-0.2, 0.3, -0.2] },
-    { scale: 2.3, speed: 0.1, opacity: 0.025, offset: [0.1, -0.1, 0.3] },
-  ], [])
+  // Nebel-Partikel generieren (zufällige Positionen + Grössen)
+  const particles = useMemo(() => {
+    const hex = '#' + color.getHexString()
+    const tex = createNebulaTexture(hex)
+    const count = Math.min(12 + Math.floor(size * 4), 30)
+    const pts: { sprite: THREE.Sprite; basePos: number[]; speed: number }[] = []
+    for (let i = 0; i < count; i++) {
+      const mat = new THREE.SpriteMaterial({
+        map: tex, transparent: true,
+        opacity: 0.08 + Math.random() * 0.12,
+        depthWrite: false, blending: THREE.AdditiveBlending,
+      })
+      const sprite = new THREE.Sprite(mat)
+      // Zufällige Position im Kugelvolumen
+      const theta = Math.random() * Math.PI * 2
+      const phi = Math.acos(2 * Math.random() - 1)
+      const r = size * (0.3 + Math.random() * 1.2)
+      const x = r * Math.sin(phi) * Math.cos(theta)
+      const y = r * Math.sin(phi) * Math.sin(theta)
+      const z = r * Math.cos(phi)
+      sprite.position.set(x, y, z)
+      const s = size * (0.8 + Math.random() * 1.5)
+      sprite.scale.set(s, s, 1)
+      pts.push({ sprite, basePos: [x, y, z], speed: 0.1 + Math.random() * 0.3 })
+    }
+    return pts
+  }, [color, size])
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
-    layerRefs.current.forEach((mesh, i) => {
-      if (!mesh) return
-      const l = layers[i]
-      const pulse = 1 + Math.sin(t * l.speed + i * 1.5) * 0.15
-      mesh.scale.setScalar(l.scale * pulse)
-      // Leichte Drift-Bewegung für Nebel-Effekt
-      const drift = 0.3
-      mesh.position.set(
-        l.offset[0] + Math.sin(t * l.speed * 0.7 + i) * drift,
-        l.offset[1] + Math.cos(t * l.speed * 0.5 + i * 2) * drift,
-        l.offset[2] + Math.sin(t * l.speed * 0.3 + i * 3) * drift,
+    particles.forEach((p, i) => {
+      const drift = size * 0.15
+      p.sprite.position.set(
+        p.basePos[0] + Math.sin(t * p.speed + i * 1.7) * drift,
+        p.basePos[1] + Math.cos(t * p.speed * 0.8 + i * 2.3) * drift,
+        p.basePos[2] + Math.sin(t * p.speed * 0.6 + i * 3.1) * drift,
       )
+      // Leichtes Pulsieren der Opazität
+      const mat = p.sprite.material as THREE.SpriteMaterial
+      mat.opacity = (0.08 + Math.random() * 0.02) + Math.sin(t * p.speed + i) * 0.03
     })
   })
 
   const hex = `#${color.getHexString()}`
 
   return (
-    <group position={position}>
-      {/* Nebel-Schichten */}
-      {layers.map((l, i) => (
-        <mesh key={i}
-          ref={el => { if (el) layerRefs.current[i] = el }}
-          position={l.offset as [number, number, number]}>
-          <sphereGeometry args={[size * l.scale, 16, 16]} />
-          <meshBasicMaterial color={color} transparent opacity={l.opacity}
-            depthWrite={false} blending={THREE.AdditiveBlending} />
-        </mesh>
+    <group position={position} ref={groupRef}>
+      {/* Nebel-Partikel */}
+      {particles.map((p, i) => (
+        <primitive key={i} object={p.sprite} />
       ))}
       {/* Unsichtbarer Klick-Bereich */}
       <mesh onClick={onClick}>
-        <sphereGeometry args={[size * 1.2, 8, 8]} />
+        <sphereGeometry args={[size * 1.5, 8, 8]} />
         <meshBasicMaterial visible={false} />
       </mesh>
       {/* Sprite-Label */}
