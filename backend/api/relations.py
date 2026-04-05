@@ -193,6 +193,22 @@ def create_relation_type(data: RelationTypeCreate, db: Session = Depends(get_db)
 
 
 # --- Hilfsfunktionen ---
+
+
+@router.get("/targets")
+def get_relation_targets(type: str = "note", db: Session = Depends(get_db)):
+    """Alle verfügbaren Targets eines Typs für Dropdown"""
+    if type == "note":
+        return [{"id": n.id, "title": n.title} for n in db.query(Note).all()]
+    elif type == "summary":
+        results = []
+        for s in db.query(Summary).all():
+            doc = db.query(Document).filter(Document.id == s.document_id).first()
+            results.append({"id": s.id, "title": doc.filename if doc else f"Summary {s.id}"})
+        return results
+    elif type == "module":
+        return [{"id": m.id, "title": m.name} for m in db.query(Module).all()]
+    return []
 def _build_title_cache(db: Session) -> dict:
     """Titel-Cache für alle Node-Typen aufbauen"""
     cache = {}

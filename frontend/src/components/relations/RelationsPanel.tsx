@@ -26,6 +26,21 @@ export default function RelationsPanel({ noteId, onNavigate }: Props) {
   const [typeId, setTypeId] = useState<number>(0)
   const [reason, setReason] = useState('')
 
+  const [targets, setTargets] = useState<{id: number, title: string}[]>([])
+
+  // Verfügbare Targets laden wenn Typ sich ändert
+  useEffect(() => {
+    if (!showForm) return
+    const loadTargets = async () => {
+      try {
+        const data = await get<{id: number, title: string}[]>(
+          `/api/relations/targets?type=${targetType}`
+        )
+        setTargets(targetType === 'note' ? data.filter(n => n.id !== noteId) : data)
+      } catch { setTargets([]) }
+    }
+    loadTargets()
+  }, [showForm, targetType, noteId])
   const loadRelations = useCallback(async () => {
     try {
       const data = await get<RelationData[]>(
@@ -250,9 +265,14 @@ export default function RelationsPanel({ noteId, onNavigate }: Props) {
                   <option value="summary">Summary</option>
                   <option value="module">Module</option>
                 </select>
-                <input type="number" value={targetId} placeholder="ID"
+                <select value={targetId}
                   onChange={e => setTargetId(e.target.value)}
-                  className="hud-input text-xs" style={{ width: '70px' }} />
+                  className="hud-input text-xs flex-1">
+                  <option value="">{language === 'de' ? 'Ziel wählen' : 'Select target'}</option>
+                  {targets.map(t => (
+                    <option key={t.id} value={t.id}>{t.title}</option>
+                  ))}
+                </select>
                 <select value={typeId}
                   onChange={e => setTypeId(parseInt(e.target.value))}
                   className="hud-input text-xs flex-1">
