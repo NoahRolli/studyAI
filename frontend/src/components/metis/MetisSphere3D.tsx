@@ -16,6 +16,15 @@ const COLORS: Record<string, THREE.Color> = {
   wikilink: new THREE.Color('#e8e090'),
   ai: new THREE.Color('#6aacbe'),
   entry: new THREE.Color('#00d4ff'),
+  // Ontology-Relationstypen
+  is_a: new THREE.Color('#ff6b9d'),
+  subclass_of: new THREE.Color('#c084fc'),
+  part_of: new THREE.Color('#fb923c'),
+  builds_on: new THREE.Color('#4ade80'),
+  requires: new THREE.Color('#f87171'),
+  contradicts: new THREE.Color('#ef4444'),
+  example_of: new THREE.Color('#67e8f9'),
+  related_to: new THREE.Color('#a78bfa'),
 }
 const HUB_FALLBACK = ['#7dd4a3', '#d4a574', '#d4cc7d', '#7dd8e8', '#888888']
 const GOLDEN = Math.PI * (3 - Math.sqrt(5))
@@ -272,9 +281,9 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
           const e = nodePositions.get(edge.target_node_id)
           if (!s || !e) return null
           const hl = isEdgeHighlighted(edge.source_node_id, edge.target_node_id)
-          const c = edge.relation_type === 'wikilink' ? COLORS.wikilink : COLORS.ai
+          const c = COLORS[edge.relation_type] || COLORS.ai; const isOntology = edge.id < 0
           return <GlowEdge key={edge.id} start={s} end={e}
-            color={c} strength={hl ? 5.0 : edge.strength} />
+            color={c} strength={hl ? 5.0 : (isOntology ? 1.5 : edge.strength)} />
         })}
         {hubData.map(hub => hub.memberNodeIds.map(nid => {
           const hp = hubPositions.get(hub.id)

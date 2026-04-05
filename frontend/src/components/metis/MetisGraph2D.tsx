@@ -16,11 +16,12 @@ import { layoutGraph } from '../../utils/metisLayout'
 import MetisNode2D from './MetisNode2D'
 
 // Farben — gedämpft, HUD-Stil
-const COLORS = {
-  note: '#7dd4a3',
-  summary: '#d4a574',
-  wikilink: '#d4cc7d',
-  ai: '#888888', entry: '#00d4ff',
+const COLORS: Record<string, string> = {
+  note: '#7dd4a3', summary: '#d4a574',
+  wikilink: '#d4cc7d', ai: '#888888', entry: '#00d4ff',
+  is_a: '#ff6b9d', subclass_of: '#c084fc', part_of: '#fb923c',
+  builds_on: '#4ade80', requires: '#f87171', contradicts: '#ef4444',
+  example_of: '#67e8f9', related_to: '#a78bfa',
 }
 
 interface Props {
@@ -57,17 +58,19 @@ export default function MetisGraph2D({ graph, onPositionUpdate, onNodeClick, tra
 
     const rfEdges: Edge[] = graph.edges.map(e => {
       const isWikilink = e.relation_type === 'wikilink'
+      const isOntology = e.id < 0
+      const edgeColor = COLORS[e.relation_type] || COLORS.ai
       return {
         id: String(e.id),
         source: String(e.source_node_id),
         target: String(e.target_node_id),
-        animated: !isWikilink,
+        animated: !isWikilink && !isOntology,
         style: {
-          stroke: isWikilink ? COLORS.wikilink : COLORS.ai,
-          strokeWidth: isWikilink ? 2.5 : 1.5,
-          strokeDasharray: isWikilink ? undefined : '6 4',
-          opacity: 0.5 + e.strength * 0.5,
-          filter: 'drop-shadow(0 0 3px ' + (isWikilink ? '#d4cc7d60' : '#88888840') + ')',
+          stroke: edgeColor,
+          strokeWidth: isOntology ? 2.5 : (isWikilink ? 2.5 : 1.5),
+          strokeDasharray: (isWikilink || isOntology) ? undefined : '6 4',
+          opacity: isOntology ? 0.8 : (0.5 + e.strength * 0.5),
+          filter: `drop-shadow(0 0 3px ${edgeColor}60)`,
         },
       }
     })

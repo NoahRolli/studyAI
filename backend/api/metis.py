@@ -14,6 +14,7 @@ from backend.models.note import Note
 from backend.models.summary import Summary
 from backend.models.document import Document
 from backend.api.metis_sync import sync_nodes, sync_wikilinks
+from backend.models.relation import Relation, RelationType
 
 router = APIRouter(prefix="/api/metis", tags=["metis"])
 
@@ -94,18 +95,36 @@ def _cluster_to_dict(cluster: MetisCluster) -> dict:
 # --- Endpunkte ---
 
 @router.get("/graph")
+@router.get("/graph")
 def get_graph(db: Session = Depends(get_db)):
-    """Kompletter Knowledge-Graph: Nodes + Edges + Clusters."""
+    """Kompletter Knowledge-Graph: Nodes + Edges + Clusters + Ontology-Relationen."""
     nodes = db.query(MetisNode).all()
     edges = db.query(MetisEdge).all()
     clusters = db.query(MetisCluster).all()
 
+    edge_list = [_edge_to_dict(e) for e in edges]
+
+    # Ontology-Relationen als Extra-Edges einspeisen
+    node_lookup = {(n.type, n.source_id): n.id for n in nodes}
+    type_map = {t.id: t.name for t in db.query(RelationType).all()}
+    ontology_rels = db.query(Relation).filter(Relation.status == "confirmed").all()
+    for rel in ontology_rels:
+        src_nid = node_lookup.get((rel.source_type, rel.source_id))
+        tgt_nid = node_lookup.get((rel.target_type, rel.target_id))
+        if src_nid and tgt_nid:
+            edge_list.append({
+                "id": -rel.id,
+                "source_node_id": src_nid,
+                "target_node_id": tgt_nid,
+                "relation_type": type_map.get(rel.relation_type_id, "related_to"),
+                "strength": 0.8,
+            })
+
     return {
         "nodes": [_node_to_dict(n, db) for n in nodes],
-        "edges": [_edge_to_dict(e) for e in edges],
+        "edges": edge_list,
         "clusters": [_cluster_to_dict(c) for c in clusters],
     }
-
 
 @router.post("/sync")
 def sync_graph(db: Session = Depends(get_db)):
