@@ -201,6 +201,9 @@ function Sidebar() {
           <NavLink to="/metis" className={linkStyle} title={t.sidebar.metis}>
             {collapsed ? 'M' : t.sidebar.metis}
           </NavLink>
+          <NavLink to="/ontology" className={linkStyle} title="Ontology">
+            {collapsed ? 'O' : 'Ontology'}
+          </NavLink>
         </nav>
 
         {/* Spacer */}
