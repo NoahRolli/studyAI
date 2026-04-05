@@ -3,6 +3,7 @@
 // Bestätigte + vorgeschlagene Relationen, manuelles Erstellen
 
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { get, post, put, del } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { RelationData, RelationType } from '../../types/relations'
@@ -14,6 +15,7 @@ interface Props {
 
 export default function RelationsPanel({ noteId, onNavigate }: Props) {
   const { language } = useLanguage()
+  const navigate = useNavigate()
   const [relations, setRelations] = useState<RelationData[]>([])
   const [types, setTypes] = useState<RelationType[]>([])
   const [expanded, setExpanded] = useState(false)
@@ -116,6 +118,12 @@ export default function RelationsPanel({ noteId, onNavigate }: Props) {
     return `${labels[type] || type} #${id}`
   }
 
+
+  // Doppelklick → zur Quelle navigieren
+  const navigateToSource = (type: string, id: number) => {
+    if (type === 'note') { onNavigate?.(id); return }
+    if (type === 'summary' || type === 'module') navigate(`/modules/${id}`)
+  }
   // Welche Seite ist das Gegenstück zu dieser Note?
   const otherSide = (r: RelationData): { type: string; id: number; title: string; direction: string } => {
     if (r.source_type === 'note' && r.source_id === noteId) {
@@ -160,7 +168,7 @@ export default function RelationsPanel({ noteId, onNavigate }: Props) {
                 </span>
                 <button className="hover:underline"
                   style={{ color: 'var(--color-text-primary)' }}
-                  onClick={() => other.type === 'note' && onNavigate?.(other.id)}
+                  onDoubleClick={() => navigateToSource(other.type, other.id)}
                   title={r.reason || undefined}>
                   {nodeLabel(other.type, other.id, other.title)}
                 </button>
@@ -191,8 +199,9 @@ export default function RelationsPanel({ noteId, onNavigate }: Props) {
                 <span className="font-medium" style={{ color: 'var(--color-warning)' }}>
                   {typeLabel(r.relation_type)}
                 </span>
-                <span style={{ color: 'var(--color-text-primary)' }}
-                  title={r.reason || undefined}>
+                <span className="cursor-pointer hover:underline" style={{ color: 'var(--color-text-primary)' }}
+                  title={r.reason || undefined}
+                  onDoubleClick={() => navigateToSource(other.type, other.id)}>
                   {nodeLabel(other.type, other.id, other.title)}
                 </span>
                 {r.reason && (
