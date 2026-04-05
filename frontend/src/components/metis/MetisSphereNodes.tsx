@@ -118,12 +118,12 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
   const particles = useMemo(() => {
     const hex = '#' + color.getHexString()
     const tex = createNebulaTexture(hex)
-    const count = Math.min(12 + Math.floor(size * 4), 30)
+    const count = Math.min(20 + Math.floor(size * 6), 50)
     const pts: { sprite: THREE.Sprite; basePos: number[]; speed: number }[] = []
     for (let i = 0; i < count; i++) {
       const mat = new THREE.SpriteMaterial({
         map: tex, transparent: true,
-        opacity: 0.7 + Math.random() * 0.3,
+        opacity: 0.85 + Math.random() * 0.15,
         depthWrite: false, blending: THREE.NormalBlending,
       })
       const sprite = new THREE.Sprite(mat)
@@ -135,7 +135,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
       const y = r * Math.sin(phi) * Math.sin(theta)
       const z = r * Math.cos(phi)
       sprite.position.set(x, y, z)
-      const s = size * (0.8 + Math.random() * 1.5)
+      const s = size * (1.5 + Math.random() * 2.5)
       sprite.scale.set(s, s, 1)
       pts.push({ sprite, basePos: [x, y, z], speed: 0.1 + Math.random() * 0.3 })
     }
@@ -153,7 +153,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
       )
       // Leichtes Pulsieren der Opazität
       const mat = p.sprite.material as THREE.SpriteMaterial
-      mat.opacity = (0.7 + Math.random() * 0.05) + Math.sin(t * p.speed + i) * 0.12
+      mat.opacity = (0.85 + Math.random() * 0.05) + Math.sin(t * p.speed + i) * 0.08
     })
   })
 
