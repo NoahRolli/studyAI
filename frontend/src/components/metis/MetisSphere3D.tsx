@@ -9,6 +9,8 @@ import type { MetisGraph } from '../../types/metis'
 import {
   GlowNode, ClusterHub, GlowEdge, BackgroundGrid, CameraTracker,
 } from './MetisSphereNodes'
+import MetisSphereSettings from './MetisSphereSettings'
+import { useSphereSettings } from '../../hooks/useSphereSettings'
 
 const COLORS: Record<string, THREE.Color> = {
   note: new THREE.Color('#90edb8'),
@@ -151,13 +153,14 @@ function TrackballControls({ groupRef, onInteract, isDraggingRef }: {
 }
 
 function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
-  showLabels, isDraggingRef }: {
+  showLabels, isDraggingRef, settings }: {
   graph: MetisGraph
   onNodeClick?: (id: number) => void
   onCameraMove: (a: number, e: number, d: number) => void
   transparent?: boolean
   showLabels: boolean
   isDraggingRef: React.MutableRefObject<boolean>
+  settings: import('../../hooks/useSphereSettings').SphereSettings
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const idleTime = useRef(0)
@@ -283,7 +286,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
           const hl = isEdgeHighlighted(edge.source_node_id, edge.target_node_id)
           const c = COLORS[edge.relation_type] || COLORS.ai; const isOntology = edge.id < 0
           return <GlowEdge key={edge.id} start={s} end={e}
-            color={c} strength={hl ? 5.0 : (isOntology ? 1.5 : edge.strength)} />
+            color={c} strength={hl ? 5.0 : (isOntology ? settings.edgeOntology : edge.strength * settings.edgeSimilarity)} />
         })}
         {hubData.map(hub => hub.memberNodeIds.map(nid => {
           const hp = hubPositions.get(hub.id)
@@ -301,13 +304,15 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
           return <ClusterHub key={hub.id} position={pos}
             color={hub.color} size={Math.min(size, 1.1)}
             label={hub.label} showLabel={showLabels}
-            onClick={() => handleHubClick(hub.id, hub.memberNodeIds)} />
+            onClick={() => handleHubClick(hub.id, hub.memberNodeIds)}
+            intensityMul={settings.nebulaIntensity}
+            sizeMul={settings.nebulaSize} />
         })}
         {graph.nodes.map(node => {
           const pos = nodePositions.get(node.id)
           if (!pos) return null
           const color = COLORS[node.type] || COLORS.note
-          return <GlowNode key={node.id} position={pos} color={color}
+          return <GlowNode key={node.id} position={pos} color={color} glowMul={settings.nodeGlow}
             size={0.12} label={node.title}
             onClick={() => handleNodeClick(node.id)}
             showLabel={false} />
@@ -330,19 +335,23 @@ export default function MetisSphere3D({
   showLabels = false,
 }: Props) {
   const isDraggingRef = useRef(false)
+  const { settings, update, save, reset } = useSphereSettings()
   const handleCameraMove = useCallback((a: number, e: number, d: number) => {
     onCameraMove?.(a, e, d)
   }, [onCameraMove])
 
   return (
-    <div className="w-full h-full" style={{ background: 'transparent' }}>
+    <div className="w-full h-full relative" style={{ background: 'transparent' }}>
       <Canvas camera={{ position: [0, 0, 50], fov: 36 }}
         style={{ background: 'transparent' }}
         gl={{ antialias: true, alpha: true }}>
         <MetisScene graph={graph} onNodeClick={onNodeClick}
           transparent={transparent} onCameraMove={handleCameraMove}
-          showLabels={showLabels} isDraggingRef={isDraggingRef} />
+          showLabels={showLabels} isDraggingRef={isDraggingRef}
+          settings={settings} />
       </Canvas>
+      <MetisSphereSettings settings={settings}
+        onUpdate={update} onSave={save} onReset={reset} />
     </div>
   )
 }

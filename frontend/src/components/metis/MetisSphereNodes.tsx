@@ -45,13 +45,15 @@ function SpriteLabel({ position, text, color, fontSize, bold }: {
 }
 
 // --- GlowNode — weisser Kern, farbiger Glow, Sprite-Label ---
-export function GlowNode({ position, color, size, label, onClick, showLabel }: {
+export function GlowNode({ position, color, size, label, onClick, showLabel,
+  glowMul = 1 }: {
   position: [number, number, number]
   color: THREE.Color
   size: number
   label: string
   onClick?: () => void
   showLabel: boolean
+  glowMul?: number
 }) {
   const glowRef = useRef<THREE.Mesh>(null)
 
@@ -67,7 +69,7 @@ export function GlowNode({ position, color, size, label, onClick, showLabel }: {
       {/* Innerer Glow */}
       <mesh ref={glowRef}>
         <sphereGeometry args={[size * 2, 8, 8]} />
-        <meshBasicMaterial color={color} transparent opacity={0.06}
+        <meshBasicMaterial color={color} transparent opacity={0.06 * glowMul}
           depthWrite={false} blending={THREE.AdditiveBlending} />
       </mesh>
       {/* Kern */}
@@ -104,13 +106,16 @@ function createNebulaTexture(color: string): THREE.CanvasTexture {
 }
 
 // --- ClusterHub — Weltraum-Nebel aus Sprite-Partikeln ---
-export function ClusterHub({ position, color, size, label, showLabel, onClick }: {
+export function ClusterHub({ position, color, size, label, showLabel, onClick,
+  intensityMul = 1, sizeMul = 1 }: {
   position: [number, number, number]
   color: THREE.Color
   size: number
   label: string
   showLabel: boolean
   onClick?: () => void
+  intensityMul?: number
+  sizeMul?: number
 }) {
   const groupRef = useRef<THREE.Group>(null)
 
@@ -123,7 +128,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
     for (let i = 0; i < count; i++) {
       const mat = new THREE.SpriteMaterial({
         map: tex, transparent: true,
-        opacity: 0.7 + Math.random() * 0.3,
+        opacity: (0.7 + Math.random() * 0.3) * intensityMul,
         depthWrite: false, blending: THREE.NormalBlending,
       })
       const sprite = new THREE.Sprite(mat)
@@ -135,7 +140,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
       const y = r * Math.sin(phi) * Math.sin(theta)
       const z = r * Math.cos(phi)
       sprite.position.set(x, y, z)
-      const s = size * (0.8 + Math.random() * 1.5)
+      const s = size * (0.8 + Math.random() * 1.5) * sizeMul
       sprite.scale.set(s, s, 1)
       pts.push({ sprite, basePos: [x, y, z], speed: 0.1 + Math.random() * 0.3 })
     }
@@ -153,7 +158,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
       )
       // Leichtes Pulsieren der Opazität
       const mat = p.sprite.material as THREE.SpriteMaterial
-      mat.opacity = (0.7 + Math.random() * 0.05) + Math.sin(t * p.speed + i) * 0.12
+      mat.opacity = ((0.7 + Math.random() * 0.05) + Math.sin(t * p.speed + i) * 0.12) * intensityMul
     })
   })
 
