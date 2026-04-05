@@ -31,6 +31,9 @@ from backend.api.ollama_status import router as ollama_status_router
 from backend.api.notes_ai import router as notes_ai_router# WICHTIG: Alle Models importieren, damit SQLAlchemy sie kennt
 from backend.api.metis import router as metis_router
 from backend.api.metis_ai import router as metis_ai_router
+from backend.api.relations import router as relations_router
+from backend.api.relations import type_router as relation_types_router
+from backend.api.relations_ai import router as relations_ai_router
 from backend.models.module import Module  # noqa: F401
 from backend.models.document import Document  # noqa: F401
 from backend.models.summary import Summary  # noqa: F401
@@ -40,6 +43,8 @@ from backend.models.calendar_event import CalendarEvent  # noqa: F401
 from backend.models.sport_entry import SportEntry  # noqa: F401
 from backend.models.note import Note  # noqa: F401
 from backend.models.metis_node import MetisNode  # noqa: F401
+from backend.models.relation import Relation  # noqa: F401
+from backend.models.relation import RelationType  # noqa: F401
 from backend.models.metis_edge import MetisEdge  # noqa: F401
 from backend.models.metis_cluster import MetisCluster  # noqa: F401
 from backend.models.metis_cluster import MetisClusterMember  # noqa: F401
@@ -132,6 +137,9 @@ app.include_router(ollama_status_router)
 app.include_router(notes_ai_router)
 app.include_router(metis_router)
 app.include_router(metis_ai_router)
+app.include_router(relations_router)
+app.include_router(relation_types_router)
+app.include_router(relations_ai_router)
 
 # Static Files — gebautes Frontend servieren (nur in Production)
 if _HAS_FRONTEND:
