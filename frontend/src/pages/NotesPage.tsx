@@ -12,6 +12,7 @@ import NotesList from '../components/notes/NotesList'
 import NoteEditor from '../components/notes/NoteEditor'
 import BacklinksPanel from '../components/notes/BacklinksPanel'
 import NoteAIPanel from '../components/notes/NoteAIPanel'
+import RelationsPanel from '../components/relations/RelationsPanel'
 import QuickSwitcher from '../components/notes/QuickSwitcher'
 
 // Notiz-Typ für die Liste (ohne Content)
@@ -228,6 +229,10 @@ function NotesPage() {
               onNavigate={loadNote}
             />
             <NoteAIPanel
+              noteId={selectedNote.id}
+              onNavigate={loadNote}
+            />
+            <RelationsPanel
               noteId={selectedNote.id}
               onNavigate={loadNote}
             />
