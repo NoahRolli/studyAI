@@ -3,6 +3,7 @@
 // Wird in der OntologyPage und optional als eigenständige Ansicht genutzt
 
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { get, post, put } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { RelationData } from '../../types/relations'
@@ -13,6 +14,7 @@ interface Props {
 
 export default function RelationSuggestions({ onChanged }: Props) {
   const { language } = useLanguage()
+  const navigate = useNavigate()
   const [suggestions, setSuggestions] = useState<RelationData[]>([])
   const [detecting, setDetecting] = useState(false)
   const [detectResult, setDetectResult] = useState<string | null>(null)
@@ -100,6 +102,12 @@ export default function RelationSuggestions({ onChanged }: Props) {
     return `${labels[type] || type} #${id}`
   }
 
+
+  // Doppelklick → zur Quelle navigieren
+  const navigateToSource = (type: string, id: number) => {
+    if (type === 'note') navigate(`/notes?open=${id}`)
+    else if (type === 'summary' || type === 'module') navigate(`/modules/${id}`)
+  }
   return (
     <div className="space-y-4">
       {/* Header + Detect Button */}
@@ -167,7 +175,8 @@ export default function RelationSuggestions({ onChanged }: Props) {
               }}>
               {/* Tripel-Darstellung */}
               <div className="flex items-center gap-2 text-sm flex-wrap">
-                <span style={{ color: 'var(--color-text-primary)' }}>
+                <span className="cursor-pointer hover:underline" style={{ color: 'var(--color-text-primary)' }}
+                  onDoubleClick={() => navigateToSource(s.source_type, s.source_id)}>
                   {nodeLabel(s.source_type, s.source_id, s.source_title)}
                 </span>
                 <span className="font-semibold px-2 py-0.5 rounded text-xs"
@@ -177,7 +186,8 @@ export default function RelationSuggestions({ onChanged }: Props) {
                   }}>
                   {typeLabel(s.relation_type)}
                 </span>
-                <span style={{ color: 'var(--color-text-primary)' }}>
+                <span className="cursor-pointer hover:underline" style={{ color: 'var(--color-text-primary)' }}
+                  onDoubleClick={() => navigateToSource(s.target_type, s.target_id)}>
                   {nodeLabel(s.target_type, s.target_id, s.target_title)}
                 </span>
               </div>
