@@ -3,6 +3,7 @@
 // Integriert RelationSuggestions für Detect + Bestätigung
 
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { get } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import RelationSuggestions from '../components/relations/RelationSuggestions'
@@ -19,6 +20,7 @@ interface OntologyNode {
 
 export default function OntologyPage() {
   const { language } = useLanguage()
+  const navigate = useNavigate()
   const [relations, setRelations] = useState<RelationData[]>([])
   const [types, setTypes] = useState<RelationType[]>([])
   const [loading, setLoading] = useState(true)
@@ -93,6 +95,12 @@ export default function OntologyPage() {
     return `${labels[type] || type} #${id}`
   }
 
+
+  // Doppelklick → zur Quelle navigieren
+  const navigateToSource = (type: string, id: number) => {
+    if (type === 'note') navigate(`/notes?open=${id}`)
+    else if (type === 'summary' || type === 'module') navigate(`/modules/${id}`)
+  }
   // Statistik
   const confirmed = relations.filter(r => r.status === 'confirmed').length
   const suggested = relations.filter(r => r.status === 'suggested').length
@@ -188,7 +196,9 @@ export default function OntologyPage() {
                       ? 'rgba(255, 170, 0, 0.05)' : 'var(--color-bg-surface)',
                   }}>
                   {/* Subjekt */}
-                  <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                  <span className="font-medium cursor-pointer hover:underline"
+                    style={{ color: 'var(--color-text-primary)' }}
+                    onDoubleClick={() => navigateToSource(r.source_type, r.source_id)}>
                     {nodeLabel(r.source_type, r.source_id, r.source_title)}
                   </span>
                   {/* Prädikat */}
@@ -201,7 +211,9 @@ export default function OntologyPage() {
                     {typeLabel(r.relation_type)}
                   </span>
                   {/* Objekt */}
-                  <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                  <span className="font-medium cursor-pointer hover:underline"
+                    style={{ color: 'var(--color-text-primary)' }}
+                    onDoubleClick={() => navigateToSource(r.target_type, r.target_id)}>
                     {nodeLabel(r.target_type, r.target_id, r.target_title)}
                   </span>
                   {/* Begründung */}
@@ -230,12 +242,12 @@ export default function OntologyPage() {
               </h3>
               <div className="flex flex-wrap gap-2">
                 {nodes.map(n => (
-                  <span key={n.key} className="px-2 py-1 rounded text-xs"
+                  <span key={n.key} className="px-2 py-1 rounded text-xs cursor-pointer hover:opacity-80"
                     style={{
                       background: 'var(--color-bg-elevated)',
                       color: 'var(--color-text-primary)',
                       border: '1px solid var(--color-border)',
-                    }}>
+                    }} onDoubleClick={() => navigateToSource(n.type, n.id)}>
                     {nodeLabel(n.type, n.id, n.title)}
                     <span className="ml-1" style={{ color: 'var(--color-text-muted)' }}>
                       ({n.relationCount})
