@@ -306,13 +306,14 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
             label={hub.label} showLabel={showLabels}
             onClick={() => handleHubClick(hub.id, hub.memberNodeIds)}
             intensityMul={settings.nebulaIntensity}
-            sizeMul={settings.nebulaSize} />
+            sizeMul={settings.nebulaSize}
+            colorMul={settings.colorIntensity} />
         })}
         {graph.nodes.map(node => {
           const pos = nodePositions.get(node.id)
           if (!pos) return null
           const color = COLORS[node.type] || COLORS.note
-          return <GlowNode key={node.id} position={pos} color={color} glowMul={settings.nodeGlow}
+          return <GlowNode key={node.id} position={pos} color={color} glowMul={settings.nodeGlow} colorMul={settings.colorIntensity}
             size={0.12} label={node.title}
             onClick={() => handleNodeClick(node.id)}
             showLabel={false} />
