@@ -92,9 +92,9 @@ function createNebulaTexture(color: string): THREE.CanvasTexture {
   const ctx = canvas.getContext('2d')!
   const cx = 64, cy = 64
   const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 64)
-  grad.addColorStop(0, color + 'ff')
-  grad.addColorStop(0.3, color + 'cc')
-  grad.addColorStop(0.6, color + '55')
+  grad.addColorStop(0, color + 'ee')
+  grad.addColorStop(0.3, color + '88')
+  grad.addColorStop(0.6, color + '33')
   grad.addColorStop(1, color + '00')
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, 128, 128)
@@ -123,7 +123,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
     for (let i = 0; i < count; i++) {
       const mat = new THREE.SpriteMaterial({
         map: tex, transparent: true,
-        opacity: 0.6 + Math.random() * 0.4,
+        opacity: 0.3 + Math.random() * 0.2,
         depthWrite: false, blending: THREE.AdditiveBlending,
       })
       const sprite = new THREE.Sprite(mat)
@@ -153,7 +153,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick }:
       )
       // Leichtes Pulsieren der Opazität
       const mat = p.sprite.material as THREE.SpriteMaterial
-      mat.opacity = (0.6 + Math.random() * 0.1) + Math.sin(t * p.speed + i) * 0.15
+      mat.opacity = (0.3 + Math.random() * 0.05) + Math.sin(t * p.speed + i) * 0.08
     })
   })
 
