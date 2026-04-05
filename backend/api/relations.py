@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from pydantic import BaseModel
 from typing import Optional
-from backend.infra.database import get_db
+from backend.models.database import get_db
 from backend.models.relation import Relation, RelationType
 
 router = APIRouter(prefix="/api/relations", tags=["relations"])

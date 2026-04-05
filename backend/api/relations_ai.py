@@ -6,7 +6,7 @@ import json
 import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from backend.infra.database import get_db
+from backend.models.database import get_db
 from backend.infra.ollama_connector import get_ollama_url
 from backend.models.relation import Relation, RelationType
 from backend.models.note import Note

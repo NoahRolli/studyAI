@@ -5,7 +5,7 @@
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
 from sqlalchemy.sql import func
-from backend.infra.database import Base
+from backend.models.database import Base
 
 
 class RelationType(Base):
