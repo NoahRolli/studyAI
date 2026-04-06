@@ -32,7 +32,7 @@ export function CalendarPage() {
     if (editSport) {
       await sport.updateEntry(editSport.id, data)
     } else {
-      await sport.createEntry({ ...data, date: cal.selectedDate })
+      await sport.createEntry({ ...data, date: cal.selectedDate! })
     }
     setSportModalOpen(false); setEditSport(null)
   }
@@ -118,7 +118,7 @@ export function CalendarPage() {
 
       {/* Kalender-Grid */}
       <div className="grid grid-cols-7 gap-1.5 mb-6">
-        {Array.from({ length: cal.startDay }).map((_, i) => (
+        {Array.from({ length: cal.startOffset }).map((_, i) => (
           <div key={`empty-${i}`} className="h-20 rounded-lg" />
         ))}
         {Array.from({ length: cal.daysInMonth }).map((_, i) => {
