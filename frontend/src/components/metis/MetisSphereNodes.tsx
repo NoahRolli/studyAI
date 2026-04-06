@@ -1,6 +1,6 @@
 // MetisSphereNodes — 3D-Bausteine für die Metis-Sphäre
 // Labels via Sprite + CanvasTexture (kein DOM, rein GPU)
-// GlowNode, ClusterHub, GlowEdge, BackgroundGrid, CameraTracker
+// GlowNode, ClusterHub, BackgroundGrid, CameraTracker
 
 import { useRef, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
@@ -191,53 +191,6 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick,
     </group>
   )
 }
-// --- GlowEdge ---
-export function GlowEdge({ start, end, color, strength, dashed, status }: {
-  start: [number, number, number]
-  end: [number, number, number]
-  color: THREE.Color
-  strength: number
-  dashed?: boolean
-  status?: string
-}) {
-  const line = useMemo(() => {
-    const geo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(...start), new THREE.Vector3(...end),
-    ])
-    // Confirmed: solider + heller, Suggested: halbtransparent
-    const isConfirmed = status === "confirmed"
-    const opBase = isConfirmed ? 0.15 : 0.05
-    const opScale = isConfirmed ? 0.2 : 0.1
-    const mat = dashed
-      ? new THREE.LineDashedMaterial({
-          color, transparent: true, opacity: opBase + strength * opScale,
-          depthWrite: false, blending: THREE.AdditiveBlending,
-          dashSize: 0.3, gapSize: 0.2,
-        })
-      : new THREE.LineBasicMaterial({
-          color, transparent: true, opacity: opBase + strength * opScale,
-          depthWrite: false, blending: THREE.AdditiveBlending,
-        })
-    const l = new THREE.Line(geo, mat)
-    if (dashed) l.computeLineDistances()
-    return l
-  }, [start, end, color, strength, dashed, status])
-  return <primitive object={line} />
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
