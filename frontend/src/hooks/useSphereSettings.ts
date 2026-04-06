@@ -1,5 +1,6 @@
 // useSphereSettings — Persistente Sphäre-Einstellungen via localStorage
 // Slider-Werte für Nebel, Edges, Nodes — bleibt über Sessions bestehen
+// Boolean für Ontologie-Symbole auf Edges
 
 import { useState, useCallback } from 'react'
 
@@ -10,6 +11,7 @@ export interface SphereSettings {
   edgeOntology: number       // Ontology-Edge Stärke (0.0–3.0)
   nodeGlow: number           // Node-Glow Intensität (0.0–2.0)
   colorIntensity: number     // Allgemeine Farbstärke (0.5–2.0)
+  showOntologyMarkers: boolean // Ontologie-Symbole auf Edges
 }
 
 const STORAGE_KEY = 'pallas-sphere-settings'
@@ -21,6 +23,7 @@ const DEFAULTS: SphereSettings = {
   edgeOntology: 1.5,
   nodeGlow: 1.0,
   colorIntensity: 1.0,
+  showOntologyMarkers: true,
 }
 
 function loadSettings(): SphereSettings {
@@ -35,7 +38,7 @@ export function useSphereSettings() {
   const [settings, setSettings] = useState<SphereSettings>(loadSettings)
 
   // Einzelnen Wert ändern (ohne Speichern)
-  const update = useCallback((key: keyof SphereSettings, value: number) => {
+  const update = useCallback((key: keyof SphereSettings, value: number | boolean) => {
     setSettings(prev => ({ ...prev, [key]: value }))
   }, [])
 
