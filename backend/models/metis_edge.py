@@ -1,8 +1,8 @@
 # Metis Edge Model — Beziehung zwischen zwei Nodes im Knowledge-Graph
-# Edges können manuell (WikiLinks) oder AI-generiert sein.
-# Relation-Typen: "wikilink", "related", "builds_on", "contradicts"
+# Edges können manuell (WikiLinks), AI-generiert oder bestätigt/abgelehnt sein.
+# Status: "suggested" (neu), "confirmed" (bestätigt), "rejected" (abgelehnt)
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
@@ -40,6 +40,16 @@ class MetisEdge(Base):
     # Stärke der Verbindung (0.0–1.0)
     # WikiLinks immer 1.0, AI-Edges basierend auf Cosine-Similarity
     strength = Column(Float, nullable=False, default=0.5)
+
+    # Review-Status: suggested, confirmed, rejected
+    # WikiLinks starten als "confirmed" (manuell erstellt)
+    status = Column(String, nullable=False, default="suggested")
+
+    # Begründung bei Bestätigung/Ablehnung (optional)
+    reason = Column(Text, nullable=True)
+
+    # Zeitpunkt der Bestätigung/Ablehnung
+    reviewed_at = Column(DateTime, nullable=True)
 
     # Zeitstempel
     created_at = Column(
