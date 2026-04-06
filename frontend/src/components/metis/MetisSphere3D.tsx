@@ -285,7 +285,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
           if (!s || !e) return null
           const hl = isEdgeHighlighted(edge.source_node_id, edge.target_node_id)
           const c = COLORS[edge.relation_type] || COLORS.ai; const isOntology = edge.id < 0
-          return <GlowEdge key={edge.id} start={s} end={e}
+          return <GlowEdge key={edge.id} start={s} end={e} status={edge.status}
             color={c} strength={hl ? 5.0 : (isOntology ? settings.edgeOntology : edge.strength * settings.edgeSimilarity)} />
         })}
         {hubData.map(hub => hub.memberNodeIds.map(nid => {
