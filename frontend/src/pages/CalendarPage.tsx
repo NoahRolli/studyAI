@@ -1,11 +1,12 @@
-// CalendarPage — Hauptkalender mit Monatsansicht + Sport-Tracker
-// Refaktoriert: State in useCalendarState, Detail in CalendarDayDetail
-// Sport-Toggle in localStorage, Sport-Indikator im Grid (grüner Punkt)
+// CalendarPage — Hauptkalender mit Monatsansicht + Sport + Git Tracker
+// Sport-Toggle + Git-Toggle in localStorage
+// Sport = grüner Punkt, Git = lila Punkt im Grid
 
 import { useState } from 'react'
 import { useLanguage } from '../hooks/useLanguage'
 import useCalendarState from '../hooks/useCalendarState'
 import useSportEntries from '../hooks/useSportEntries'
+import { useGitCommits } from '../hooks/useGitCommits'
 import CalendarEventForm, { emptyFormData } from '../components/CalendarEventForm'
 import CalendarDayDetail from '../components/calendar/CalendarDayDetail'
 import SportModal from '../components/sport/SportModal'
@@ -14,59 +15,53 @@ import type { SportEntry } from '../hooks/useSportEntries'
 
 // Farb-Map für Event-Punkte
 const COLOR_MAP: Record<string, string> = {
-  cyan: '#7dd8e8', violet: '#a78bda', emerald: '#7dd4a3',
-  orange: '#d4a574', pink: '#d47d9a', yellow: '#d4cc7d',
+  cyan: '#00d4ff', green: '#4ade80', orange: '#f59e0b',
+  red: '#ef4444', purple: '#a855f7', blue: '#3b82f6',
 }
 
-function CalendarPage() {
+export function CalendarPage() {
   const { t } = useLanguage()
   const cal = useCalendarState()
   const sport = useSportEntries(cal.month, cal.year)
+  const gitCommits = useGitCommits(cal.month, cal.year)
   const [sportModalOpen, setSportModalOpen] = useState(false)
   const [editSport, setEditSport] = useState<SportEntry | null>(null)
   const [hoveredDate, setHoveredDate] = useState<string | null>(null)
 
-  // Sport CRUD Handler
   const handleSportSave = async (data: SportFormData) => {
     if (editSport) {
       await sport.updateEntry(editSport.id, data)
-    } else if (cal.selectedDate) {
+    } else {
       await sport.createEntry({ ...data, date: cal.selectedDate })
     }
-    setSportModalOpen(false)
-    setEditSport(null)
+    setSportModalOpen(false); setEditSport(null)
   }
+
   const handleSportDelete = async () => {
     if (!editSport) return
     await sport.deleteEntry(editSport.id)
-    setSportModalOpen(false)
-    setEditSport(null)
+    setSportModalOpen(false); setEditSport(null)
   }
 
-  // Zellen-Style
+  // Zellen-Styling
   const getCellStyle = (dateStr: string) => {
     const selected = dateStr === cal.selectedDate
-    const hovered = dateStr === hoveredDate
     const today = cal.isToday(dateStr)
+    const hovered = dateStr === hoveredDate
     if (selected) return {
-      backgroundColor: 'var(--color-active-bg)',
-      border: '1px solid var(--color-highlight-strong)',
-      boxShadow: '0 0 15px var(--color-highlight-glow)',
-    }
-    if (hovered) return {
-      backgroundColor: 'var(--color-hover-bg)',
-      border: '1px solid var(--color-highlight-border)',
-      boxShadow: '0 0 15px var(--color-glow-soft)',
+      background: 'var(--color-hover-bg)',
+      border: '1px solid var(--color-primary)',
+      boxShadow: '0 0 10px var(--color-primary)30',
     }
     if (today) return {
-      backgroundColor: 'var(--color-highlight-bg)',
-      border: '1px solid var(--color-highlight-border)',
-      boxShadow: 'none',
+      background: 'var(--color-active-bg)',
+      border: '1px solid var(--color-primary)40',
     }
-    return {
-      backgroundColor: 'var(--color-hover-bg)',
-      border: '1px solid transparent', boxShadow: 'none',
+    if (hovered) return {
+      background: 'var(--color-hover-bg)',
+      border: '1px solid var(--color-border)',
     }
+    return { background: 'var(--color-bg-surface)', border: '1px solid transparent' }
   }
 
   return (
@@ -90,6 +85,18 @@ function CalendarPage() {
             title={t.sport?.toggle || 'Sport-Tracking'}>
             {t.sport?.toggle || 'Sport'}
           </button>
+          {/* Git-Toggle */}
+          <button
+            className="text-xs px-2 py-1 rounded-md border transition-all"
+            style={{
+              borderColor: gitCommits.enabled ? '#a855f7' : 'var(--color-border)',
+              color: gitCommits.enabled ? '#a855f7' : 'var(--color-text-muted)',
+              background: gitCommits.enabled ? 'rgba(168, 85, 247, 0.1)' : 'transparent',
+            }}
+            onClick={() => gitCommits.setEnabled(!gitCommits.enabled)}
+            title="Git Commits">
+            Git
+          </button>
         </div>
         <div className="flex items-center gap-3">
           <button className="hud-btn px-3 py-1" onClick={cal.prevMonth}>‹</button>
@@ -102,16 +109,16 @@ function CalendarPage() {
       </div>
 
       {/* Wochentag-Header */}
-      <div className="grid grid-cols-7 gap-1 mb-1">
-        {t.mainCalendar.weekdays.map((wd) => (
-          <div key={wd} className="text-center text-xs py-2"
+      <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+        {(t.mainCalendar.weekdays).map((wd: string) => (
+          <div key={wd} className="text-center text-xs py-1"
             style={{ color: 'var(--color-text-muted)' }}>{wd}</div>
         ))}
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-7 gap-1">
-        {Array.from({ length: cal.startOffset }).map((_, i) => (
+      {/* Kalender-Grid */}
+      <div className="grid grid-cols-7 gap-1.5 mb-6">
+        {Array.from({ length: cal.startDay }).map((_, i) => (
           <div key={`empty-${i}`} className="h-20 rounded-lg" />
         ))}
         {Array.from({ length: cal.daysInMonth }).map((_, i) => {
@@ -119,6 +126,7 @@ function CalendarPage() {
           const dateStr = `${cal.year}-${String(cal.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
           const dayEvts = cal.eventsForDay(day)
           const daySport = sport.forDate(dateStr)
+          const dayGit = gitCommits.forDate(dateStr)
           const today = cal.isToday(dateStr)
           const selected = dateStr === cal.selectedDate
 
@@ -154,6 +162,12 @@ function CalendarPage() {
                     style={{ backgroundColor: '#4ade80',
                       boxShadow: '0 0 6px #4ade80' }} />
                 )}
+                {/* Git-Indikator */}
+                {gitCommits.enabled && dayGit && (
+                  <div className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: '#a855f7',
+                      boxShadow: '0 0 6px #a855f7' }} />
+                )}
               </div>
             </div>
           )
@@ -167,6 +181,8 @@ function CalendarPage() {
           events={cal.dayEvents}
           sportEntries={sport.forDate(cal.selectedDate)}
           sportEnabled={sport.enabled}
+          gitDay={gitCommits.forDate(cal.selectedDate)}
+          gitEnabled={gitCommits.enabled}
           onNewEvent={() => { cal.setEditEvent(null); cal.setModalOpen(true) }}
           onEditEvent={cal.handleEditEvent}
           onDeleteEvent={cal.handleQuickDelete}

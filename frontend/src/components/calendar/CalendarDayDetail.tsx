@@ -1,10 +1,10 @@
-// CalendarDayDetail — Event-Liste + Sport-Einträge für selektierten Tag
-// Zeigt Events mit Farb-Indikator, Bearbeiten, Löschen
-// Sport-Einträge mit Typ, Dauer, Intensität
+// CalendarDayDetail — Event-Liste + Sport + Git-Commits für selektierten Tag
+// Events mit Farb-Indikator, Sport mit Typ/Dauer, Git mit Commits/Arbeitszeit
 
 import { useLanguage } from '../../hooks/useLanguage'
 import type { CalendarEvent } from '../../hooks/useCalendarState'
 import type { SportEntry } from '../../hooks/useSportEntries'
+import type { GitDay } from '../../hooks/useGitCommits'
 
 // Farb-Map für Event-Punkte
 const COLOR_MAP: Record<string, string> = {
@@ -17,6 +17,8 @@ interface Props {
   events: CalendarEvent[]
   sportEntries: SportEntry[]
   sportEnabled: boolean
+  gitDay: GitDay | null
+  gitEnabled: boolean
   onNewEvent: () => void
   onEditEvent: (e: CalendarEvent) => void
   onDeleteEvent: (e: CalendarEvent) => void
@@ -27,6 +29,7 @@ interface Props {
 
 export default function CalendarDayDetail({
   date, events, sportEntries, sportEnabled,
+  gitDay, gitEnabled,
   onNewEvent, onEditEvent, onDeleteEvent,
   onNewSport, onEditSport, onDeleteSport,
 }: Props) {
@@ -59,12 +62,15 @@ export default function CalendarDayDetail({
         </div>
       </div>
 
-      {/* Events */}
-      {events.length === 0 && (!sportEnabled || sportEntries.length === 0) && (
+      {/* Leer-Zustand */}
+      {events.length === 0 && (!sportEnabled || sportEntries.length === 0)
+        && (!gitEnabled || !gitDay) && (
         <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
           {t.mainCalendar.emptyTitle}
         </p>
       )}
+
+      {/* Events */}
       {events.length > 0 && (
         <div className="flex flex-col gap-2">
           {events.map((evt) => (
@@ -147,6 +153,57 @@ export default function CalendarDayDetail({
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Git-Commits */}
+      {gitEnabled && gitDay && (
+        <div className="mt-3 pt-3"
+          style={{ borderTop: '1px solid var(--color-border)' }}>
+          {/* Git-Header mit Statistik */}
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-1.5 h-5 rounded-full flex-shrink-0"
+              style={{ backgroundColor: '#a855f7' }} />
+            <span className="text-xs font-medium"
+              style={{ color: '#a855f7' }}>
+              {gitDay.count} Commits
+            </span>
+            <span className="text-xs"
+              style={{ color: 'var(--color-text-muted)' }}>
+              {gitDay.repos.join(', ')}
+            </span>
+            {gitDay.work_hours > 0 && (
+              <span className="text-xs ml-auto"
+                style={{ color: 'var(--color-text-muted)' }}>
+                {gitDay.work_hours}h
+              </span>
+            )}
+          </div>
+          {/* Commit-Liste */}
+          <div className="flex flex-col gap-1 ml-4">
+            {gitDay.commits.slice(0, 8).map((c) => (
+              <div key={c.sha} className="flex items-baseline gap-2">
+                <span className="text-xs font-mono shrink-0"
+                  style={{ color: '#a855f7', fontSize: '0.6rem' }}>
+                  {c.sha}
+                </span>
+                <span className="text-xs truncate"
+                  style={{ color: 'var(--color-text-secondary)' }}>
+                  {c.message}
+                </span>
+                <span className="text-xs shrink-0 ml-auto"
+                  style={{ color: 'var(--color-text-muted)', fontSize: '0.6rem' }}>
+                  {c.time}
+                </span>
+              </div>
+            ))}
+            {gitDay.commits.length > 8 && (
+              <span className="text-xs"
+                style={{ color: 'var(--color-text-muted)', fontSize: '0.6rem' }}>
+                +{gitDay.commits.length - 8} more
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>
