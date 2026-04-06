@@ -1,11 +1,12 @@
 # Metis API — Knowledge-Graph Endpunkte
-# Sync, Graph-Abfrage, Node-Position, Edge CRUD.
+# Sync, Graph-Abfrage, Node-Position, Edge CRUD, Confirm/Reject.
 # AI-Endpunkte (Auto-Link, Auto-Cluster) sind in metis_ai.py.
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime, timezone
 from backend.models.database import get_db
 from backend.models.metis_node import MetisNode
 from backend.models.metis_edge import MetisEdge
@@ -33,6 +34,11 @@ class EdgeCreate(BaseModel):
     target_node_id: int
     relation_type: str = "related"
     strength: float = 0.5
+
+
+class EdgeReview(BaseModel):
+    """Schema für Edge-Bestätigung/Ablehnung."""
+    reason: Optional[str] = None
 
 
 # --- Hilfs-Funktionen ---
@@ -71,13 +77,15 @@ def _node_to_dict(node: MetisNode, db: Session) -> dict:
 
 
 def _edge_to_dict(edge: MetisEdge) -> dict:
-    """Konvertiert eine MetisEdge zu einem Dict."""
+    """Konvertiert eine MetisEdge zu einem Dict inkl. Status."""
     return {
         "id": edge.id,
         "source_node_id": edge.source_node_id,
         "target_node_id": edge.target_node_id,
         "relation_type": edge.relation_type,
         "strength": edge.strength,
+        "status": edge.status,
+        "reason": edge.reason,
     }
 
 
@@ -95,11 +103,13 @@ def _cluster_to_dict(cluster: MetisCluster) -> dict:
 # --- Endpunkte ---
 
 @router.get("/graph")
-@router.get("/graph")
 def get_graph(db: Session = Depends(get_db)):
-    """Kompletter Knowledge-Graph: Nodes + Edges + Clusters + Ontology-Relationen."""
+    """Kompletter Knowledge-Graph: Nodes + Edges + Clusters + Ontology."""
     nodes = db.query(MetisNode).all()
-    edges = db.query(MetisEdge).all()
+    # Rejected Edges nicht an Frontend liefern
+    edges = db.query(MetisEdge).filter(
+        MetisEdge.status != "rejected"
+    ).all()
     clusters = db.query(MetisCluster).all()
 
     edge_list = [_edge_to_dict(e) for e in edges]
@@ -107,7 +117,9 @@ def get_graph(db: Session = Depends(get_db)):
     # Ontology-Relationen als Extra-Edges einspeisen
     node_lookup = {(n.type, n.source_id): n.id for n in nodes}
     type_map = {t.id: t.name for t in db.query(RelationType).all()}
-    ontology_rels = db.query(Relation).filter(Relation.status == "confirmed").all()
+    ontology_rels = db.query(Relation).filter(
+        Relation.status == "confirmed"
+    ).all()
     for rel in ontology_rels:
         src_nid = node_lookup.get((rel.source_type, rel.source_id))
         tgt_nid = node_lookup.get((rel.target_type, rel.target_id))
@@ -116,8 +128,12 @@ def get_graph(db: Session = Depends(get_db)):
                 "id": -rel.id,
                 "source_node_id": src_nid,
                 "target_node_id": tgt_nid,
-                "relation_type": type_map.get(rel.relation_type_id, "related_to"),
+                "relation_type": type_map.get(
+                    rel.relation_type_id, "related_to"
+                ),
                 "strength": 0.8,
+                "status": "confirmed",
+                "reason": rel.reason,
             })
 
     return {
@@ -126,13 +142,25 @@ def get_graph(db: Session = Depends(get_db)):
         "clusters": [_cluster_to_dict(c) for c in clusters],
     }
 
+
+@router.get("/edges")
+def get_edges(
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Edges abfragen, optional nach Status filtern."""
+    query = db.query(MetisEdge)
+    if status:
+        query = query.filter(MetisEdge.status == status)
+    return [_edge_to_dict(e) for e in query.all()]
+
+
 @router.post("/sync")
 def sync_graph(db: Session = Depends(get_db)):
     """Synchronisiert Notes + Summaries mit dem Graph."""
     node_stats = sync_nodes(db)
     wikilinks_synced = sync_wikilinks(db)
     db.commit()
-
     return {
         "nodes_added": node_stats["added"],
         "nodes_removed": node_stats["removed"],
@@ -146,11 +174,10 @@ def update_position(
     data: PositionUpdate,
     db: Session = Depends(get_db),
 ):
-    """Node-Position speichern (Pin). Null = zurück zu Auto-Layout."""
+    """Node-Position speichern (Pin). Null = Auto-Layout."""
     node = db.query(MetisNode).filter(MetisNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Node nicht gefunden")
-
     node.pos_x = data.pos_x
     node.pos_y = data.pos_y
     db.commit()
@@ -159,8 +186,7 @@ def update_position(
 
 @router.post("/edges")
 def create_edge(data: EdgeCreate, db: Session = Depends(get_db)):
-    """Manuell eine Edge zwischen zwei Nodes erstellen."""
-    # Prüfen ob beide Nodes existieren
+    """Manuell eine Edge erstellen (Status: confirmed)."""
     source = db.query(MetisNode).filter(
         MetisNode.id == data.source_node_id
     ).first()
@@ -170,16 +196,11 @@ def create_edge(data: EdgeCreate, db: Session = Depends(get_db)):
     if not source or not target:
         raise HTTPException(status_code=404, detail="Node nicht gefunden")
 
-    # Duplikat-Prüfung
-    existing = (
-        db.query(MetisEdge)
-        .filter(
-            MetisEdge.source_node_id == data.source_node_id,
-            MetisEdge.target_node_id == data.target_node_id,
-            MetisEdge.relation_type == data.relation_type,
-        )
-        .first()
-    )
+    existing = db.query(MetisEdge).filter(
+        MetisEdge.source_node_id == data.source_node_id,
+        MetisEdge.target_node_id == data.target_node_id,
+        MetisEdge.relation_type == data.relation_type,
+    ).first()
     if existing:
         raise HTTPException(status_code=409, detail="Edge existiert bereits")
 
@@ -188,6 +209,7 @@ def create_edge(data: EdgeCreate, db: Session = Depends(get_db)):
         target_node_id=data.target_node_id,
         relation_type=data.relation_type,
         strength=data.strength,
+        status="confirmed",
     )
     db.add(edge)
     db.commit()
@@ -195,13 +217,46 @@ def create_edge(data: EdgeCreate, db: Session = Depends(get_db)):
     return _edge_to_dict(edge)
 
 
-@router.delete("/edges/{edge_id}")
-def delete_edge(edge_id: int, db: Session = Depends(get_db)):
-    """Edge löschen."""
+@router.put("/edges/{edge_id}/confirm")
+def confirm_edge(
+    edge_id: int,
+    data: EdgeReview = EdgeReview(),
+    db: Session = Depends(get_db),
+):
+    """Edge bestätigen — wird stärker dargestellt."""
     edge = db.query(MetisEdge).filter(MetisEdge.id == edge_id).first()
     if not edge:
         raise HTTPException(status_code=404, detail="Edge nicht gefunden")
+    edge.status = "confirmed"
+    edge.reason = data.reason
+    edge.reviewed_at = datetime.now(timezone.utc)
+    db.commit()
+    return _edge_to_dict(edge)
 
+
+@router.put("/edges/{edge_id}/reject")
+def reject_edge(
+    edge_id: int,
+    data: EdgeReview = EdgeReview(),
+    db: Session = Depends(get_db),
+):
+    """Edge ablehnen — verschwindet aus dem Graph."""
+    edge = db.query(MetisEdge).filter(MetisEdge.id == edge_id).first()
+    if not edge:
+        raise HTTPException(status_code=404, detail="Edge nicht gefunden")
+    edge.status = "rejected"
+    edge.reason = data.reason
+    edge.reviewed_at = datetime.now(timezone.utc)
+    db.commit()
+    return _edge_to_dict(edge)
+
+
+@router.delete("/edges/{edge_id}")
+def delete_edge(edge_id: int, db: Session = Depends(get_db)):
+    """Edge endgültig löschen."""
+    edge = db.query(MetisEdge).filter(MetisEdge.id == edge_id).first()
+    if not edge:
+        raise HTTPException(status_code=404, detail="Edge nicht gefunden")
     db.delete(edge)
     db.commit()
     return {"ok": True}
