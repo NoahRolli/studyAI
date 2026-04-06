@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { get, put } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
-import type { MetisGraph, MetisEdge, MetisNode } from '../../types/metis'
+import type { MetisGraph, MetisNode } from '../../types/metis'
 
 type SortMode = 'weakest' | 'strongest' | 'newest'
 

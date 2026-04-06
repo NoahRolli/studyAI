@@ -50,8 +50,9 @@ export function adaptGraph(
       id: idMap.get(e.id) || 0,
       source_node_id: idMap.get(e.source) || 0,
       target_node_id: idMap.get(e.target) || 0,
-      relation_type: 'related' as const,
+      relation_type: e.relation_type || 'related',
       strength: e.strength,
+      status: e.status || 'suggested',
     })),
     clusters,
   }
