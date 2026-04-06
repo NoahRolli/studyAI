@@ -59,17 +59,22 @@ export default function MetisGraph2D({ graph, onPositionUpdate, onNodeClick, tra
     const rfEdges: Edge[] = graph.edges.map(e => {
       const isWikilink = e.relation_type === 'wikilink'
       const isOntology = e.id < 0
+      const isConfirmed = e.status === 'confirmed'
       const edgeColor = COLORS[e.relation_type] || COLORS.ai
+      // Confirmed: solid + dicker, Suggested: dashed + subtiler
+      const sw = isOntology ? 2.5 : (isConfirmed ? 2.5 : 1.5)
+      const dash = (isWikilink || isOntology || isConfirmed) ? undefined : '6 4'
+      const op = isOntology ? 0.8 : (isConfirmed ? 0.7 + e.strength * 0.3 : 0.3 + e.strength * 0.4)
       return {
         id: String(e.id),
         source: String(e.source_node_id),
         target: String(e.target_node_id),
-        animated: !isWikilink && !isOntology,
+        animated: !isWikilink && !isOntology && !isConfirmed,
         style: {
           stroke: edgeColor,
-          strokeWidth: isOntology ? 2.5 : (isWikilink ? 2.5 : 1.5),
-          strokeDasharray: (isWikilink || isOntology) ? undefined : '6 4',
-          opacity: isOntology ? 0.8 : (0.5 + e.strength * 0.5),
+          strokeWidth: sw,
+          strokeDasharray: dash,
+          opacity: op,
           filter: `drop-shadow(0 0 3px ${edgeColor}60)`,
         },
       }
