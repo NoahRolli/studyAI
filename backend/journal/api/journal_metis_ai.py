@@ -1,5 +1,5 @@
 # Journal Metis AI — Embedding + Clustering via Ollama
-# Auto-Link: Embeddings + Cosine-Similarity
+# Auto-Link: Embeddings + Cosine-Similarity, lernt aus Confirm/Reject
 # Auto-Cluster: Themen-Clustering (Ollama)
 # Hilfsfunktionen: Embedding, Cosine, Ollama-Chat, JSON-Parser
 
@@ -95,10 +95,11 @@ def _parse_json(text: str):
 async def auto_link(
     journal_db: Session = Depends(get_journal_db),
 ):
+    """Embeddings berechnen, Similarity-Edges erstellen. Lernt aus Reviews."""
     key = _require_key()
     nodes = journal_db.query(JournalMetisNode).all()
     if len(nodes) < 2:
-        return {"embeddings_updated": 0, "edges_created": 0}
+        return {"embeddings_updated": 0, "edges_created": 0, "edges_removed": 0}
 
     # Stale Embeddings neu berechnen
     updated = 0
@@ -120,7 +121,7 @@ async def auto_link(
             updated += 1
     journal_db.flush()
 
-    # Similarity-Matrix
+    # Bestehende AI-Edges + Status laden
     threshold = 0.65
     created = 0
     removed = 0
@@ -132,6 +133,20 @@ async def auto_link(
         (e.source_node_id, e.target_node_id): e for e in ai_edges
     }
 
+    # Rejected/Confirmed Paare sammeln
+    rejected_pairs = set()
+    confirmed_pairs = set()
+    for e in ai_edges:
+        pair = (e.source_node_id, e.target_node_id)
+        rev = (e.target_node_id, e.source_node_id)
+        if e.status == "rejected":
+            rejected_pairs.add(pair)
+            rejected_pairs.add(rev)
+        elif e.status == "confirmed":
+            confirmed_pairs.add(pair)
+            confirmed_pairs.add(rev)
+
+    # Similarity berechnen
     valid_pairs = set()
     for i, na in enumerate(nodes):
         if not na.embedding:
@@ -147,19 +162,24 @@ async def auto_link(
             if sim >= threshold:
                 valid_pairs.add(pair)
                 valid_pairs.add(reverse)
-                if (pair not in existing_pairs
-                        and reverse not in existing_pairs):
+                # Rejected überspringen
+                if pair in rejected_pairs:
+                    continue
+                if pair not in existing_pairs and reverse not in existing_pairs:
                     edge = JournalMetisEdge(
                         source_node_id=na.id,
                         target_node_id=nb.id,
                         relation_type="similarity",
                         strength=round(sim, 3),
+                        status="suggested",
                     )
                     journal_db.add(edge)
                     created += 1
 
-    # Alte Edges unter Threshold entfernen
+    # Alte Edges aufräumen (confirmed/rejected behalten)
     for (src, tgt), edge in existing_pairs.items():
+        if edge.status in ("confirmed", "rejected"):
+            continue
         if (src, tgt) not in valid_pairs:
             journal_db.delete(edge)
             removed += 1
@@ -178,6 +198,7 @@ async def auto_link(
 async def auto_cluster(
     journal_db: Session = Depends(get_journal_db),
 ):
+    """Ollama gruppiert Journal-Einträge thematisch."""
     key = _require_key()
     nodes = journal_db.query(JournalMetisNode).all()
     if len(nodes) < 3:
@@ -233,7 +254,6 @@ Regeln:
             continue
         label_text = cdata.get("label", f"Cluster {i + 1}")
         desc_text = cdata.get("description", "")
-        # Verschlüsseln
         enc_label = encrypt_text(label_text, key)
         enc_desc = encrypt_text(desc_text, key) if desc_text else None
 
