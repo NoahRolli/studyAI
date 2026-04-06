@@ -63,10 +63,10 @@ async def _ollama_chat(prompt: str) -> str:
     base_url = await get_ollama_url()
     async with httpx.AsyncClient(timeout=120.0) as client:
         resp = await client.post(
-            f"{base_url}/api/generate",
+            f"{base_url}/api/chat",
             json={
                 "model": OLLAMA_MODEL,
-                "prompt": prompt,
+                "messages": [{"role": "user", "content": prompt}],
                 "stream": False,
                 "options": {"num_predict": 2000},
                 "think": False,
@@ -74,7 +74,7 @@ async def _ollama_chat(prompt: str) -> str:
         )
         if resp.status_code != 200:
             raise ConnectionError(f"Ollama error: {resp.status_code}")
-        return resp.json()["response"]
+        return resp.json()["message"]["content"]
 
 
 def _parse_json(text: str):
