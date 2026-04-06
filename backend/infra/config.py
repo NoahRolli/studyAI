@@ -43,3 +43,6 @@ OLLAMA_PRIMARY_URL = os.environ.get("OLLAMA_PRIMARY_URL", "")
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma4:e2b")
 OLLAMA_EMBED_MODEL = "nomic-embed-text"  # Für Metis Embeddings
+
+# GitHub — Public API für Commit-Kalender + Zeittracking
+GITHUB_USERNAME = os.environ.get("GITHUB_USERNAME", "NoahRolli")
