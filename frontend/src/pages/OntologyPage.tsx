@@ -17,9 +17,6 @@ export default function OntologyPage() {
   const [relations, setRelations] = useState<RelationData[]>([])
   const [types, setTypes] = useState<RelationType[]>([])
   const [metisConfirmed, setMetisConfirmed] = useState<{ edge: MetisEdge; src: MetisNode; tgt: MetisNode }[]>([])
-
-
-  >([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'suggestions' | 'metis'>('overview')
   const [filterType, setFilterType] = useState('all')
