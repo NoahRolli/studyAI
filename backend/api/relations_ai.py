@@ -33,6 +33,7 @@ async def _ollama_chat(prompt: str, system: str = "") -> str:
             resp = await client.post(f"{url}/api/chat", json={
                 "model": OLLAMA_MODEL, "messages": messages,
                 "stream": False, "format": "json",
+                "think": False,
             })
             data = resp.json()
             return data.get("message", {}).get("content", "")

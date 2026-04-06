@@ -69,6 +69,7 @@ async def _ollama_chat(prompt: str) -> str:
                 "prompt": prompt,
                 "stream": False,
                 "options": {"num_predict": 2000},
+                "think": False,
             },
         )
         if resp.status_code != 200:
