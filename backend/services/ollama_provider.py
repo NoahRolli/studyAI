@@ -33,6 +33,7 @@ class OllamaProvider:
                     "model": self.model,
                     "prompt": prompt,
                     "stream": False,
+                    "think": False,
                     "options": {
                         "num_predict": max_tokens,
                     }
