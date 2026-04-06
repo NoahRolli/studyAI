@@ -19,8 +19,10 @@ export interface MetisEdge {
   id: number
   source_node_id: number
   target_node_id: number
-  relation_type: 'wikilink' | 'related' | 'builds_on' | 'contradicts'
+  relation_type: string
   strength: number
+  status: 'suggested' | 'confirmed' | 'rejected'
+  reason?: string | null
 }
 
 // Ein Themen-Cluster (AI-generiert)
@@ -64,6 +66,8 @@ export interface JournalMetisEdge {
   target: string
   relation_type: string
   strength: number
+  status: 'suggested' | 'confirmed' | 'rejected'
+  reason?: string | null
   realm: 'journal' | 'public'
 }
 
