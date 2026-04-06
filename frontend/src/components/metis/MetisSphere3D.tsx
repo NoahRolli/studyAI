@@ -7,8 +7,9 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { MetisGraph } from '../../types/metis'
 import {
-  GlowNode, ClusterHub, GlowEdge, BackgroundGrid, CameraTracker,
+  GlowNode, ClusterHub, BackgroundGrid, CameraTracker,
 } from './MetisSphereNodes'
+import { GlowEdge } from './MetisSphereEdge'
 import MetisSphereSettings from './MetisSphereSettings'
 import { useSphereSettings } from '../../hooks/useSphereSettings'
 
