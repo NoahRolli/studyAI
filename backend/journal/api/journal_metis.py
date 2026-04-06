@@ -1,10 +1,13 @@
 # Journal Metis API — Verschlüsselter Knowledge-Graph im Journal
 # Graph: Merged View aus Journal-Nodes + öffentlichen Metis-Nodes
 # Sync: Journal-Einträge → Nodes (verschlüsselt, mit Cleanup)
-# Position: Node-Positionen speichern
+# Position, Edge-Review (Confirm/Reject)
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime, timezone
 from backend.journal.models.journal_database import get_journal_db
 from backend.journal.models.journal_metis_node import JournalMetisNode
 from backend.journal.models.journal_metis_edge import JournalMetisEdge
@@ -25,6 +28,11 @@ router = APIRouter(
     prefix="/api/journal/metis",
     tags=["journal-metis"],
 )
+
+
+class EdgeReview(BaseModel):
+    """Schema für Edge-Bestätigung/Ablehnung."""
+    reason: Optional[str] = None
 
 
 def require_journal_key():
@@ -72,14 +80,17 @@ def get_merged_graph(
             "realm": "journal",
         })
 
-    # 2. Journal-Edges
-    j_edges = journal_db.query(JournalMetisEdge).all()
+    # 2. Journal-Edges (rejected rausfiltern)
+    j_edges = journal_db.query(JournalMetisEdge).filter(
+        JournalMetisEdge.status != "rejected"
+    ).all()
     journal_edges = [{
         "id": f"j-{e.id}",
         "source": f"j-{e.source_node_id}",
         "target": f"j-{e.target_node_id}",
         "relation_type": e.relation_type,
         "strength": e.strength,
+        "status": e.status,
         "realm": "journal",
     } for e in j_edges]
 
@@ -138,14 +149,17 @@ def get_merged_graph(
             "realm": "public",
         })
 
-    # 5. Öffentliche Edges
-    pub_edges_raw = main_db.query(MetisEdge).all()
+    # 5. Öffentliche Edges (rejected rausfiltern)
+    pub_edges_raw = main_db.query(MetisEdge).filter(
+        MetisEdge.status != "rejected"
+    ).all()
     pub_edges = [{
         "id": f"p-{e.id}",
         "source": f"p-{e.source_node_id}",
         "target": f"p-{e.target_node_id}",
         "relation_type": e.relation_type,
         "strength": e.strength,
+        "status": e.status,
         "realm": "public",
     } for e in pub_edges_raw]
 
@@ -251,3 +265,45 @@ def update_node_position(
     node.pos_y = data.get("pos_y")
     journal_db.commit()
     return {"ok": True}
+
+
+# --- Edge Review (Confirm/Reject) ---
+
+@router.put("/edges/{edge_id}/confirm")
+def confirm_journal_edge(
+    edge_id: int,
+    data: EdgeReview = EdgeReview(),
+    journal_db: Session = Depends(get_journal_db),
+):
+    """Journal-Edge bestätigen."""
+    require_journal_key()
+    edge = journal_db.query(JournalMetisEdge).filter(
+        JournalMetisEdge.id == edge_id
+    ).first()
+    if not edge:
+        raise HTTPException(status_code=404, detail="Edge nicht gefunden")
+    edge.status = "confirmed"
+    edge.reason = data.reason
+    edge.reviewed_at = datetime.now(timezone.utc)
+    journal_db.commit()
+    return {"ok": True, "status": "confirmed"}
+
+
+@router.put("/edges/{edge_id}/reject")
+def reject_journal_edge(
+    edge_id: int,
+    data: EdgeReview = EdgeReview(),
+    journal_db: Session = Depends(get_journal_db),
+):
+    """Journal-Edge ablehnen — verschwindet aus dem Graph."""
+    require_journal_key()
+    edge = journal_db.query(JournalMetisEdge).filter(
+        JournalMetisEdge.id == edge_id
+    ).first()
+    if not edge:
+        raise HTTPException(status_code=404, detail="Edge nicht gefunden")
+    edge.status = "rejected"
+    edge.reason = data.reason
+    edge.reviewed_at = datetime.now(timezone.utc)
+    journal_db.commit()
+    return {"ok": True, "status": "rejected"}
