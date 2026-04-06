@@ -1,6 +1,6 @@
 # Metis AI Service — Ollama-powered Auto-Link und Auto-Cluster
-# Auto-Link: Berechnet Embeddings, findet ähnliche Nodes via Cosine-Similarity
-# Auto-Cluster: Ollama gruppiert Nodes thematisch basierend auf Titeln/Inhalten
+# Auto-Link: Embeddings + Cosine-Similarity, lernt aus Confirm/Reject
+# Auto-Cluster: Ollama gruppiert Nodes thematisch
 # Ollama-only — kein Claude, kein externer API-Call
 
 import json
@@ -87,15 +87,12 @@ async def _ollama_chat(prompt: str) -> str:
 
 def _parse_json(text: str):
     """Extrahiert JSON aus Ollama-Antworten (Markdown-Backticks etc.)."""
-    # Strategie 1: Codeblock
     match = re.search(r"```(?:json)?\s*(\[.*?\]|\{.*?\})\s*```", text, re.DOTALL)
     if match:
         return json.loads(match.group(1))
-    # Strategie 2: Erstes JSON im Text
     match = re.search(r"(\[.*\]|\{.*\})", text, re.DOTALL)
     if match:
         return json.loads(match.group(1))
-    # Strategie 3: Rohtext
     return json.loads(text.strip())
 
 
@@ -104,8 +101,8 @@ def _parse_json(text: str):
 @router.post("/auto-link")
 async def auto_link(db: Session = Depends(get_db)):
     """
-    Berechnet Embeddings für alle stale Nodes,
-    dann Cosine-Similarity → Edges für ähnliche Paare.
+    Berechnet Embeddings für stale Nodes, dann Cosine-Similarity.
+    Lernt aus Nutzer-Entscheidungen: confirmed bleiben, rejected werden übersprungen.
     """
     nodes = db.query(MetisNode).all()
     if len(nodes) < 2:
@@ -124,22 +121,33 @@ async def auto_link(db: Session = Depends(get_db)):
             updated += 1
     db.flush()
 
-    # Schritt 2: Similarity-Matrix berechnen
+    # Schritt 2: Bestehende AI-Edges + Status laden
     threshold = 0.65
     created = 0
     removed = 0
 
-    # Bestehende AI-Edges laden
-    ai_edges = (
-        db.query(MetisEdge)
-        .filter(MetisEdge.relation_type == "related")
-        .all()
-    )
+    ai_edges = db.query(MetisEdge).filter(
+        MetisEdge.relation_type == "related"
+    ).all()
     existing_pairs = {
         (e.source_node_id, e.target_node_id): e for e in ai_edges
     }
 
-    # Alle Paare vergleichen
+    # Rejected Paare merken — nie wieder vorschlagen
+    rejected_pairs = set()
+    for e in ai_edges:
+        if e.status == "rejected":
+            rejected_pairs.add((e.source_node_id, e.target_node_id))
+            rejected_pairs.add((e.target_node_id, e.source_node_id))
+
+    # Confirmed Paare — nicht entfernen auch wenn Similarity sinkt
+    confirmed_pairs = set()
+    for e in ai_edges:
+        if e.status == "confirmed":
+            confirmed_pairs.add((e.source_node_id, e.target_node_id))
+            confirmed_pairs.add((e.target_node_id, e.source_node_id))
+
+    # Schritt 3: Alle Paare vergleichen
     valid_pairs = set()
     for i, node_a in enumerate(nodes):
         if not node_a.embedding:
@@ -157,19 +165,30 @@ async def auto_link(db: Session = Depends(get_db)):
             if sim >= threshold:
                 valid_pairs.add(pair)
                 valid_pairs.add(reverse)
-                # Edge erstellen wenn noch nicht vorhanden
+                # Rejected Paare überspringen
+                if pair in rejected_pairs:
+                    continue
+                # Neue Edge nur wenn noch keine existiert
                 if pair not in existing_pairs and reverse not in existing_pairs:
                     edge = MetisEdge(
                         source_node_id=node_a.id,
                         target_node_id=node_b.id,
                         relation_type="related",
                         strength=round(sim, 3),
+                        status="suggested",
                     )
                     db.add(edge)
                     created += 1
 
-    # Alte AI-Edges entfernen wenn unter Threshold
+    # Schritt 4: Alte Edges aufräumen
     for (src, tgt), edge in existing_pairs.items():
+        # Confirmed niemals entfernen
+        if edge.status == "confirmed":
+            continue
+        # Rejected behalten (als Negativbeispiel)
+        if edge.status == "rejected":
+            continue
+        # Suggested unter Threshold entfernen
         if (src, tgt) not in valid_pairs:
             db.delete(edge)
             removed += 1
@@ -246,7 +265,6 @@ Regeln:
         db.add(cluster)
         db.flush()
 
-        # Mitglieder zuordnen
         member_ids = []
         for nid in cdata.get("node_ids", []):
             if nid in valid_node_ids:
