@@ -1,32 +1,28 @@
 // OntologyPage — Vollbild-Wissensgraph aller typisierten Relationen
-// Zeigt bestätigte + vorgeschlagene Relationen als Graph
-// Integriert RelationSuggestions für Detect + Bestätigung
+// Tabs: Übersicht (Ontology + bestätigte Metis), Vorschläge, Metis Links
+// Bestätigte Metis-Edges erscheinen in Übersicht mit "via Metis" Badge
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { get } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import RelationSuggestions from '../components/relations/RelationSuggestions'
+import MetisLinksTab from '../components/metis/MetisLinksTab'
 import type { RelationData, RelationType } from '../types/relations'
-
-// Node-Typ für die Übersicht
-interface OntologyNode {
-  key: string
-  type: string
-  id: number
-  title: string
-  relationCount: number
-}
+import type { MetisEdge, MetisGraph, MetisNode } from '../types/metis'
 
 export default function OntologyPage() {
   const { language } = useLanguage()
   const navigate = useNavigate()
   const [relations, setRelations] = useState<RelationData[]>([])
   const [types, setTypes] = useState<RelationType[]>([])
+  const [metisConfirmed, setMetisConfirmed] = useState
+    { edge: MetisEdge; src: MetisNode; tgt: MetisNode }[]
+  >([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'graph' | 'suggestions'>('graph')
-  const [filterType, setFilterType] = useState<string>('all')
-  const [filterStatus, setFilterStatus] = useState<string>('confirmed')
+  const [activeTab, setActiveTab] = useState<'overview' | 'suggestions' | 'metis'>('overview')
+  const [filterType, setFilterType] = useState('all')
+  const [filterStatus, setFilterStatus] = useState('confirmed')
 
   const loadRelations = useCallback(async () => {
     try {
@@ -46,36 +42,27 @@ export default function OntologyPage() {
     }
   }, [])
 
-  useEffect(() => { loadRelations(); loadTypes() }, [loadRelations, loadTypes])
-
-  // Nodes aus Relationen extrahieren
-  const nodes: OntologyNode[] = (() => {
-    const map = new Map<string, OntologyNode>()
-    const filtered = relations.filter(r => {
-      if (filterStatus !== 'all' && r.status !== filterStatus) return false
-      if (filterType !== 'all' && r.relation_type?.name !== filterType) return false
-      return true
-    })
-    for (const r of filtered) {
-      const sKey = `${r.source_type}:${r.source_id}`
-      const tKey = `${r.target_type}:${r.target_id}`
-      if (!map.has(sKey)) {
-        map.set(sKey, {
-          key: sKey, type: r.source_type, id: r.source_id,
-          title: sKey, relationCount: 0,
-        })
-      }
-      if (!map.has(tKey)) {
-        map.set(tKey, {
-          key: tKey, type: r.target_type, id: r.target_id,
-          title: tKey, relationCount: 0,
-        })
-      }
-      map.get(sKey)!.relationCount++
-      map.get(tKey)!.relationCount++
+  // Bestätigte Metis-Edges für Overview laden
+  const loadMetisConfirmed = useCallback(async () => {
+    try {
+      const graph = await get<MetisGraph>('/api/metis/graph')
+      const confirmed = graph.edges
+        .filter(e => e.id > 0 && e.status === 'confirmed' && e.relation_type !== 'wikilink')
+        .map(edge => ({
+          edge,
+          src: graph.nodes.find(n => n.id === edge.source_node_id)!,
+          tgt: graph.nodes.find(n => n.id === edge.target_node_id)!,
+        }))
+        .filter(e => e.src && e.tgt)
+      setMetisConfirmed(confirmed)
+    } catch (err) {
+      console.error('Metis-Graph laden fehlgeschlagen:', err)
     }
-    return Array.from(map.values()).sort((a, b) => b.relationCount - a.relationCount)
-  })()
+  }, [])
+
+  useEffect(() => {
+    loadRelations(); loadTypes(); loadMetisConfirmed()
+  }, [loadRelations, loadTypes, loadMetisConfirmed])
 
   // Gefilterte Relationen
   const filteredRelations = relations.filter(r => {
@@ -87,28 +74,25 @@ export default function OntologyPage() {
   const typeLabel = (rt: RelationData['relation_type']) =>
     rt ? (language === 'de' ? rt.label_de : rt.label_en) : '?'
 
-  const nodeLabel = (type: string, id: number, title?: string) => {
-    if (title) return title
-    const labels: Record<string, string> = {
-      note: 'Note', summary: 'Summary', module: 'Module',
-    }
-    return `${labels[type] || type} #${id}`
-  }
-
-
-  // Doppelklick → zur Quelle navigieren
   const navigateToSource = (type: string, id: number) => {
     if (type === 'note') navigate(`/notes?open=${id}`)
     else if (type === 'summary' || type === 'module') navigate(`/modules/${id}`)
   }
+
+  const navigateToNode = (node: MetisNode) => {
+    if (node.type === 'note') navigate(`/notes?open=${node.source_id}`)
+    else if (node.type === 'summary' && node.module_id) navigate(`/modules/${node.module_id}`)
+  }
+
   // Statistik
   const confirmed = relations.filter(r => r.status === 'confirmed').length
   const suggested = relations.filter(r => r.status === 'suggested').length
-  const typeCount = new Set(relations.map(r => r.relation_type?.name)).size
+  const metisCount = metisConfirmed.length
 
   const tabs = [
-    { key: 'graph' as const, label: language === 'de' ? 'Übersicht' : 'Overview' },
+    { key: 'overview' as const, label: language === 'de' ? 'Übersicht' : 'Overview' },
     { key: 'suggestions' as const, label: language === 'de' ? 'Vorschläge' : 'Suggestions' },
+    { key: 'metis' as const, label: 'Metis Links' },
   ]
 
   if (loading) {
@@ -128,12 +112,15 @@ export default function OntologyPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="hud-title text-glow text-2xl">ONTOLOGY</h1>
         <div className="flex gap-4 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-          <span>{nodes.length} Nodes</span>
           <span>{confirmed} {language === 'de' ? 'bestätigt' : 'confirmed'}</span>
           <span style={{ color: 'var(--color-warning)' }}>
             {suggested} {language === 'de' ? 'offen' : 'pending'}
           </span>
-          <span>{typeCount} {language === 'de' ? 'Typen' : 'types'}</span>
+          {metisCount > 0 && (
+            <span style={{ color: '#00d4ff' }}>
+              {metisCount} via Metis
+            </span>
+          )}
         </div>
       </div>
 
@@ -154,8 +141,8 @@ export default function OntologyPage() {
         ))}
       </div>
 
-      {/* Tab: Übersicht */}
-      {activeTab === 'graph' && (
+      {/* Tab: Übersicht — Ontology + bestätigte Metis */}
+      {activeTab === 'overview' && (
         <div>
           {/* Filter */}
           <div className="flex gap-3 mb-4">
@@ -178,30 +165,29 @@ export default function OntologyPage() {
             </select>
           </div>
 
-          {/* Relationen-Liste als Tripel */}
-          {filteredRelations.length === 0 ? (
+          {/* Ontology-Relationen */}
+          {filteredRelations.length === 0 && metisConfirmed.length === 0 ? (
             <div className="hud-card p-8 text-center">
               <p style={{ color: 'var(--color-text-muted)' }}>
                 {language === 'de'
-                  ? 'Keine Relationen. Erstelle welche in Notes oder nutze "Vorschläge" → "Relationen erkennen".'
-                  : 'No relations. Create some in Notes or use "Suggestions" → "Detect Relations".'}
+                  ? 'Keine Relationen. Erstelle welche in Notes oder nutze Vorschläge.'
+                  : 'No relations. Create some in Notes or use Suggestions.'}
               </p>
             </div>
           ) : (
             <div className="space-y-1">
               {filteredRelations.map(r => (
-                <div key={r.id} className="flex items-center gap-2 text-sm px-3 py-2 rounded"
+                <div key={`rel-${r.id}`}
+                  className="flex items-center gap-2 text-sm px-3 py-2 rounded"
                   style={{
                     background: r.status === 'suggested'
                       ? 'rgba(255, 170, 0, 0.05)' : 'var(--color-bg-surface)',
                   }}>
-                  {/* Subjekt */}
                   <span className="font-medium cursor-pointer hover:underline"
                     style={{ color: 'var(--color-text-primary)' }}
                     onDoubleClick={() => navigateToSource(r.source_type, r.source_id)}>
-                    {nodeLabel(r.source_type, r.source_id, r.source_title)}
+                    {r.source_title || `${r.source_type} #${r.source_id}`}
                   </span>
-                  {/* Prädikat */}
                   <span className="px-2 py-0.5 rounded text-xs font-semibold"
                     style={{
                       color: r.status === 'suggested' ? 'var(--color-warning)' : 'var(--color-primary)',
@@ -210,51 +196,59 @@ export default function OntologyPage() {
                     }}>
                     {typeLabel(r.relation_type)}
                   </span>
-                  {/* Objekt */}
                   <span className="font-medium cursor-pointer hover:underline"
                     style={{ color: 'var(--color-text-primary)' }}
                     onDoubleClick={() => navigateToSource(r.target_type, r.target_id)}>
-                    {nodeLabel(r.target_type, r.target_id, r.target_title)}
+                    {r.target_title || `${r.target_type} #${r.target_id}`}
                   </span>
-                  {/* Begründung */}
                   {r.reason && (
-                    <span className="text-xs truncate max-w-64 ml-2"
+                    <span className="text-xs truncate max-w-48 ml-2"
                       style={{ color: 'var(--color-text-muted)' }}>
                       — {r.reason}
                     </span>
                   )}
-                  {/* Quelle */}
                   <span className="ml-auto text-xs"
                     style={{ color: 'var(--color-text-muted)' }}>
                     {r.created_by === 'ollama' ? 'AI' : ''}
                   </span>
                 </div>
               ))}
-            </div>
-          )}
 
-          {/* Node-Übersicht */}
-          {nodes.length > 0 && (
-            <div className="mt-6">
-              <h3 className="text-xs font-semibold uppercase tracking-wider mb-3"
-                style={{ color: 'var(--color-text-secondary)' }}>
-                {language === 'de' ? 'Vernetzte Nodes' : 'Connected Nodes'}
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {nodes.map(n => (
-                  <span key={n.key} className="px-2 py-1 rounded text-xs cursor-pointer hover:opacity-80"
-                    style={{
-                      background: 'var(--color-bg-elevated)',
-                      color: 'var(--color-text-primary)',
-                      border: '1px solid var(--color-border)',
-                    }} onDoubleClick={() => navigateToSource(n.type, n.id)}>
-                    {nodeLabel(n.type, n.id, n.title)}
-                    <span className="ml-1" style={{ color: 'var(--color-text-muted)' }}>
-                      ({n.relationCount})
-                    </span>
+              {/* Bestätigte Metis-Edges mit Badge */}
+              {metisConfirmed.map(({ edge, src, tgt }) => (
+                <div key={`metis-${edge.id}`}
+                  className="flex items-center gap-2 text-sm px-3 py-2 rounded"
+                  style={{ background: 'var(--color-bg-surface)' }}>
+                  <span className="font-medium cursor-pointer hover:underline"
+                    style={{ color: 'var(--color-text-primary)' }}
+                    onDoubleClick={() => navigateToNode(src)}>
+                    {src.title}
                   </span>
-                ))}
-              </div>
+                  <span className="px-2 py-0.5 rounded text-xs font-semibold"
+                    style={{ color: 'var(--color-primary)', background: 'var(--color-hover-bg)' }}>
+                    {edge.relation_type}
+                  </span>
+                  <span className="font-medium cursor-pointer hover:underline"
+                    style={{ color: 'var(--color-text-primary)' }}
+                    onDoubleClick={() => navigateToNode(tgt)}>
+                    {tgt.title}
+                  </span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded ml-2"
+                    style={{ color: '#00d4ff', background: '#00d4ff15', border: '1px solid #00d4ff30' }}>
+                    via Metis
+                  </span>
+                  {edge.reason && (
+                    <span className="text-xs truncate max-w-48 ml-1"
+                      style={{ color: 'var(--color-text-muted)' }}>
+                      — {edge.reason}
+                    </span>
+                  )}
+                  <span className="ml-auto text-xs"
+                    style={{ color: 'var(--color-text-muted)' }}>
+                    {(edge.strength * 100).toFixed(0)}%
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -263,6 +257,11 @@ export default function OntologyPage() {
       {/* Tab: Vorschläge */}
       {activeTab === 'suggestions' && (
         <RelationSuggestions onChanged={loadRelations} />
+      )}
+
+      {/* Tab: Metis Links */}
+      {activeTab === 'metis' && (
+        <MetisLinksTab />
       )}
     </div>
   )
