@@ -1,5 +1,6 @@
 // MetisSphereSettings — HUD-Overlay für Sphäre-Visuals
-// Slider für Nebel, Edges, Nodes, Farben — persistent via localStorage
+// Slider für Nebel, Edges, Nodes, Farben + Ontologie-Toggle
+// Persistent via localStorage
 
 import { useState } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
@@ -7,7 +8,7 @@ import type { SphereSettings } from '../../hooks/useSphereSettings'
 
 interface Props {
   settings: SphereSettings
-  onUpdate: (key: keyof SphereSettings, value: number) => void
+  onUpdate: (key: keyof SphereSettings, value: number | boolean) => void
   onSave: () => void
   onReset: () => void
 }
@@ -49,6 +50,7 @@ export default function MetisSphereSettings({ settings, onUpdate, onSave, onRese
     edgeOnt: language === 'de' ? 'Ontology-Edges' : 'Ontology Edges',
     nodeGlow: language === 'de' ? 'Node-Glow' : 'Node Glow',
     colorInt: language === 'de' ? 'Farbstärke' : 'Color Intensity',
+    markers: language === 'de' ? 'Ontologie-Symbole' : 'Ontology Markers',
     save: language === 'de' ? 'Speichern' : 'Save',
     reset: language === 'de' ? 'Zurücksetzen' : 'Reset',
   }
@@ -107,6 +109,25 @@ export default function MetisSphereSettings({ settings, onUpdate, onSave, onRese
       <SettingsSlider label={t.colorInt} value={settings.colorIntensity}
         min={0.3} max={3.0} step={0.1}
         onChange={v => onUpdate('colorIntensity', v)} />
+
+      {/* Ontologie-Symbole Toggle */}
+      <div className="flex items-center gap-3 py-1.5 mt-1"
+        style={{ borderTop: '1px solid var(--color-border)', paddingTop: '8px' }}>
+        <span className="text-xs w-28 shrink-0"
+          style={{ color: 'var(--color-text-secondary)' }}>
+          {t.markers}
+        </span>
+        <button
+          onClick={() => onUpdate('showOntologyMarkers', !settings.showOntologyMarkers)}
+          className="text-xs px-2 py-0.5 rounded"
+          style={{
+            color: settings.showOntologyMarkers ? 'var(--color-primary)' : 'var(--color-text-muted)',
+            border: `1px solid ${settings.showOntologyMarkers ? 'var(--color-primary)' : 'var(--color-border)'}`,
+            background: settings.showOntologyMarkers ? 'var(--color-hover-bg)' : 'transparent',
+          }}>
+          {settings.showOntologyMarkers ? 'ON' : 'OFF'}
+        </button>
+      </div>
 
       {/* Aktionen */}
       <div className="flex gap-2 mt-3 pt-2"
