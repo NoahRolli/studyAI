@@ -1,6 +1,7 @@
 // OntologyPage — Vollbild-Wissensgraph aller typisierten Relationen
 // Tabs: Übersicht (Ontology + bestätigte Metis), Vorschläge, Metis Links
 // Bestätigte Metis-Edges erscheinen in Übersicht mit "via Metis" Badge
+// Ontologie-Symbole togglebar via localStorage
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -8,8 +9,21 @@ import { get } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import RelationSuggestions from '../components/relations/RelationSuggestions'
 import MetisLinksTab from '../components/metis/MetisLinksTab'
+import { getOntologyMarker, getMarkersVisible, setMarkersVisible } from '../utils/ontologyMarkers'
 import type { RelationData, RelationType } from '../types/relations'
 import type { MetisEdge, MetisGraph, MetisNode } from '../types/metis'
+
+// Inline-Symbol für Relationstyp (oder null wenn Toggle aus)
+function TypeSymbol({ type, show }: { type: string; show: boolean }) {
+  if (!show) return null
+  const marker = getOntologyMarker(type)
+  if (!marker) return null
+  return (
+    <span className="mr-1" style={{ color: marker.color, fontSize: '14px' }}>
+      {marker.symbol}
+    </span>
+  )
+}
 
 export default function OntologyPage() {
   const { language } = useLanguage()
@@ -21,6 +35,14 @@ export default function OntologyPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'suggestions' | 'metis'>('overview')
   const [filterType, setFilterType] = useState('all')
   const [filterStatus, setFilterStatus] = useState('confirmed')
+  const [showMarkers, setShowMarkers] = useState(getMarkersVisible)
+
+  const toggleMarkers = useCallback(() => {
+    setShowMarkers(prev => {
+      setMarkersVisible(!prev)
+      return !prev
+    })
+  }, [])
 
   const loadRelations = useCallback(async () => {
     try {
@@ -106,10 +128,10 @@ export default function OntologyPage() {
 
   return (
     <div className="animate-fade-in">
-      {/* Header + Statistik */}
+      {/* Header + Statistik + Toggle */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="hud-title text-glow text-2xl">ONTOLOGY</h1>
-        <div className="flex gap-4 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+        <div className="flex gap-4 items-center text-xs" style={{ color: 'var(--color-text-secondary)' }}>
           <span>{confirmed} {language === 'de' ? 'bestätigt' : 'confirmed'}</span>
           <span style={{ color: 'var(--color-warning)' }}>
             {suggested} {language === 'de' ? 'offen' : 'pending'}
@@ -119,6 +141,15 @@ export default function OntologyPage() {
               {metisCount} via Metis
             </span>
           )}
+          <button onClick={toggleMarkers}
+            className="px-2 py-0.5 rounded"
+            style={{
+              color: showMarkers ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              border: `1px solid ${showMarkers ? 'var(--color-primary)' : 'var(--color-border)'}`,
+              background: showMarkers ? 'var(--color-hover-bg)' : 'transparent',
+            }}>
+            {'\u25b3\u25c6'}
+          </button>
         </div>
       </div>
 
@@ -163,7 +194,7 @@ export default function OntologyPage() {
             </select>
           </div>
 
-          {/* Ontology-Relationen */}
+          {/* Relationen-Liste */}
           {filteredRelations.length === 0 && metisConfirmed.length === 0 ? (
             <div className="hud-card p-8 text-center">
               <p style={{ color: 'var(--color-text-muted)' }}>
@@ -174,6 +205,7 @@ export default function OntologyPage() {
             </div>
           ) : (
             <div className="space-y-1">
+              {/* Ontology-Relationen */}
               {filteredRelations.map(r => (
                 <div key={`rel-${r.id}`}
                   className="flex items-center gap-2 text-sm px-3 py-2 rounded"
@@ -192,6 +224,7 @@ export default function OntologyPage() {
                       background: r.status === 'suggested'
                         ? 'rgba(255, 170, 0, 0.1)' : 'var(--color-hover-bg)',
                     }}>
+                    <TypeSymbol type={r.relation_type?.name || ''} show={showMarkers} />
                     {typeLabel(r.relation_type)}
                   </span>
                   <span className="font-medium cursor-pointer hover:underline"
@@ -224,6 +257,7 @@ export default function OntologyPage() {
                   </span>
                   <span className="px-2 py-0.5 rounded text-xs font-semibold"
                     style={{ color: 'var(--color-primary)', background: 'var(--color-hover-bg)' }}>
+                    <TypeSymbol type={edge.relation_type} show={showMarkers} />
                     {edge.relation_type}
                   </span>
                   <span className="font-medium cursor-pointer hover:underline"
