@@ -228,6 +228,7 @@ export default function MetisPage() {
             node={selectedNode}
             graph={graph}
             onClose={() => setSelectedNode(null)}
+            onEdgeReviewed={loadGraph}
           />
         )}
       </div>

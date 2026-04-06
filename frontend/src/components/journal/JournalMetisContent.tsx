@@ -188,6 +188,7 @@ export default function JournalMetisContent() {
 
         {selectedNode && (
           <MetisNodeDetail node={selectedNode} graph={graph}
+            onEdgeReviewed={loadGraph}
             onClose={() => setSelectedNode(null)} />
         )}
       </div>
