@@ -275,6 +275,58 @@
 </section>
 <section id="module-backend.api.documents">
 <span id="source-code"></span><h2>Source Code<a class="headerlink" href="#module-backend.api.documents" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="backend.api.documents.RenameDoc">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">backend.api.documents.</span></span><span class="sig-name descname"><span class="pre">RenameDoc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/backend/api/documents.html#RenameDoc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.api.documents.RenameDoc" title="Link to this definition">¶</a></dt>
+<dd><p>Schema für Dokument-Umbenennung.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="backend.api.documents.RenameDoc.model_computed_fields">
+<span class="sig-name descname"><span class="pre">model_computed_fields</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></span><a class="headerlink" href="#backend.api.documents.RenameDoc.model_computed_fields" title="Link to this definition">¶</a></dt>
+<dd><p>A dictionary of computed field names and their corresponding <cite>ComputedFieldInfo</cite> objects.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="backend.api.documents.RenameDoc.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></span><a class="headerlink" href="#backend.api.documents.RenameDoc.model_config" title="Link to this definition">¶</a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="backend.api.documents.RenameDoc.model_fields">
+<span class="sig-name descname"><span class="pre">model_fields</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'display_name':</span> <span class="pre">FieldInfo(annotation=Union[str,</span> <span class="pre">NoneType],</span> <span class="pre">required=False,</span> <span class="pre">default=None)}</span></span><a class="headerlink" href="#backend.api.documents.RenameDoc.model_fields" title="Link to this definition">¶</a></dt>
+<dd><p>Metadata about the fields defined on the model,
+mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo] objects.</p>
+<p>This replaces <cite>Model.__fields__</cite> from Pydantic V1.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="backend.api.documents.RenameSummary">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">backend.api.documents.</span></span><span class="sig-name descname"><span class="pre">RenameSummary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/backend/api/documents.html#RenameSummary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.api.documents.RenameSummary" title="Link to this definition">¶</a></dt>
+<dd><p>Schema für Summary-Titel.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="backend.api.documents.RenameSummary.model_computed_fields">
+<span class="sig-name descname"><span class="pre">model_computed_fields</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></span><a class="headerlink" href="#backend.api.documents.RenameSummary.model_computed_fields" title="Link to this definition">¶</a></dt>
+<dd><p>A dictionary of computed field names and their corresponding <cite>ComputedFieldInfo</cite> objects.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="backend.api.documents.RenameSummary.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></span><a class="headerlink" href="#backend.api.documents.RenameSummary.model_config" title="Link to this definition">¶</a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="backend.api.documents.RenameSummary.model_fields">
+<span class="sig-name descname"><span class="pre">model_fields</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'title':</span> <span class="pre">FieldInfo(annotation=Union[str,</span> <span class="pre">NoneType],</span> <span class="pre">required=False,</span> <span class="pre">default=None)}</span></span><a class="headerlink" href="#backend.api.documents.RenameSummary.model_fields" title="Link to this definition">¶</a></dt>
+<dd><p>Metadata about the fields defined on the model,
+mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo] objects.</p>
+<p>This replaces <cite>Model.__fields__</cite> from Pydantic V1.</p>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 </section>
 
@@ -341,7 +393,21 @@
 <li><a class="reference internal" href="#delete-api-documents-id"><code class="docutils literal notranslate"><span class="pre">DELETE</span> <span class="pre">/api/documents/{id}</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#module-backend.api.documents">Source Code</a></li>
+<li><a class="reference internal" href="#module-backend.api.documents">Source Code</a><ul>
+<li><a class="reference internal" href="#backend.api.documents.RenameDoc"><code class="docutils literal notranslate"><span class="pre">RenameDoc</span></code></a><ul>
+<li><a class="reference internal" href="#backend.api.documents.RenameDoc.model_computed_fields"><code class="docutils literal notranslate"><span class="pre">RenameDoc.model_computed_fields</span></code></a></li>
+<li><a class="reference internal" href="#backend.api.documents.RenameDoc.model_config"><code class="docutils literal notranslate"><span class="pre">RenameDoc.model_config</span></code></a></li>
+<li><a class="reference internal" href="#backend.api.documents.RenameDoc.model_fields"><code class="docutils literal notranslate"><span class="pre">RenameDoc.model_fields</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#backend.api.documents.RenameSummary"><code class="docutils literal notranslate"><span class="pre">RenameSummary</span></code></a><ul>
+<li><a class="reference internal" href="#backend.api.documents.RenameSummary.model_computed_fields"><code class="docutils literal notranslate"><span class="pre">RenameSummary.model_computed_fields</span></code></a></li>
+<li><a class="reference internal" href="#backend.api.documents.RenameSummary.model_config"><code class="docutils literal notranslate"><span class="pre">RenameSummary.model_config</span></code></a></li>
+<li><a class="reference internal" href="#backend.api.documents.RenameSummary.model_fields"><code class="docutils literal notranslate"><span class="pre">RenameSummary.model_fields</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

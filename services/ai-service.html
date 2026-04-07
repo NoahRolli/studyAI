@@ -267,55 +267,8 @@
 <h2>Switching Providers<a class="headerlink" href="#switching-providers" title="Link to this heading">¶</a></h2>
 <p>The active provider is set in <code class="docutils literal notranslate"><span class="pre">backend/infra/config.py</span></code> via <code class="docutils literal notranslate"><span class="pre">AI_PROVIDER</span></code> and can be changed at runtime.</p>
 </section>
-<section id="module-backend.services.ai_service">
-<span id="source-code"></span><h2>Source Code<a class="headerlink" href="#module-backend.services.ai_service" title="Link to this heading">¶</a></h2>
-<dl class="py function">
-<dt class="sig sig-object py" id="backend.services.ai_service.deep_dive">
-<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">backend.services.ai_service.</span></span><span class="sig-name descname"><span class="pre">deep_dive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_detail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/backend/services/ai_service.html#deep_dive"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.services.ai_service.deep_dive" title="Link to this definition">¶</a></dt>
-<dd><p>Generiert Unterknoten für einen Mindmap-Knoten (Reinzoomen).
-Gibt eine Liste von Kind-Knoten zurück.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="backend.services.ai_service.explain_term">
-<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">backend.services.ai_service.</span></span><span class="sig-name descname"><span class="pre">explain_term</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">term</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/backend/services/ai_service.html#explain_term"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.services.ai_service.explain_term" title="Link to this definition">¶</a></dt>
-<dd><p>Erklärt einen Fachbegriff im Kontext des Dokuments.
-Gibt eine verständliche Erklärung zurück.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="backend.services.ai_service.generate_mindmap">
-<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">backend.services.ai_service.</span></span><span class="sig-name descname"><span class="pre">generate_mindmap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/backend/services/ai_service.html#generate_mindmap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.services.ai_service.generate_mindmap" title="Link to this definition">¶</a></dt>
-<dd><p>Generiert eine Mindmap-Struktur aus einem Text.
-Gibt eine Liste von Knoten zurück: [{“label”: str, “detail”: str, “children”: […]}]</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="backend.services.ai_service.get_active_provider_name">
-<span class="sig-prename descclassname"><span class="pre">backend.services.ai_service.</span></span><span class="sig-name descname"><span class="pre">get_active_provider_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/backend/services/ai_service.html#get_active_provider_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.services.ai_service.get_active_provider_name" title="Link to this definition">¶</a></dt>
-<dd><p>Gibt den Namen des aktuell aktiven Providers zurück.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="backend.services.ai_service.get_provider">
-<span class="sig-prename descclassname"><span class="pre">backend.services.ai_service.</span></span><span class="sig-name descname"><span class="pre">get_provider</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/backend/services/ai_service.html#get_provider"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.services.ai_service.get_provider" title="Link to this definition">¶</a></dt>
-<dd><p>Gibt den aktuell aktiven AI-Provider zurück.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="backend.services.ai_service.set_provider">
-<span class="sig-prename descclassname"><span class="pre">backend.services.ai_service.</span></span><span class="sig-name descname"><span class="pre">set_provider</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/backend/services/ai_service.html#set_provider"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.services.ai_service.set_provider" title="Link to this definition">¶</a></dt>
-<dd><p>Wechselt den aktiven AI-Provider.
-Erlaubte Werte: “claude” oder “ollama”</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="backend.services.ai_service.summarize">
-<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">backend.services.ai_service.</span></span><span class="sig-name descname"><span class="pre">summarize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../_modules/backend/services/ai_service.html#summarize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.services.ai_service.summarize" title="Link to this definition">¶</a></dt>
-<dd><p>Generiert eine Zusammenfassung mit Schlüsselbegriffen.
-Gibt zurück: {“summary”: str, “key_terms”: list[str]}</p>
-</dd></dl>
-
+<section id="source-code">
+<h2>Source Code<a class="headerlink" href="#source-code" title="Link to this heading">¶</a></h2>
 </section>
 </section>
 
@@ -377,16 +330,7 @@ Gibt zurück: {“summary”: str, “key_terms”: list[str]}</p>
 <li><a class="reference internal" href="#">AI Service</a><ul>
 <li><a class="reference internal" href="#provider-pattern">Provider Pattern</a></li>
 <li><a class="reference internal" href="#switching-providers">Switching Providers</a></li>
-<li><a class="reference internal" href="#module-backend.services.ai_service">Source Code</a><ul>
-<li><a class="reference internal" href="#backend.services.ai_service.deep_dive"><code class="docutils literal notranslate"><span class="pre">deep_dive()</span></code></a></li>
-<li><a class="reference internal" href="#backend.services.ai_service.explain_term"><code class="docutils literal notranslate"><span class="pre">explain_term()</span></code></a></li>
-<li><a class="reference internal" href="#backend.services.ai_service.generate_mindmap"><code class="docutils literal notranslate"><span class="pre">generate_mindmap()</span></code></a></li>
-<li><a class="reference internal" href="#backend.services.ai_service.get_active_provider_name"><code class="docutils literal notranslate"><span class="pre">get_active_provider_name()</span></code></a></li>
-<li><a class="reference internal" href="#backend.services.ai_service.get_provider"><code class="docutils literal notranslate"><span class="pre">get_provider()</span></code></a></li>
-<li><a class="reference internal" href="#backend.services.ai_service.set_provider"><code class="docutils literal notranslate"><span class="pre">set_provider()</span></code></a></li>
-<li><a class="reference internal" href="#backend.services.ai_service.summarize"><code class="docutils literal notranslate"><span class="pre">summarize()</span></code></a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#source-code">Source Code</a></li>
 </ul>
 </li>
 </ul>

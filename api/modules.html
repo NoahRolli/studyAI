@@ -285,64 +285,8 @@
 <p>Delete a module and all associated documents (cascade).</p>
 </section>
 </section>
-<section id="module-backend.api.modules">
-<span id="source-code"></span><h2>Source Code<a class="headerlink" href="#module-backend.api.modules" title="Link to this heading">¶</a></h2>
-<dl class="py class">
-<dt class="sig sig-object py" id="backend.api.modules.ModuleCreate">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">backend.api.modules.</span></span><span class="sig-name descname"><span class="pre">ModuleCreate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'#4a90d9'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/backend/api/modules.html#ModuleCreate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.api.modules.ModuleCreate" title="Link to this definition">¶</a></dt>
-<dd><dl class="py attribute">
-<dt class="sig sig-object py" id="backend.api.modules.ModuleCreate.model_computed_fields">
-<span class="sig-name descname"><span class="pre">model_computed_fields</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></span><a class="headerlink" href="#backend.api.modules.ModuleCreate.model_computed_fields" title="Link to this definition">¶</a></dt>
-<dd><p>A dictionary of computed field names and their corresponding <cite>ComputedFieldInfo</cite> objects.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="backend.api.modules.ModuleCreate.model_config">
-<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></span><a class="headerlink" href="#backend.api.modules.ModuleCreate.model_config" title="Link to this definition">¶</a></dt>
-<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="backend.api.modules.ModuleCreate.model_fields">
-<span class="sig-name descname"><span class="pre">model_fields</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'color':</span> <span class="pre">FieldInfo(annotation=Union[str,</span> <span class="pre">NoneType],</span> <span class="pre">required=False,</span> <span class="pre">default='#4a90d9'),</span> <span class="pre">'description':</span> <span class="pre">FieldInfo(annotation=Union[str,</span> <span class="pre">NoneType],</span> <span class="pre">required=False,</span> <span class="pre">default=''),</span> <span class="pre">'name':</span> <span class="pre">FieldInfo(annotation=str,</span> <span class="pre">required=True)}</span></span><a class="headerlink" href="#backend.api.modules.ModuleCreate.model_fields" title="Link to this definition">¶</a></dt>
-<dd><p>Metadata about the fields defined on the model,
-mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo] objects.</p>
-<p>This replaces <cite>Model.__fields__</cite> from Pydantic V1.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="backend.api.modules.ModuleUpdate">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">backend.api.modules.</span></span><span class="sig-name descname"><span class="pre">ModuleUpdate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/backend/api/modules.html#ModuleUpdate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.api.modules.ModuleUpdate" title="Link to this definition">¶</a></dt>
-<dd><dl class="py attribute">
-<dt class="sig sig-object py" id="backend.api.modules.ModuleUpdate.model_computed_fields">
-<span class="sig-name descname"><span class="pre">model_computed_fields</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></span><a class="headerlink" href="#backend.api.modules.ModuleUpdate.model_computed_fields" title="Link to this definition">¶</a></dt>
-<dd><p>A dictionary of computed field names and their corresponding <cite>ComputedFieldInfo</cite> objects.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="backend.api.modules.ModuleUpdate.model_config">
-<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></span><a class="headerlink" href="#backend.api.modules.ModuleUpdate.model_config" title="Link to this definition">¶</a></dt>
-<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="backend.api.modules.ModuleUpdate.model_fields">
-<span class="sig-name descname"><span class="pre">model_fields</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'color':</span> <span class="pre">FieldInfo(annotation=Union[str,</span> <span class="pre">NoneType],</span> <span class="pre">required=False,</span> <span class="pre">default=None),</span> <span class="pre">'description':</span> <span class="pre">FieldInfo(annotation=Union[str,</span> <span class="pre">NoneType],</span> <span class="pre">required=False,</span> <span class="pre">default=None),</span> <span class="pre">'name':</span> <span class="pre">FieldInfo(annotation=Union[str,</span> <span class="pre">NoneType],</span> <span class="pre">required=False,</span> <span class="pre">default=None)}</span></span><a class="headerlink" href="#backend.api.modules.ModuleUpdate.model_fields" title="Link to this definition">¶</a></dt>
-<dd><p>Metadata about the fields defined on the model,
-mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo] objects.</p>
-<p>This replaces <cite>Model.__fields__</cite> from Pydantic V1.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="backend.api.modules.toggle_pin_module">
-<span class="sig-prename descclassname"><span class="pre">backend.api.modules.</span></span><span class="sig-name descname"><span class="pre">toggle_pin_module</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">module_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Session</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Depends(get_db)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/backend/api/modules.html#toggle_pin_module"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.api.modules.toggle_pin_module" title="Link to this definition">¶</a></dt>
-<dd><p>Pin-Status eines Moduls umschalten.</p>
-</dd></dl>
-
+<section id="source-code">
+<h2>Source Code<a class="headerlink" href="#source-code" title="Link to this heading">¶</a></h2>
 </section>
 </section>
 
@@ -410,22 +354,7 @@ mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo] ob
 <li><a class="reference internal" href="#delete-api-modules-id"><code class="docutils literal notranslate"><span class="pre">DELETE</span> <span class="pre">/api/modules/{id}</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#module-backend.api.modules">Source Code</a><ul>
-<li><a class="reference internal" href="#backend.api.modules.ModuleCreate"><code class="docutils literal notranslate"><span class="pre">ModuleCreate</span></code></a><ul>
-<li><a class="reference internal" href="#backend.api.modules.ModuleCreate.model_computed_fields"><code class="docutils literal notranslate"><span class="pre">ModuleCreate.model_computed_fields</span></code></a></li>
-<li><a class="reference internal" href="#backend.api.modules.ModuleCreate.model_config"><code class="docutils literal notranslate"><span class="pre">ModuleCreate.model_config</span></code></a></li>
-<li><a class="reference internal" href="#backend.api.modules.ModuleCreate.model_fields"><code class="docutils literal notranslate"><span class="pre">ModuleCreate.model_fields</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#backend.api.modules.ModuleUpdate"><code class="docutils literal notranslate"><span class="pre">ModuleUpdate</span></code></a><ul>
-<li><a class="reference internal" href="#backend.api.modules.ModuleUpdate.model_computed_fields"><code class="docutils literal notranslate"><span class="pre">ModuleUpdate.model_computed_fields</span></code></a></li>
-<li><a class="reference internal" href="#backend.api.modules.ModuleUpdate.model_config"><code class="docutils literal notranslate"><span class="pre">ModuleUpdate.model_config</span></code></a></li>
-<li><a class="reference internal" href="#backend.api.modules.ModuleUpdate.model_fields"><code class="docutils literal notranslate"><span class="pre">ModuleUpdate.model_fields</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#backend.api.modules.toggle_pin_module"><code class="docutils literal notranslate"><span class="pre">toggle_pin_module()</span></code></a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#source-code">Source Code</a></li>
 </ul>
 </li>
 </ul>

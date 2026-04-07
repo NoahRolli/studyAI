@@ -277,30 +277,8 @@
 </table>
 </div>
 </section>
-<section id="module-backend.services.mindmap_service">
-<span id="source-code"></span><h2>Source Code<a class="headerlink" href="#module-backend.services.mindmap_service" title="Link to this heading">¶</a></h2>
-<dl class="py function">
-<dt class="sig sig-object py" id="backend.services.mindmap_service.create_mindmap_from_summary">
-<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">backend.services.mindmap_service.</span></span><span class="sig-name descname"><span class="pre">create_mindmap_from_summary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">summary_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Session</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/backend/services/mindmap_service.html#create_mindmap_from_summary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.services.mindmap_service.create_mindmap_from_summary" title="Link to this definition">¶</a></dt>
-<dd><p>Generiert eine komplette Mindmap aus einem Text via AI.
-Speichert alle Knoten in der Datenbank.
-Gibt die Baumstruktur mit DB-IDs als Liste zurück.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="backend.services.mindmap_service.expand_node">
-<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">backend.services.mindmap_service.</span></span><span class="sig-name descname"><span class="pre">expand_node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Session</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/backend/services/mindmap_service.html#expand_node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.services.mindmap_service.expand_node" title="Link to this definition">¶</a></dt>
-<dd><p>Generiert Unterknoten für einen bestehenden Knoten (Deep Dive).
-Gibt Knoten mit echten DB-IDs zurück — wichtig für weitere Deep Dives.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="backend.services.mindmap_service.get_mindmap_tree">
-<span class="sig-prename descclassname"><span class="pre">backend.services.mindmap_service.</span></span><span class="sig-name descname"><span class="pre">get_mindmap_tree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">summary_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Session</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/backend/services/mindmap_service.html#get_mindmap_tree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#backend.services.mindmap_service.get_mindmap_tree" title="Link to this definition">¶</a></dt>
-<dd><p>Lädt die komplette Mindmap als Baumstruktur aus der DB.
-Baut den Baum rekursiv aus den flachen DB-Einträgen auf.</p>
-</dd></dl>
-
+<section id="source-code">
+<h2>Source Code<a class="headerlink" href="#source-code" title="Link to this heading">¶</a></h2>
 </section>
 </section>
 
@@ -361,12 +339,7 @@ Baut den Baum rekursiv aus den flachen DB-Einträgen auf.</p>
             <ul>
 <li><a class="reference internal" href="#">Mindmap Service</a><ul>
 <li><a class="reference internal" href="#depth-levels">Depth Levels</a></li>
-<li><a class="reference internal" href="#module-backend.services.mindmap_service">Source Code</a><ul>
-<li><a class="reference internal" href="#backend.services.mindmap_service.create_mindmap_from_summary"><code class="docutils literal notranslate"><span class="pre">create_mindmap_from_summary()</span></code></a></li>
-<li><a class="reference internal" href="#backend.services.mindmap_service.expand_node"><code class="docutils literal notranslate"><span class="pre">expand_node()</span></code></a></li>
-<li><a class="reference internal" href="#backend.services.mindmap_service.get_mindmap_tree"><code class="docutils literal notranslate"><span class="pre">get_mindmap_tree()</span></code></a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#source-code">Source Code</a></li>
 </ul>
 </li>
 </ul>
