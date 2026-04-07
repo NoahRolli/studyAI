@@ -15,11 +15,9 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { post } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
-import { treeLayout, neuralLayout } from '../utils/mindmapLayouts'
+import { treeLayout } from '../utils/mindmapLayouts'
 import type { ClusterResult, StorylineResult } from '../types/models'
 import type { MindmapTreeNode } from '../utils/mindmapLayouts'
-
-type LayoutMode = 'tree' | 'neural'
 
 function JournalMindmapPage() {
   const { t } = useLanguage()
@@ -27,22 +25,17 @@ function JournalMindmapPage() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>('tree')
   const [treeData, setTreeData] = useState<MindmapTreeNode[]>([])
   const [selectedNode, setSelectedNode] = useState<{
     label: string
     detail: string
   } | null>(null)
 
-  function applyLayout(tree: MindmapTreeNode[], mode: LayoutMode) {
-    const result = mode === 'neural' ? neuralLayout(tree) : treeLayout(tree)
+  // Layout berechnen und Nodes/Edges setzen
+  function applyLayout(tree: MindmapTreeNode[]) {
+    const result = treeLayout(tree)
     setNodes(result.nodes)
     setEdges(result.edges)
-  }
-
-  function switchLayout(mode: LayoutMode) {
-    setLayoutMode(mode)
-    if (treeData.length > 0) applyLayout(treeData, mode)
   }
 
   useEffect(() => {
@@ -61,7 +54,7 @@ function JournalMindmapPage() {
         }
         const tree = buildTree(clusters, storylines, t)
         setTreeData(tree)
-        applyLayout(tree, layoutMode)
+        applyLayout(tree)
       } catch (err) {
         setError(err instanceof Error ? err.message : t.common.error)
       } finally {
@@ -106,23 +99,6 @@ function JournalMindmapPage() {
             {t.mindmap.backToJournal}
           </Link>
           <h1 className="hud-title text-sm text-glow">{t.mindmap.journalTitle}</h1>
-        </div>
-        <div
-          className="flex gap-1 p-1 rounded-lg"
-          style={{ backgroundColor: 'var(--color-bg-surface)' }}
-        >
-          <button
-            onClick={() => switchLayout('tree')}
-            className={`hud-tab ${layoutMode === 'tree' ? 'hud-tab-active' : ''}`}
-          >
-            {t.mindmap.layoutTree}
-          </button>
-          <button
-            onClick={() => switchLayout('neural')}
-            className={`hud-tab ${layoutMode === 'neural' ? 'hud-tab-active' : ''}`}
-          >
-            {t.mindmap.layoutNeural}
-          </button>
         </div>
       </div>
 
