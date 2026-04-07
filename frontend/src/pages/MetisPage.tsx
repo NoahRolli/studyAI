@@ -1,11 +1,10 @@
 // MetisPage — Orchestrator für den Metis Knowledge-Graph
-// 3D-Sphäre (default), 2D-Graph, Listen-Ansicht.
+// 3D-Sphäre (default) und Listen-Ansicht.
 // Toolbar, Detail-Panel, MiniMap, Fullscreen, Label-Toggle.
 
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { get, post, put } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
-import MetisGraph2D from '../components/metis/MetisGraph2D'
 import MetisToolbar from '../components/metis/MetisToolbar'
 import MetisListView from '../components/metis/MetisListView'
 import MetisNodeDetail from '../components/metis/MetisNodeDetail'
@@ -166,7 +165,7 @@ export default function MetisPage() {
           </div>
         ) : view === 'list' ? (
           <MetisListView graph={graph} />
-        ) : view === '3d' ? (
+        ) : (
           <Suspense fallback={
             <div className="flex items-center justify-center h-full">
               <p className="text-[var(--color-text-muted)]">{t.common.loading}</p>
@@ -180,13 +179,6 @@ export default function MetisPage() {
               showLabels={showLabels}
             />
           </Suspense>
-        ) : (
-          <MetisGraph2D
-            graph={graph}
-            onPositionUpdate={handlePositionUpdate}
-            onNodeClick={handleNodeClick}
-            transparent={true}
-          />
         )}
 
         {/* Overlay Controls */}
