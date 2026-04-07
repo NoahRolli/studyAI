@@ -3,7 +3,7 @@
 // Toolbar, Detail-Panel, MiniMap, Fullscreen, Label-Toggle.
 
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
-import { get, post, put } from '../hooks/useAPI'
+import { get, post } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import MetisToolbar from '../components/metis/MetisToolbar'
 import MetisListView from '../components/metis/MetisListView'
