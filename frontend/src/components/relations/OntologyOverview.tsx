@@ -1,5 +1,5 @@
 // OntologyOverview — Übersicht aller Wissensrelationen
-// Hover-Icons: Bearbeiten (Ontology) + Löschen (Ontology + Metis)
+// Hover-Icons: Bearbeiten + Löschen (Ontology + Metis)
 // Inferred Relationen sind nicht editierbar (berechnet)
 
 import { useState, useEffect, useCallback } from 'react'
@@ -8,8 +8,9 @@ import { get, del, put } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import { getOntologyMarker } from '../../utils/ontologyMarkers'
 import OntologyEditModal from './OntologyEditModal'
+import type { EditTarget } from './OntologyEditModal'
 import type { RelationData, RelationType } from '../../types/relations'
-import type { MetisEdge, MetisGraph, MetisNode } from '../../types/metis'
+import type { MetisGraph, MetisNode } from '../../types/metis'
 
 interface InferredRelation {
   source_type: string; source_id: number; source_title: string
@@ -28,23 +29,20 @@ function TypeSymbol({ type, show }: { type: string; show: boolean }) {
   return <span className="mr-1" style={{ color: marker.color, fontSize: '14px' }}>{marker.symbol}</span>
 }
 
-// Hover-Aktions-Icons (Bearbeiten + Löschen)
-function RowActions({ onEdit, onDelete, showEdit = true }: {
-  onEdit?: () => void; onDelete: () => void; showEdit?: boolean
+function RowActions({ onEdit, onDelete }: {
+  onEdit?: () => void; onDelete: () => void
 }) {
   return (
     <span className="row-actions ml-auto flex gap-1 opacity-0 transition-opacity"
       style={{ flexShrink: 0 }}>
-      {showEdit && onEdit && (
+      {onEdit && (
         <button onClick={e => { e.stopPropagation(); onEdit() }}
           className="px-1.5 py-0.5 rounded text-xs hover:bg-white/10"
-          style={{ color: 'var(--color-text-muted)' }}
-          title="Edit">✎</button>
+          style={{ color: 'var(--color-text-muted)' }} title="Edit">✎</button>
       )}
       <button onClick={e => { e.stopPropagation(); onDelete() }}
         className="px-1.5 py-0.5 rounded text-xs hover:bg-white/10"
-        style={{ color: '#ef4444' }}
-        title="Delete">✕</button>
+        style={{ color: '#ef4444' }} title="Delete">✕</button>
     </span>
   )
 }
@@ -55,12 +53,12 @@ export default function OntologyOverview({ showMarkers }: Props) {
   const [relations, setRelations] = useState<RelationData[]>([])
   const [types, setTypes] = useState<RelationType[]>([])
   const [metisConfirmed, setMetisConfirmed] = useState
-    { edge: MetisEdge; src: MetisNode; tgt: MetisNode }[]
+    { edge: { id: number; relation_type: string; strength: number; reason: string | null; source_node_id: number; target_node_id: number; status: string }; src: MetisNode; tgt: MetisNode }[]
   >([])
   const [inferred, setInferred] = useState<InferredRelation[]>([])
   const [filterType, setFilterType] = useState('all')
   const [filterStatus, setFilterStatus] = useState('confirmed')
-  const [editRelation, setEditRelation] = useState<RelationData | null>(null)
+  const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
 
   const loadData = useCallback(async () => {
     try {
@@ -85,7 +83,6 @@ export default function OntologyOverview({ showMarkers }: Props) {
 
   useEffect(() => { loadData() }, [loadData])
 
-  // Ontology-Relation löschen
   const deleteRelation = async (id: number) => {
     const msg = language === 'de' ? 'Relation wirklich löschen?' : 'Delete this relation?'
     if (!confirm(msg)) return
@@ -93,12 +90,32 @@ export default function OntologyOverview({ showMarkers }: Props) {
     catch (err) { console.error('Löschen fehlgeschlagen:', err) }
   }
 
-  // Metis-Edge ablehnen (= entfernen aus Übersicht)
   const rejectMetisEdge = async (edgeId: number) => {
     const msg = language === 'de' ? 'Metis-Link entfernen?' : 'Remove this Metis link?'
     if (!confirm(msg)) return
     try { await put(`/api/metis/edges/${edgeId}/reject`, {}); loadData() }
     catch (err) { console.error('Reject fehlgeschlagen:', err) }
+  }
+
+  // Edit-Target für Ontology-Relation
+  const editRelation = (r: RelationData) => {
+    setEditTarget({
+      mode: 'relation', id: r.id,
+      sourceTitle: r.source_title || `${r.source_type} #${r.source_id}`,
+      targetTitle: r.target_title || `${r.target_type} #${r.target_id}`,
+      typeId: r.relation_type?.id || 0,
+      reason: r.reason || '',
+    })
+  }
+
+  // Edit-Target für Metis-Edge
+  const editMetisEdge = (edge: { id: number; relation_type: string; reason: string | null }, src: MetisNode, tgt: MetisNode) => {
+    setEditTarget({
+      mode: 'metis', id: edge.id,
+      sourceTitle: src.title, targetTitle: tgt.title,
+      relationType: edge.relation_type,
+      reason: edge.reason || '',
+    })
   }
 
   const filteredRelations = relations.filter(r => {
@@ -158,10 +175,8 @@ export default function OntologyOverview({ showMarkers }: Props) {
         </select>
       </div>
 
-      {/* Hover-CSS (inline Style-Tag) */}
       <style>{`.onto-row:hover .row-actions { opacity: 1 !important; }`}</style>
 
-      {/* Liste */}
       {filteredRelations.length === 0 && metisConfirmed.length === 0 && inferred.length === 0 ? (
         <div className="hud-card p-8 text-center">
           <p style={{ color: 'var(--color-text-muted)' }}>
@@ -172,7 +187,6 @@ export default function OntologyOverview({ showMarkers }: Props) {
         </div>
       ) : (
         <div className="space-y-1">
-          {/* Ontology-Relationen */}
           {filteredRelations.map(r => (
             <div key={`rel-${r.id}`}
               className="onto-row flex items-center gap-2 text-sm px-3 py-2 rounded"
@@ -206,11 +220,10 @@ export default function OntologyOverview({ showMarkers }: Props) {
               <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                 {r.created_by === 'ollama' ? 'AI' : ''}
               </span>
-              <RowActions onEdit={() => setEditRelation(r)} onDelete={() => deleteRelation(r.id)} />
+              <RowActions onEdit={() => editRelation(r)} onDelete={() => deleteRelation(r.id)} />
             </div>
           ))}
 
-          {/* Bestätigte Metis-Edges */}
           {metisConfirmed.map(({ edge, src, tgt }) => (
             <div key={`metis-${edge.id}`}
               className="onto-row flex items-center gap-2 text-sm px-3 py-2 rounded"
@@ -241,11 +254,12 @@ export default function OntologyOverview({ showMarkers }: Props) {
               <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                 {(edge.strength * 100).toFixed(0)}%
               </span>
-              <RowActions showEdit={false} onDelete={() => rejectMetisEdge(edge.id)} />
+              <RowActions
+                onEdit={() => editMetisEdge(edge, src, tgt)}
+                onDelete={() => rejectMetisEdge(edge.id)} />
             </div>
           ))}
 
-          {/* Abgeleitete (Inferred) Relationen — keine Aktionen */}
           {inferred.map((inf, i) => (
             <div key={`inf-${i}`}
               className="flex items-center gap-2 text-sm px-3 py-2 rounded"
@@ -275,11 +289,10 @@ export default function OntologyOverview({ showMarkers }: Props) {
         </div>
       )}
 
-      {/* Edit-Modal */}
-      {editRelation && (
+      {editTarget && (
         <OntologyEditModal
-          relation={editRelation}
-          onClose={() => setEditRelation(null)}
+          target={editTarget}
+          onClose={() => setEditTarget(null)}
           onSaved={loadData}
         />
       )}

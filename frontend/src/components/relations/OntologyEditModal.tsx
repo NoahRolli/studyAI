@@ -1,48 +1,88 @@
-// OntologyEditModal — Bearbeiten einer Ontology-Relation
-// Typ-Dropdown + Begründung editieren
-// Wird aus OntologyOverview geöffnet
+// OntologyEditModal — Bearbeiten von Ontology-Relationen oder Metis-Edges
+// Ontology: Typ-Dropdown + Begründung (PUT /api/relations/:id)
+// Metis: Typ-Dropdown + Begründung (PUT /api/metis/edges/:id)
 
 import { useState, useEffect } from 'react'
 import { put, get } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
-import type { RelationData, RelationType } from '../../types/relations'
+import type { RelationType } from '../../types/relations'
+
+interface RelationEdit {
+  mode: 'relation'
+  id: number
+  sourceTitle: string
+  targetTitle: string
+  typeId: number
+  reason: string
+}
+
+interface MetisEdgeEdit {
+  mode: 'metis'
+  id: number
+  sourceTitle: string
+  targetTitle: string
+  relationType: string
+  reason: string
+}
+
+export type EditTarget = RelationEdit | MetisEdgeEdit
 
 interface Props {
-  relation: RelationData
+  target: EditTarget
   onClose: () => void
   onSaved: () => void
 }
 
-export default function OntologyEditModal({ relation, onClose, onSaved }: Props) {
+export default function OntologyEditModal({ target, onClose, onSaved }: Props) {
   const { language } = useLanguage()
   const [types, setTypes] = useState<RelationType[]>([])
-  const [typeId, setTypeId] = useState(relation.relation_type_id)
-  const [reason, setReason] = useState(relation.reason || '')
   const [saving, setSaving] = useState(false)
+
+  // Ontology: Typ-ID, Metis: relation_type String
+  const [typeId, setTypeId] = useState(
+    target.mode === 'relation' ? target.typeId : 0
+  )
+  const [relType, setRelType] = useState(
+    target.mode === 'metis' ? target.relationType : ''
+  )
+  const [reason, setReason] = useState(target.reason || '')
 
   // Relationstypen laden
   useEffect(() => {
-    get<RelationType[]>('/api/relation-types').then(setTypes).catch(console.error)
-  }, [])
+    get<RelationType[]>('/api/relation-types').then(data => {
+      setTypes(data)
+      // Metis: String zu ID matchen für initiale Selektion
+      if (target.mode === 'metis') {
+        const match = data.find(t => t.name === target.relationType)
+        if (match) setTypeId(match.id)
+      }
+    }).catch(console.error)
+  }, [target])
 
   // Speichern
   const handleSave = async () => {
     setSaving(true)
     try {
-      await put(`/api/relations/${relation.id}`, {
-        relation_type_id: typeId,
-        reason: reason.trim() || null,
-      })
+      if (target.mode === 'relation') {
+        await put(`/api/relations/${target.id}`, {
+          relation_type_id: typeId,
+          reason: reason.trim() || null,
+        })
+      } else {
+        // Metis-Edge: ID zu Name auflösen
+        const typeName = types.find(t => t.id === typeId)?.name || relType
+        await put(`/api/metis/edges/${target.id}`, {
+          relation_type: typeName,
+          reason: reason.trim() || null,
+        })
+      }
       onSaved()
       onClose()
     } catch (err) {
-      console.error('Relation speichern fehlgeschlagen:', err)
-    } finally {
-      setSaving(false)
-    }
+      console.error('Speichern fehlgeschlagen:', err)
+    } finally { setSaving(false) }
   }
 
-  // Overlay-Klick schliesst Modal
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) onClose()
   }
@@ -55,20 +95,21 @@ export default function OntologyEditModal({ relation, onClose, onSaved }: Props)
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
       <div className="hud-card p-6" style={{ width: '400px', maxWidth: '90vw' }}>
-        {/* Titel */}
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
-          {language === 'de' ? 'Relation bearbeiten' : 'Edit Relation'}
+        <h3 className="text-sm font-semibold mb-4"
+          style={{ color: 'var(--color-text-primary)' }}>
+          {target.mode === 'relation'
+            ? (language === 'de' ? 'Relation bearbeiten' : 'Edit Relation')
+            : (language === 'de' ? 'Metis-Link bearbeiten' : 'Edit Metis Link')}
         </h3>
 
-        {/* Source → Target (nur Anzeige) */}
+        {/* Source → Target */}
         <div className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
-          {relation.source_title || `${relation.source_type} #${relation.source_id}`}
-          {' → '}
-          {relation.target_title || `${relation.target_type} #${relation.target_id}`}
+          {target.sourceTitle} → {target.targetTitle}
         </div>
 
         {/* Typ-Dropdown */}
-        <label className="block text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+        <label className="block text-xs mb-1"
+          style={{ color: 'var(--color-text-secondary)' }}>
           {language === 'de' ? 'Typ' : 'Type'}
         </label>
         <select value={typeId} onChange={e => setTypeId(Number(e.target.value))}
@@ -81,7 +122,8 @@ export default function OntologyEditModal({ relation, onClose, onSaved }: Props)
         </select>
 
         {/* Begründung */}
-        <label className="block text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+        <label className="block text-xs mb-1"
+          style={{ color: 'var(--color-text-secondary)' }}>
           {language === 'de' ? 'Begründung' : 'Reason'}
         </label>
         <textarea value={reason} onChange={e => setReason(e.target.value)}
