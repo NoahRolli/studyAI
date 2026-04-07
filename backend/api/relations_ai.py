@@ -3,6 +3,7 @@
 # Vorschläge werden mit Status 'suggested' + Begründung gespeichert
 
 import json
+from backend.infra.config import OLLAMA_MODEL
 import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -18,7 +19,6 @@ import httpx
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/relations", tags=["relations-ai"])
 
-OLLAMA_MODEL = "llama3.2"
 
 
 async def _ollama_chat(prompt: str, system: str = "") -> str:

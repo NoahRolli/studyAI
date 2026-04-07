@@ -33,7 +33,7 @@ AES_IV_LENGTH = 12              # 96-bit IV (empfohlen für GCM)
 # Env-Variable erlaubt Umschalten zwischen lokal und remote
 OLLAMA_PRIMARY_URL = os.environ.get("OLLAMA_PRIMARY_URL", "")
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_CHAT_MODEL = "llama3.2"              # Für Sentiment, Storylines
+OLLAMA_CHAT_MODEL = "gemma4:e2b"              # Für Sentiment, Storylines
 OLLAMA_EMBED_MODEL = "nomic-embed-text"     # Für Embeddings/Clustering
 
 # Session-Einstellungen

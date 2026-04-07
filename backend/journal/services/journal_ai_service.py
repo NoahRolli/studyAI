@@ -3,7 +3,7 @@
 # Alle Journal-Daten bleiben lokal auf dem Rechner
 # Nutzt ollama_connector für dynamische URL (MacBook → Server Fallback)
 #
-# Nutzt llama3.2 für Textanalyse (Mood, Storylines, Titel-Generierung)
+# Nutzt Ollama für Textanalyse (Mood, Storylines, Titel-Generierung)
 
 import json
 import re
