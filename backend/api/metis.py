@@ -41,6 +41,12 @@ class EdgeReview(BaseModel):
     reason: Optional[str] = None
 
 
+
+class EdgeUpdate(BaseModel):
+    """Schema für Edge-Bearbeitung (Typ + Begründung)."""
+    relation_type: Optional[str] = None
+    reason: Optional[str] = None
+
 # --- Hilfs-Funktionen ---
 
 def _node_to_dict(node: MetisNode, db: Session) -> dict:
@@ -217,7 +223,25 @@ def create_edge(data: EdgeCreate, db: Session = Depends(get_db)):
     return _edge_to_dict(edge)
 
 
-@router.put("/edges/{edge_id}/confirm")
+
+
+@router.put("/edges/{edge_id}")
+def update_edge(
+    edge_id: int,
+    data: EdgeUpdate,
+    db: Session = Depends(get_db),
+):
+    """Edge bearbeiten — Typ und Begründung ändern."""
+    edge = db.query(MetisEdge).filter(MetisEdge.id == edge_id).first()
+    if not edge:
+        raise HTTPException(status_code=404, detail="Edge nicht gefunden")
+    if data.relation_type is not None:
+        edge.relation_type = data.relation_type
+    if data.reason is not None:
+        edge.reason = data.reason
+    db.commit()
+    return _edge_to_dict(edge)
+
 def confirm_edge(
     edge_id: int,
     data: EdgeReview = EdgeReview(),
