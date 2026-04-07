@@ -1,5 +1,5 @@
 // MetisToolbar — Steuerleiste für den Knowledge-Graph
-// View-Toggle, Action-Buttons, Transparenz-Checkbox.
+// View-Toggle (3D/Liste), Action-Buttons.
 
 import { useLanguage } from '../../hooks/useLanguage'
 import type { MetisViewMode } from '../../types/metis'
@@ -26,7 +26,6 @@ export default function MetisToolbar({
   const { t } = useLanguage()
 
   const views: { key: MetisViewMode; label: string }[] = [
-    { key: '2d', label: t.metis.view2D },
     { key: '3d', label: t.metis.view3D },
     { key: 'list', label: t.metis.viewList },
   ]
