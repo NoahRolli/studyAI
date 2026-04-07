@@ -33,6 +33,7 @@ export interface Document {
   id: number
   module_id: number
   filename: string
+  display_name: string | null
   file_path: string
   file_type: string          // z.B. "pdf", "docx", "txt"
   raw_text: string           // Extrahierter Text (vom Parser)
@@ -45,6 +46,7 @@ export interface Document {
 export interface Summary {
   id: number
   document_id: number
+  title: string | null
   summary: string            // Der Zusammenfassungstext
   key_terms: string[]        // Liste der Schlüsselbegriffe
   ai_provider: string        // "claude" oder "ollama"
@@ -179,6 +181,7 @@ export interface Folder {
   parent_id: number | null
   sort_order: number
   is_pinned: boolean
+  description: string
   created_at: string
 }
 // Payload zum Erstellen eines neuen Ordners
