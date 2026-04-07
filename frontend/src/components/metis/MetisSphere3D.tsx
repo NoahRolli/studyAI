@@ -286,7 +286,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
           if (!s || !e) return null
           const hl = isEdgeHighlighted(edge.source_node_id, edge.target_node_id)
           const c = COLORS[edge.relation_type] || COLORS.ai; const isOntology = edge.id < 0
-          return <GlowEdge key={edge.id} start={s} end={e} status={edge.status}
+          return <GlowEdge key={edge.id} start={s} end={e} status={edge.status} relationType={edge.relation_type} showMarker={isOntology && settings.showOntologyMarkers} showLabel={isOntology && settings.showEdgeLabels} thickness={isOntology ? settings.ontologyThickness : 1}
             color={c} strength={hl ? 5.0 : (isOntology ? settings.edgeOntology : edge.strength * settings.edgeSimilarity)} />
         })}
         {hubData.map(hub => hub.memberNodeIds.map(nid => {
@@ -313,7 +313,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
         {graph.nodes.map(node => {
           const pos = nodePositions.get(node.id)
           if (!pos) return null
-          const color = COLORS[node.type] || COLORS.note
+          const color = settings.showNodeColors ? (COLORS[node.type] || COLORS.note) : new THREE.Color("#ffffff")
           return <GlowNode key={node.id} position={pos} color={color} glowMul={settings.nodeGlow} colorMul={settings.colorIntensity}
             size={0.12} label={node.title}
             onClick={() => handleNodeClick(node.id)}

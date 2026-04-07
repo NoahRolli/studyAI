@@ -1,6 +1,6 @@
 // MetisSphereSettings — HUD-Overlay für Sphäre-Visuals
-// Slider für Nebel, Edges, Nodes, Farben + Ontologie-Toggle
-// Persistent via localStorage
+// Slider für Nebel, Edges, Nodes, Farben
+// Toggles für Ontologie-Symbole, Edge-Labels, Node-Farben
 
 import { useState } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
@@ -13,7 +13,6 @@ interface Props {
   onReset: () => void
 }
 
-// Einzelner Slider mit Label + Wert
 function SettingsSlider({ label, value, min, max, step, onChange }: {
   label: string; value: number; min: number; max: number
   step: number; onChange: (v: number) => void
@@ -21,9 +20,7 @@ function SettingsSlider({ label, value, min, max, step, onChange }: {
   return (
     <div className="flex items-center gap-3 py-1.5">
       <span className="text-xs w-28 shrink-0"
-        style={{ color: 'var(--color-text-secondary)' }}>
-        {label}
-      </span>
+        style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
       <input type="range" min={min} max={max} step={step}
         value={value} onChange={e => onChange(parseFloat(e.target.value))}
         className="flex-1 h-1 rounded-full appearance-none cursor-pointer"
@@ -31,9 +28,27 @@ function SettingsSlider({ label, value, min, max, step, onChange }: {
           background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${((value - min) / (max - min)) * 100}%, var(--color-border) ${((value - min) / (max - min)) * 100}%, var(--color-border) 100%)`,
         }} />
       <span className="text-xs w-8 text-right font-mono"
-        style={{ color: 'var(--color-text-muted)' }}>
-        {value.toFixed(1)}
-      </span>
+        style={{ color: 'var(--color-text-muted)' }}>{value.toFixed(1)}</span>
+    </div>
+  )
+}
+
+function ToggleButton({ label, value, onChange }: {
+  label: string; value: boolean; onChange: (v: boolean) => void
+}) {
+  return (
+    <div className="flex items-center gap-3 py-1.5">
+      <span className="text-xs w-28 shrink-0"
+        style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
+      <button onClick={() => onChange(!value)}
+        className="text-xs px-2 py-0.5 rounded"
+        style={{
+          color: value ? 'var(--color-primary)' : 'var(--color-text-muted)',
+          border: `1px solid ${value ? 'var(--color-primary)' : 'var(--color-border)'}`,
+          background: value ? 'var(--color-hover-bg)' : 'transparent',
+        }}>
+        {value ? 'ON' : 'OFF'}
+      </button>
     </div>
   )
 }
@@ -41,19 +56,7 @@ function SettingsSlider({ label, value, min, max, step, onChange }: {
 export default function MetisSphereSettings({ settings, onUpdate, onSave, onReset }: Props) {
   const { language } = useLanguage()
   const [open, setOpen] = useState(false)
-
-  const t = {
-    title: language === 'de' ? 'SPHÄRE' : 'SPHERE',
-    nebula: language === 'de' ? 'Nebel-Leuchten' : 'Nebula Glow',
-    nebulaSize: language === 'de' ? 'Nebel-Grösse' : 'Nebula Size',
-    edgeSim: language === 'de' ? 'Similarity-Edges' : 'Similarity Edges',
-    edgeOnt: language === 'de' ? 'Ontology-Edges' : 'Ontology Edges',
-    nodeGlow: language === 'de' ? 'Node-Glow' : 'Node Glow',
-    colorInt: language === 'de' ? 'Farbstärke' : 'Color Intensity',
-    markers: language === 'de' ? 'Ontologie-Symbole' : 'Ontology Markers',
-    save: language === 'de' ? 'Speichern' : 'Save',
-    reset: language === 'de' ? 'Zurücksetzen' : 'Reset',
-  }
+  const de = language === 'de'
 
   if (!open) {
     return (
@@ -65,7 +68,7 @@ export default function MetisSphereSettings({ settings, onUpdate, onSave, onRese
           color: 'var(--color-text-secondary)',
           backdropFilter: 'blur(8px)',
         }}>
-        {language === 'de' ? 'Visuals' : 'Visuals'}
+        Visuals
       </button>
     )
   }
@@ -82,51 +85,46 @@ export default function MetisSphereSettings({ settings, onUpdate, onSave, onRese
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-semibold tracking-widest"
           style={{ color: 'var(--color-primary)', fontFamily: 'Orbitron, monospace' }}>
-          {t.title}
+          {de ? 'SPHÄRE' : 'SPHERE'}
         </span>
         <button onClick={() => setOpen(false)}
-          className="text-xs px-1" style={{ color: 'var(--color-text-muted)' }}>
-          x
-        </button>
+          className="text-xs px-1" style={{ color: 'var(--color-text-muted)' }}>x</button>
       </div>
 
       {/* Slider */}
-      <SettingsSlider label={t.nebula} value={settings.nebulaIntensity}
-        min={0.1} max={3.0} step={0.1}
+      <SettingsSlider label={de ? 'Nebel-Leuchten' : 'Nebula Glow'}
+        value={settings.nebulaIntensity} min={0.1} max={3.0} step={0.1}
         onChange={v => onUpdate('nebulaIntensity', v)} />
-      <SettingsSlider label={t.nebulaSize} value={settings.nebulaSize}
-        min={0.3} max={3.0} step={0.1}
+      <SettingsSlider label={de ? 'Nebel-Grösse' : 'Nebula Size'}
+        value={settings.nebulaSize} min={0.3} max={3.0} step={0.1}
         onChange={v => onUpdate('nebulaSize', v)} />
-      <SettingsSlider label={t.edgeSim} value={settings.edgeSimilarity}
-        min={0.0} max={3.0} step={0.1}
+      <SettingsSlider label={de ? 'Similarity-Edges' : 'Similarity Edges'}
+        value={settings.edgeSimilarity} min={0.0} max={3.0} step={0.1}
         onChange={v => onUpdate('edgeSimilarity', v)} />
-      <SettingsSlider label={t.edgeOnt} value={settings.edgeOntology}
-        min={0.0} max={5.0} step={0.1}
+      <SettingsSlider label={de ? 'Ontology-Edges' : 'Ontology Edges'}
+        value={settings.edgeOntology} min={0.0} max={5.0} step={0.1}
         onChange={v => onUpdate('edgeOntology', v)} />
-      <SettingsSlider label={t.nodeGlow} value={settings.nodeGlow}
-        min={0.0} max={3.0} step={0.1}
+      <SettingsSlider label={de ? 'Ontology-Dicke' : 'Ontology Width'}
+        value={settings.ontologyThickness} min={0.5} max={5.0} step={0.5}
+        onChange={v => onUpdate('ontologyThickness', v)} />
+      <SettingsSlider label={de ? 'Node-Glow' : 'Node Glow'}
+        value={settings.nodeGlow} min={0.0} max={3.0} step={0.1}
         onChange={v => onUpdate('nodeGlow', v)} />
-      <SettingsSlider label={t.colorInt} value={settings.colorIntensity}
-        min={0.3} max={3.0} step={0.1}
+      <SettingsSlider label={de ? 'Farbstärke' : 'Color Intensity'}
+        value={settings.colorIntensity} min={0.3} max={3.0} step={0.1}
         onChange={v => onUpdate('colorIntensity', v)} />
 
-      {/* Ontologie-Symbole Toggle */}
-      <div className="flex items-center gap-3 py-1.5 mt-1"
-        style={{ borderTop: '1px solid var(--color-border)', paddingTop: '8px' }}>
-        <span className="text-xs w-28 shrink-0"
-          style={{ color: 'var(--color-text-secondary)' }}>
-          {t.markers}
-        </span>
-        <button
-          onClick={() => onUpdate('showOntologyMarkers', !settings.showOntologyMarkers)}
-          className="text-xs px-2 py-0.5 rounded"
-          style={{
-            color: settings.showOntologyMarkers ? 'var(--color-primary)' : 'var(--color-text-muted)',
-            border: `1px solid ${settings.showOntologyMarkers ? 'var(--color-primary)' : 'var(--color-border)'}`,
-            background: settings.showOntologyMarkers ? 'var(--color-hover-bg)' : 'transparent',
-          }}>
-          {settings.showOntologyMarkers ? 'ON' : 'OFF'}
-        </button>
+      {/* Toggles */}
+      <div style={{ borderTop: '1px solid var(--color-border)', marginTop: '6px', paddingTop: '6px' }}>
+        <ToggleButton label={de ? 'Ontologie-Symbole' : 'Ontology Markers'}
+          value={settings.showOntologyMarkers}
+          onChange={v => onUpdate('showOntologyMarkers', v)} />
+        <ToggleButton label={de ? 'Edge-Labels' : 'Edge Labels'}
+          value={settings.showEdgeLabels}
+          onChange={v => onUpdate('showEdgeLabels', v)} />
+        <ToggleButton label={de ? 'Node-Farben' : 'Node Colors'}
+          value={settings.showNodeColors}
+          onChange={v => onUpdate('showNodeColors', v)} />
       </div>
 
       {/* Aktionen */}
@@ -134,12 +132,12 @@ export default function MetisSphereSettings({ settings, onUpdate, onSave, onRese
         style={{ borderTop: '1px solid var(--color-border)' }}>
         <button onClick={() => { onSave(); setOpen(false) }}
           className="hud-btn text-xs flex-1">
-          {t.save}
+          {de ? 'Speichern' : 'Save'}
         </button>
         <button onClick={onReset}
           className="text-xs px-3 py-1 rounded"
           style={{ color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>
-          {t.reset}
+          {de ? 'Zurücksetzen' : 'Reset'}
         </button>
       </div>
     </div>
