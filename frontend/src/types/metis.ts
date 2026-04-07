@@ -42,7 +42,7 @@ export interface MetisGraph {
 }
 
 // Ansichts-Modi
-export type MetisViewMode = '2d' | '3d' | 'list'
+export type MetisViewMode = '3d' | 'list'
 
 // --- Journal Metis (verschlüsselt, merged view) ---
 
