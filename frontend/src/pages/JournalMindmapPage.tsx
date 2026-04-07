@@ -25,7 +25,7 @@ function JournalMindmapPage() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [treeData, setTreeData] = useState<MindmapTreeNode[]>([])
+  const [_treeData, setTreeData] = useState<MindmapTreeNode[]>([])
   const [selectedNode, setSelectedNode] = useState<{
     label: string
     detail: string

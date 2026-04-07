@@ -94,17 +94,6 @@ export default function MetisPage() {
     }
   }, [loadGraph])
 
-  const handlePositionUpdate = useCallback(async (
-    nodeId: number, x: number | null, y: number | null,
-  ) => {
-    try {
-      await put(`/api/metis/nodes/${nodeId}/position`, {
-        pos_x: x, pos_y: y,
-      })
-    } catch (err) {
-      console.error('Position update failed:', err)
-    }
-  }, [])
 
   const handleNodeClick = useCallback((nodeId: number) => {
     const node = graph.nodes.find(n => n.id === nodeId)
