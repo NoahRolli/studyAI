@@ -28,10 +28,10 @@ class OllamaProvider:
         base_url = await self._get_url()
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
-                f"{base_url}/api/generate",
+                f"{base_url}/api/chat",
                 json={
                     "model": self.model,
-                    "prompt": prompt,
+                    "messages": [{"role": "user", "content": prompt}],
                     "stream": False,
                     "think": False,
                     "options": {
@@ -46,7 +46,7 @@ class OllamaProvider:
                     "Läuft Ollama? Starte mit: ollama serve"
                 )
 
-            return response.json()["response"]
+            return response.json()["message"]["content"]
 
     async def is_available(self) -> bool:
         """Prüft ob Ollama läuft und erreichbar ist."""
