@@ -42,7 +42,7 @@ export default function OntologyEditModal({ target, onClose, onSaved }: Props) {
   const [typeId, setTypeId] = useState(
     target.mode === 'relation' ? target.typeId : 0
   )
-  const [relType, setRelType] = useState(
+  const [_relType] = useState(
     target.mode === 'metis' ? target.relationType : ''
   )
   const [reason, setReason] = useState(target.reason || '')
@@ -70,7 +70,7 @@ export default function OntologyEditModal({ target, onClose, onSaved }: Props) {
         })
       } else {
         // Metis-Edge: ID zu Name auflösen
-        const typeName = types.find(t => t.id === typeId)?.name || relType
+        const typeName = types.find(t => t.id === typeId)?.name || _relType
         await put(`/api/metis/edges/${target.id}`, {
           relation_type: typeName,
           reason: reason.trim() || null,

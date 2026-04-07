@@ -52,9 +52,7 @@ export default function OntologyOverview({ showMarkers }: Props) {
   const navigate = useNavigate()
   const [relations, setRelations] = useState<RelationData[]>([])
   const [types, setTypes] = useState<RelationType[]>([])
-  const [metisConfirmed, setMetisConfirmed] = useState
-    { edge: { id: number; relation_type: string; strength: number; reason: string | null; source_node_id: number; target_node_id: number; status: string }; src: MetisNode; tgt: MetisNode }[]
-  >([])
+  const [metisConfirmed, setMetisConfirmed] = useState<any[]>([])
   const [inferred, setInferred] = useState<InferredRelation[]>([])
   const [filterType, setFilterType] = useState('all')
   const [filterStatus, setFilterStatus] = useState('confirmed')
