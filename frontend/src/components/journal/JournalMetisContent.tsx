@@ -5,7 +5,6 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { get, post } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
-import MetisGraph2D from '../metis/MetisGraph2D'
 import MetisToolbar from '../metis/MetisToolbar'
 import MetisListView from '../metis/MetisListView'
 import MetisNodeDetail from '../metis/MetisNodeDetail'
@@ -137,7 +136,7 @@ export default function JournalMetisContent() {
           </div>
         ) : view === 'list' ? (
           <MetisListView graph={graph} />
-        ) : view === '3d' ? (
+        ) : (
           <Suspense fallback={
             <div className="flex items-center justify-center h-full">
               <p className="text-[var(--color-text-muted)]">{t.common.loading}</p>
@@ -147,9 +146,6 @@ export default function JournalMetisContent() {
               onCameraMove={handleCameraMove} transparent={true}
               showLabels={showLabels} />
           </Suspense>
-        ) : (
-          <MetisGraph2D graph={graph} onPositionUpdate={() => {}}
-            onNodeClick={handleNodeClick} transparent={true} />
         )}
 
         {/* Overlay-Buttons */}
