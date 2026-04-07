@@ -306,7 +306,6 @@ const en = {
     journalGeneratingHint: 'Analyzing clusters and storylines...',
     expanding: 'Expanding...',
     layoutTree: 'Tree',
-    layoutNeural: 'Neural',
     minEntries: 'At least 2 entries needed for the mindmap.',
     themes: 'Topics',
     storylines: 'Storylines',
