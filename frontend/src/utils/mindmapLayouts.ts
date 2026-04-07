@@ -1,11 +1,6 @@
 // Mindmap Layout-Algorithmen
 //
-// 1. Tree-Layout: Horizontale Baumstruktur, geordnet, übersichtlich
-// 2. Neural-Layout: Radial mit Ast-basierten Sektoren
-//    — Jeder Hauptast bekommt einen eigenen Winkelbereich
-//    — Kinder werden innerhalb des Eltern-Sektors platziert
-//    — Dynamischer Radius passt sich an Knotenanzahl an
-//
+// Tree-Layout: Horizontale Baumstruktur, geordnet, übersichtlich
 // Styles und Farben kommen aus mindmapStyles.ts
 
 import type { Node, Edge } from 'reactflow'
@@ -13,16 +8,14 @@ import {
   type MindmapTreeNode,
   getNodeStyle,
   getEdgeStyle,
-  getNeuralNodeStyle,
-  getNeuralEdgeStyle,
 } from './mindmapStyles'
 
 // Re-Export damit bestehende Imports weiter funktionieren
 export type { MindmapTreeNode }
-export { getNodeStyle, getEdgeStyle, getNeuralNodeStyle, getNeuralEdgeStyle }
+export { getNodeStyle, getEdgeStyle }
 
 // ============================================
-// Layout 1: Tree (horizontale Baumstruktur)
+// Tree-Layout (horizontale Baumstruktur)
 // branchIndex wird beim ersten Kind-Level vergeben und weitervererbt
 // ============================================
 
@@ -102,143 +95,4 @@ export function treeLayout(
   }
 
   return { nodes, edges, totalHeight: currentY - startY }
-}
-
-// ============================================
-// Layout 2: Neural (radial, Ast-basierte Sektoren)
-// ============================================
-
-// Hilfsfunktion: Zählt alle Knoten in einem Teilbaum
-function countNodes(node: MindmapTreeNode): number {
-  let count = 1
-  for (const child of node.children) count += countNodes(child)
-  return count
-}
-
-// Deterministischer Pseudo-Zufall basierend auf Knoten-ID
-function seededRandom(seed: number): number {
-  const x = Math.sin(seed * 9301 + 49297) * 49297
-  return x - Math.floor(x)
-}
-
-// Rekursive Platzierung: Knoten innerhalb ihres Sektors positionieren
-function placeNodesInSector(
-  node: MindmapTreeNode,
-  parentId: string | null,
-  parentDepth: number,
-  branchIndex: number,
-  centerX: number,
-  centerY: number,
-  sectorStart: number,
-  sectorEnd: number,
-  radius: number,
-  radiusStep: number,
-  nodes: Node[],
-  edges: Edge[],
-): void {
-  const nodeId = `node-${node.id}`
-  const depth = node.depth_level
-  const sectorMid = (sectorStart + sectorEnd) / 2
-
-  // Minimaler Jitter für organisches Feeling (3% des Radius)
-  const jitterR = (seededRandom(node.id * 3) - 0.5) * radius * 0.03
-  const jitterA = (seededRandom(node.id * 7) - 0.5) * 0.05
-  const x = centerX + Math.cos(sectorMid + jitterA) * (radius + jitterR)
-  const y = centerY + Math.sin(sectorMid + jitterA) * (radius + jitterR)
-
-  nodes.push({
-    id: nodeId,
-    position: { x, y },
-    data: {
-      label: node.label,
-      detail: node.detail,
-      depth,
-      backendId: node.id,
-      hasChildren: node.children.length > 0,
-      branchIndex,
-    },
-    style: getNeuralNodeStyle(depth, node.children.length > 0, branchIndex),
-  })
-
-  if (parentId) {
-    edges.push({
-      id: `edge-${parentId}-${nodeId}`,
-      source: parentId,
-      target: nodeId,
-      style: getNeuralEdgeStyle(parentDepth, branchIndex),
-      animated: true,
-      type: 'default',
-    })
-  }
-
-  // Kinder rekursiv — Sektor aufteilen nach Teilbaumgrösse
-  if (node.children.length > 0) {
-    const childRadius = radius + radiusStep
-    const sectorWidth = sectorEnd - sectorStart
-    const childWeights = node.children.map((c) => countNodes(c))
-    const totalWeight = childWeights.reduce((sum, w) => sum + w, 0)
-
-    let currentAngle = sectorStart
-    for (let i = 0; i < node.children.length; i++) {
-      const childWidth = (childWeights[i] / totalWeight) * sectorWidth
-      placeNodesInSector(
-        node.children[i], nodeId, depth, branchIndex,
-        centerX, centerY,
-        currentAngle, currentAngle + childWidth,
-        childRadius, radiusStep, nodes, edges,
-      )
-      currentAngle += childWidth
-    }
-  }
-}
-
-export function neuralLayout(
-  treeNodes: MindmapTreeNode[],
-): { nodes: Node[]; edges: Edge[] } {
-  const nodes: Node[] = []
-  const edges: Edge[] = []
-  if (treeNodes.length === 0) return { nodes, edges }
-
-  const centerX = 600
-  const centerY = 500
-  const root = treeNodes[0]
-  const rootId = `node-${root.id}`
-
-  // Root im Zentrum
-  nodes.push({
-    id: rootId,
-    position: { x: centerX, y: centerY },
-    data: {
-      label: root.label, detail: root.detail, depth: 0,
-      backendId: root.id, hasChildren: root.children.length > 0,
-      branchIndex: -1,
-    },
-    style: getNeuralNodeStyle(0, root.children.length > 0, 0),
-  })
-
-  const branches = root.children
-  if (branches.length === 0) return { nodes, edges }
-
-  // Grösserer Radius für mehr Abstand — verhindert Overlap
-  const baseRadius = Math.max(380, 280 + branches.length * 40)
-  const totalNodes = countNodes(root)
-  const radiusStep = Math.max(220, 160 + Math.sqrt(totalNodes) * 12)
-
-  // Gewichtete Sektor-Aufteilung pro Ast
-  const weights = branches.map((b) => countNodes(b))
-  const totalWeight = weights.reduce((s, w) => s + w, 0)
-  let angle = 0
-
-  for (let i = 0; i < branches.length; i++) {
-    const sectorWidth = (weights[i] / totalWeight) * 2 * Math.PI
-    placeNodesInSector(
-      branches[i], rootId, 0, i,
-      centerX, centerY,
-      angle, angle + sectorWidth,
-      baseRadius, radiusStep, nodes, edges,
-    )
-    angle += sectorWidth
-  }
-
-  return { nodes, edges }
 }
