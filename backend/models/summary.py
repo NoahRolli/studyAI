@@ -16,6 +16,9 @@ class Summary(Base):
     # Fremdschlüssel — verknüpft Zusammenfassung mit einem Dokument
     document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
 
+    # Editierbarer Titel (z.B. "Einführung Wissensrepräsentation")
+    title = Column(String, nullable=True)
+
     # Die eigentliche Zusammenfassung als Text
     content = Column(Text, nullable=False)
 

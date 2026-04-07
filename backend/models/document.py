@@ -19,6 +19,9 @@ class Document(Base):
     # Originaler Dateiname (z.B. "Vorlesung_03.pdf")
     filename = Column(String, nullable=False)
 
+    # Anzeigename (editierbar, fallback auf filename)
+    display_name = Column(String, nullable=True)
+
     # Speicherpfad auf der SSD (backend_storage)
     file_path = Column(String, nullable=False)
 

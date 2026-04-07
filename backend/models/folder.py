@@ -12,6 +12,7 @@ class Folder(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    description = Column(String, default="")
     parent_id = Column(Integer, ForeignKey("folders.id"), nullable=True, index=True)
 
     # Reihenfolge innerhalb des Eltern-Ordners (niedrig = oben)
