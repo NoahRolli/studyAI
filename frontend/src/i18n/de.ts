@@ -380,7 +380,6 @@ const de = {
     autoLinking: 'Analysiert...',
     autoCluster: 'Themen gruppieren',
     autoClustering: 'Gruppiert...',
-    view2D: '2D Graph',
     view3D: '3D Sphäre',
     viewList: 'Liste',
     noNodes: 'Noch keine Daten. Synchronisiere zuerst.',

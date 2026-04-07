@@ -379,7 +379,6 @@ const en = {
     autoLinking: 'Analyzing...',
     autoCluster: 'Group topics',
     autoClustering: 'Grouping...',
-    view2D: '2D Graph',
     view3D: '3D Sphere',
     viewList: 'List',
     noNodes: 'No data yet. Sync first.',
