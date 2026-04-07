@@ -20,7 +20,7 @@ interface InferredRelation {
   chain_length: number; status: string
 }
 
-interface Props { showMarkers: boolean }
+interface Props { showMarkers: boolean; onNodeFocus?: (key: string) => void }
 
 function TypeSymbol({ type, show }: { type: string; show: boolean }) {
   if (!show) return null
@@ -29,12 +29,17 @@ function TypeSymbol({ type, show }: { type: string; show: boolean }) {
   return <span className="mr-1" style={{ color: marker.color, fontSize: '14px' }}>{marker.symbol}</span>
 }
 
-function RowActions({ onEdit, onDelete }: {
-  onEdit?: () => void; onDelete: () => void
+function RowActions({ onGraph, onEdit, onDelete }: {
+  onGraph?: () => void; onEdit?: () => void; onDelete: () => void
 }) {
   return (
     <span className="row-actions ml-auto flex gap-1 opacity-0 transition-opacity"
       style={{ flexShrink: 0 }}>
+      {onGraph && (
+        <button onClick={e => { e.stopPropagation(); onGraph() }}
+          className="px-1.5 py-0.5 rounded text-xs hover:bg-white/10"
+          style={{ color: "var(--color-primary)" }} title="Graph">◉</button>
+      )}
       {onEdit && (
         <button onClick={e => { e.stopPropagation(); onEdit() }}
           className="px-1.5 py-0.5 rounded text-xs hover:bg-white/10"
@@ -47,7 +52,7 @@ function RowActions({ onEdit, onDelete }: {
   )
 }
 
-export default function OntologyOverview({ showMarkers }: Props) {
+export default function OntologyOverview({ showMarkers, onNodeFocus }: Props) {
   const { language } = useLanguage()
   const navigate = useNavigate()
   const [relations, setRelations] = useState<RelationData[]>([])
@@ -218,7 +223,7 @@ export default function OntologyOverview({ showMarkers }: Props) {
               <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                 {r.created_by === 'ollama' ? 'AI' : ''}
               </span>
-              <RowActions onEdit={() => editRelation(r)} onDelete={() => deleteRelation(r.id)} />
+              <RowActions onGraph={() => onNodeFocus?.(`${r.source_type}:${r.source_id}`)} onEdit={() => editRelation(r)} onDelete={() => deleteRelation(r.id)} />
             </div>
           ))}
 
@@ -252,7 +257,7 @@ export default function OntologyOverview({ showMarkers }: Props) {
               <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                 {(edge.strength * 100).toFixed(0)}%
               </span>
-              <RowActions
+              <RowActions onGraph={() => onNodeFocus?.(`${src.type}:${src.source_id}`)}
                 onEdit={() => editMetisEdge(edge, src, tgt)}
                 onDelete={() => rejectMetisEdge(edge.id)} />
             </div>

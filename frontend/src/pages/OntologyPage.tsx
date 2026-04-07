@@ -31,10 +31,6 @@ export default function OntologyPage() {
   ]
 
   // Doppelklick auf Node-Titel → Graph-Tab mit Fokus
-  const navigateToGraph = useCallback((key: string) => {
-    setGraphFocus(key)
-    setActiveTab('graph')
-  }, [])
 
   return (
     <div className="animate-fade-in">
@@ -66,7 +62,7 @@ export default function OntologyPage() {
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
-        <OntologyOverview showMarkers={showMarkers} />
+        <OntologyOverview showMarkers={showMarkers} onNodeFocus={(key) => { setGraphFocus(key); setActiveTab("graph") }} />
       )}
       {activeTab === 'suggestions' && (
         <RelationSuggestions onChanged={() => {}} />
