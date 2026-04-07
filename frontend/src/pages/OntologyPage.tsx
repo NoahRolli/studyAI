@@ -1,5 +1,5 @@
-// OntologyPage — Vollbild-Wissensgraph aller typisierten Relationen
-// Tabs: Übersicht (Ontology + Metis + Inferred), Vorschläge, Metis Links
+// OntologyPage — Wissensgraph aller typisierten Relationen
+// Tabs: Übersicht, Vorschläge, Metis Links, Graph (Ego-View)
 // Ontologie-Symbole togglebar via localStorage
 
 import { useState, useCallback } from 'react'
@@ -7,12 +7,14 @@ import { useLanguage } from '../hooks/useLanguage'
 import RelationSuggestions from '../components/relations/RelationSuggestions'
 import MetisLinksTab from '../components/metis/MetisLinksTab'
 import OntologyOverview from '../components/relations/OntologyOverview'
+import OntologyEgoGraph from '../components/relations/OntologyEgoGraph'
 import { getMarkersVisible, setMarkersVisible } from '../utils/ontologyMarkers'
 
 export default function OntologyPage() {
   const { language } = useLanguage()
-  const [activeTab, setActiveTab] = useState<'overview' | 'suggestions' | 'metis'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'suggestions' | 'metis' | 'graph'>('overview')
   const [showMarkers, setShowMarkers] = useState(getMarkersVisible)
+  const [graphFocus, setGraphFocus] = useState<string | null>(null)
 
   const toggleMarkers = useCallback(() => {
     setShowMarkers(prev => {
@@ -25,7 +27,14 @@ export default function OntologyPage() {
     { key: 'overview' as const, label: language === 'de' ? 'Übersicht' : 'Overview' },
     { key: 'suggestions' as const, label: language === 'de' ? 'Vorschläge' : 'Suggestions' },
     { key: 'metis' as const, label: 'Metis Links' },
+    { key: 'graph' as const, label: 'Graph' },
   ]
+
+  // Doppelklick auf Node-Titel → Graph-Tab mit Fokus
+  const navigateToGraph = useCallback((key: string) => {
+    setGraphFocus(key)
+    setActiveTab('graph')
+  }, [])
 
   return (
     <div className="animate-fade-in">
@@ -64,6 +73,11 @@ export default function OntologyPage() {
       )}
       {activeTab === 'metis' && (
         <MetisLinksTab />
+      )}
+      {activeTab === 'graph' && (
+        <OntologyEgoGraph
+          focusKey={graphFocus}
+          onFocusChange={setGraphFocus} />
       )}
     </div>
   )
