@@ -34,6 +34,7 @@ from backend.api.metis_ai import router as metis_ai_router
 from backend.api.relations import router as relations_router
 from backend.api.relations import type_router as relation_types_router
 from backend.api.relations_ai import router as relations_ai_router
+from backend.api.relations_inference import router as relations_inference_router
 from backend.api.git_tracker import router as git_tracker_router
 from backend.models.module import Module  # noqa: F401
 from backend.models.document import Document  # noqa: F401
@@ -142,6 +143,7 @@ app.include_router(metis_ai_router)
 app.include_router(relations_router)
 app.include_router(relation_types_router)
 app.include_router(relations_ai_router)
+app.include_router(relations_inference_router)
 app.include_router(git_tracker_router)
 
 # Static Files — gebautes Frontend servieren (nur in Production)
