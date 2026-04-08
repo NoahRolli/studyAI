@@ -1,13 +1,14 @@
 // DocumentCard — Einzelne Dokument-Karte in ModuleDetail
-// Inline-Edit für Dokumenttitel, Datei-Typ-Icon
-// Summary mit editierbarem Titel, Mindmap-Button
+// Inline-Edit für Dokumenttitel, Datei-Typ-Badge
+// Summary mit editierbarem Titel + TipTap-Editor Toggle
 
 import { useState } from 'react'
 import { put } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { Document, Summary } from '../../types/models'
+import SummaryEditor from './SummaryEditor'
 
-// Datei-Typ Icons (Text-basiert, keine Emojis)
+// Datei-Typ Badges (Text, keine Emojis)
 const FILE_ICONS: Record<string, string> = {
   pdf: 'PDF', docx: 'DOC', doc: 'DOC', pptx: 'PPT', ppt: 'PPT',
   xlsx: 'XLS', xls: 'XLS', md: 'MD', txt: 'TXT',
@@ -34,6 +35,7 @@ export default function DocumentCard({
   const [docTitle, setDocTitle] = useState(doc.display_name || doc.filename)
   const [editingSummary, setEditingSummary] = useState(false)
   const [summaryTitle, setSummaryTitle] = useState(summary?.title || '')
+  const [editingContent, setEditingContent] = useState(false)
 
   const displayName = doc.display_name || doc.filename
   const icon = FILE_ICONS[doc.file_type] || 'FILE'
@@ -131,14 +133,35 @@ export default function DocumentCard({
                 via {summary.ai_provider}
               </span>
             </div>
-            <button onClick={onMindmap} disabled={generatingMindmap}
-              className="hud-btn shrink-0" style={{ fontSize: '0.65rem' }}>
-              {generatingMindmap ? t.moduleDetail.generatingMindmap : t.moduleDetail.openMindmap}
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => setEditingContent(!editingContent)}
+                className="text-xs px-2 py-0.5 rounded transition-colors
+                  text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
+                {editingContent ? t.common.close : t.common.edit}
+              </button>
+              <button onClick={onMindmap} disabled={generatingMindmap}
+                className="hud-btn" style={{ fontSize: '0.65rem' }}>
+                {generatingMindmap ? t.moduleDetail.generatingMindmap : t.moduleDetail.openMindmap}
+              </button>
+            </div>
           </div>
-          <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-            {summary.summary}
-          </p>
+
+          {/* Summary Content — Editor oder Read-only */}
+          {editingContent ? (
+            <SummaryEditor
+              summaryId={summary.id}
+              content={summary.summary}
+              onClose={() => setEditingContent(false)}
+              onSaved={() => onReload?.()}
+            />
+          ) : (
+            <p className="text-sm leading-relaxed cursor-pointer hover:opacity-80"
+              style={{ color: 'var(--color-text-secondary)' }}
+              onClick={() => setEditingContent(true)}>
+              {summary.summary}
+            </p>
+          )}
+
           {summary.key_terms.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
               {summary.key_terms.map((term, i) => (
