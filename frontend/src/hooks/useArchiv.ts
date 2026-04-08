@@ -106,8 +106,8 @@ export function useArchiv() {
   }
 
   // --- Rename ---
-  async function renameFolder(folderId: number, name: string) {
-    await put(`/api/folders/${folderId}`, { name })
+  async function updateFolder(folderId: number, data: { name?: string; description?: string }) {
+    await put(`/api/folders/${folderId}`, data)
     await loadContents()
   }
 
@@ -150,7 +150,7 @@ export function useArchiv() {
     loading, error, setError,
     createFolder, createModule, deleteFolder, deleteModule, deleteDocument,
     togglePinFolder, togglePinModule,
-    renameFolder, renameModule,
+    updateFolder, renameModule,
     saveSortOrder, moveToFolder,
     openFolder, goToRoot, goToBreadcrumb, loadContents,
   }

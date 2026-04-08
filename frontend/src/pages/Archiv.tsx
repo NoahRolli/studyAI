@@ -37,7 +37,7 @@ function Archiv() {
     if (!editingId || !editName.trim()) { setEditingId(null); return }
     try {
       if (editingId.startsWith('folder-')) {
-        await db.renameFolder(parseInt(editingId.replace('folder-', '')), editName.trim())
+        await db.updateFolder(parseInt(editingId.replace('folder-', '')), { name: editName.trim() })
       } else {
         await db.renameModule(parseInt(editingId.replace('module-', '')), editName.trim())
       }
@@ -186,6 +186,9 @@ function Archiv() {
                         <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>{folder.name}</h3>
                       )}
                     </div>
+                    {folder.description && (
+                      <p className="text-xs pl-0 mb-1" style={{ color: 'var(--color-text-muted)' }}>{folder.description}</p>
+                      )}
                     <div className="flex items-center justify-between">
                       <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                         {new Date(folder.created_at).toLocaleDateString('de-CH')}
