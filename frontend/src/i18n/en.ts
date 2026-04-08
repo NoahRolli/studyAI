@@ -69,7 +69,7 @@ const en = {
     emptyRoot: 'Nothing here yet.',
     emptyFolder: 'Folder is empty.',
     emptyHint: 'Create a folder or module to get started.',
-    moveFailed: 'Move failed',
+    moveFailed: 'Move failed',    uploadTitle: 'Upload file',    uploadButton: 'Choose file',    uploading: 'Uploading...',    dropHere: 'Drop file here...',    uploadNeedsFolder: 'Please open a folder first.',    looseDocuments: 'Documents',
   },
 
   // Main Calendar
