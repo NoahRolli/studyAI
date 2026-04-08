@@ -20,7 +20,7 @@ const en = {
 
   // Sidebar
   sidebar: {
-    dashboard: 'Dashboard',
+    archiv: 'Archive',
     journal: 'Journal',
     calendar: 'Calendar',
     notes: 'Notes',
@@ -36,8 +36,8 @@ const en = {
   // Welcome Page
   welcome: {
     subtitle: 'Your personal knowledge & productivity system',
-    dashboardTitle: 'Dashboard',
-    dashboardDesc: 'Manage modules, documents and summaries.',
+    archivTitle: 'Archive',
+    archivDesc: 'Manage modules, documents and summaries.',
     journalTitle: 'Journal',
     journalDesc: 'Encrypted diary with mood analysis and mindmaps.',
     calendarTitle: 'Calendar',
@@ -49,9 +49,9 @@ const en = {
     hint: 'Choose an area to get started.',
   },
 
-  // Dashboard
-  dashboard: {
-    title: 'Dashboard',
+  // Archiv
+  archiv: {
+    title: 'Archive',
     newFolder: '+ Folder',
     newModule: '+ Module',
     cancelFolder: 'Cancel',
@@ -277,7 +277,7 @@ const en = {
 
   // Module Detail
   moduleDetail: {
-    backToDashboard: '← Back to Dashboard',
+    backToArchiv: '← Back to Archive',
     notFound: 'Module not found.',
     uploadTitle: 'Upload Document',
     uploadHint: 'Supported formats: PDF, Word, PowerPoint, Excel, Markdown, TXT, Images (OCR)',
@@ -299,7 +299,7 @@ const en = {
   mindmap: {
     title: 'Mindmap',
     journalTitle: 'Journal Mindmap',
-    backToDashboard: '← Back',
+    backToArchiv: '← Back',
     backToJournal: '← Journal',
     generating: 'Generating mindmap',
     generatingHint: 'Building neural network...',
