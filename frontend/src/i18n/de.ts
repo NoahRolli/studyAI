@@ -21,7 +21,7 @@ const de = {
 
   // Sidebar
   sidebar: {
-    dashboard: 'Dashboard',
+    archiv: 'Archiv',
     journal: 'Journal',
     calendar: 'Kalender',
     notes: 'Notizen',
@@ -37,8 +37,8 @@ const de = {
   // Begrüssungsseite
   welcome: {
     subtitle: 'Dein persönliches Wissens- & Produktivitätssystem',
-    dashboardTitle: 'Dashboard',
-    dashboardDesc: 'Module, Dokumente und Zusammenfassungen verwalten.',
+    archivTitle: 'Archiv',
+    archivDesc: 'Module, Dokumente und Zusammenfassungen verwalten.',
     journalTitle: 'Journal',
     journalDesc: 'Verschlüsseltes Tagebuch mit Stimmungsanalyse und Mindmaps.',
     calendarTitle: 'Kalender',
@@ -50,9 +50,9 @@ const de = {
     hint: 'Wähle einen Bereich um loszulegen.',
   },
 
-  // Dashboard
-  dashboard: {
-    title: 'Dashboard',
+  // Archiv
+  archiv: {
+    title: 'Archiv',
     newFolder: '+ Ordner',
     newModule: '+ Modul',
     cancelFolder: 'Abbrechen',
@@ -278,7 +278,7 @@ const de = {
 
   // Modul-Detail
   moduleDetail: {
-    backToDashboard: '← Zurück zum Dashboard',
+    backToArchiv: '← Zurück zum Archiv',
     notFound: 'Modul nicht gefunden.',
     uploadTitle: 'Dokument hochladen',
     uploadHint: 'Unterstützte Formate: PDF, Word, PowerPoint, Excel, Markdown, TXT, Bilder (OCR)',
@@ -300,7 +300,7 @@ const de = {
   mindmap: {
     title: 'Mindmap',
     journalTitle: 'Journal-Mindmap',
-    backToDashboard: '← Zurück',
+    backToArchiv: '← Zurück',
     backToJournal: '← Journal',
     generating: 'Mindmap wird generiert',
     generatingHint: 'Neuronales Netz wird aufgebaut...',
