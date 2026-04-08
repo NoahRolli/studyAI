@@ -68,7 +68,7 @@ export default function MetisNodeDetail({
     if (n.type === 'note') navigate(`/notes?open=${n.source_id}`)
     else if (n.type === 'entry') navigate(`/journal?entry=${n.source_id}`)
     else if (n.type === 'summary' && n.module_id) navigate(`/modules/${n.module_id}`)
-    else navigate('/dashboard')
+    else navigate('/archiv')
     onClose()
   }
 
