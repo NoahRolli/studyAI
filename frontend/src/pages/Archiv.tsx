@@ -152,9 +152,6 @@ function Archiv() {
       {/* Lose Dokumente + Upload-Zone */}
       <ArchivDocuments folderId={db.currentFolderId}
         documents={db.documents} onReload={db.loadContents} />
-      {/* Lose Dokumente + Upload */}
-      <ArchivDocuments folderId={db.currentFolderId}
-        documents={db.documents} onReload={db.loadContents} />
 
       {db.loading && <p style={{ color: 'var(--color-text-muted)' }}>{t.common.loading}</p>}
 
