@@ -1,6 +1,6 @@
 # API-Endpunkte für die Ordner-Hierarchie
 # Ordner können verschachtelt werden (Ordner in Ordnern)
-# Module können in Ordner verschoben werden
+# Module und lose Dokumente können in Ordnern liegen
 # Sortierung: Gepinnte zuerst, dann nach sort_order
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,6 +11,7 @@ from typing import Optional
 from backend.models.database import get_db
 from backend.models.folder import Folder
 from backend.models.module import Module
+from backend.models.document import Document
 
 router = APIRouter(prefix="/api/folders", tags=["folders"])
 
@@ -44,7 +45,7 @@ def get_folder_contents(
     parent_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
-    """Inhalt eines Ordners: Unterordner + Module, sortiert."""
+    """Inhalt eines Ordners: Unterordner + Module + lose Dokumente."""
     folders = (
         db.query(Folder)
         .filter(Folder.parent_id == parent_id)
@@ -57,20 +58,32 @@ def get_folder_contents(
         .order_by(Module.is_pinned.desc(), asc(Module.sort_order), asc(Module.id))
         .all()
     )
+    # Lose Dokumente (ohne Modul) in diesem Ordner
+    documents = (
+        db.query(Document)
+        .filter(Document.folder_id == parent_id, Document.module_id.is_(None))
+        .order_by(Document.uploaded_at.desc())
+        .all()
+    )
     return {
         "parent_id": parent_id,
         "folders": [
             {
-                "id": f.id,
-                "name": f.name,
-                "parent_id": f.parent_id,
-                "sort_order": f.sort_order,
-                "is_pinned": f.is_pinned,
+                "id": f.id, "name": f.name, "parent_id": f.parent_id,
+                "sort_order": f.sort_order, "is_pinned": f.is_pinned,
                 "created_at": f.created_at.isoformat(),
             }
             for f in folders
         ],
         "modules": modules,
+        "documents": [
+            {
+                "id": d.id, "filename": d.filename,
+                "display_name": d.display_name, "file_type": d.file_type,
+                "uploaded_at": d.uploaded_at.isoformat(),
+            }
+            for d in documents
+        ],
     }
 
 
@@ -81,11 +94,8 @@ def get_folder(folder_id: int, db: Session = Depends(get_db)):
     if not folder:
         raise HTTPException(status_code=404, detail="Ordner nicht gefunden")
     return {
-        "id": folder.id,
-        "name": folder.name,
-        "parent_id": folder.parent_id,
-        "sort_order": folder.sort_order,
-        "is_pinned": folder.is_pinned,
+        "id": folder.id, "name": folder.name, "parent_id": folder.parent_id,
+        "sort_order": folder.sort_order, "is_pinned": folder.is_pinned,
         "created_at": folder.created_at.isoformat(),
     }
 
@@ -114,7 +124,6 @@ def create_folder(data: FolderCreate, db: Session = Depends(get_db)):
         parent = db.query(Folder).filter(Folder.id == data.parent_id).first()
         if not parent:
             raise HTTPException(status_code=404, detail="Eltern-Ordner nicht gefunden")
-    # sort_order = Anzahl bestehender Ordner auf gleicher Ebene
     count = db.query(Folder).filter(Folder.parent_id == data.parent_id).count()
     folder = Folder(name=data.name, parent_id=data.parent_id, sort_order=count)
     db.add(folder)
@@ -168,11 +177,10 @@ def update_sort_order(data: SortOrderUpdate, db: Session = Depends(get_db)):
 
 @router.delete("/{folder_id}")
 def delete_folder(folder_id: int, db: Session = Depends(get_db)):
-    """Ordner löschen inkl. aller Unterordner und Module."""
+    """Ordner löschen inkl. aller Unterordner, Module und Dokumente."""
     folder = db.query(Folder).filter(Folder.id == folder_id).first()
     if not folder:
         raise HTTPException(status_code=404, detail="Ordner nicht gefunden")
-
     folder_name = folder.name
 
     def collect_subfolder_ids(parent: int) -> list[int]:
@@ -184,6 +192,11 @@ def delete_folder(folder_id: int, db: Session = Depends(get_db)):
         return sub_ids
 
     all_folder_ids = [folder_id] + collect_subfolder_ids(folder_id)
+    # Lose Dokumente in allen betroffenen Ordnern löschen
+    db.query(Document).filter(
+        Document.folder_id.in_(all_folder_ids),
+        Document.module_id.is_(None)
+    ).delete(synchronize_session=False)
     db.query(Module).filter(Module.folder_id.in_(all_folder_ids)).delete(synchronize_session=False)
     db.query(Folder).filter(Folder.id.in_(all_folder_ids)).delete(synchronize_session=False)
     db.commit()
