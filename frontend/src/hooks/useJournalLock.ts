@@ -81,7 +81,7 @@ function useJournalLock({
 
   // --- 1. Unmount: Timer starten wenn Journal-Bereich verlassen wird ---
   // /journal → /journal/mindmap = NICHT starten
-  // /journal → /dashboard = Timer starten (15 Min)
+  // /journal → /archiv = Timer starten (15 Min)
   useEffect(() => {
     return () => {
       if (isUnlockedRef.current) {
