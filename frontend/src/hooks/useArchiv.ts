@@ -1,12 +1,12 @@
 // useArchiv — State + Logik für Archiv
-// Lädt Ordner + Module, CRUD, DnD-Reihenfolge, Pin, Rename
+// Lädt Ordner + Module + lose Dokumente, CRUD, DnD, Pin, Rename
 
 import { useState, useEffect, useCallback } from 'react'
 import { get, post, put, del } from './useAPI'
 import { useLanguage } from './useLanguage'
 import type {
   Module, ModuleCreate, Folder, FolderCreate,
-  FolderContents, BreadcrumbItem,
+  Document, FolderContents, BreadcrumbItem,
 } from '../types/models'
 
 export function useArchiv() {
@@ -14,6 +14,7 @@ export function useArchiv() {
   const [currentFolderId, setCurrentFolderId] = useState<number | null>(null)
   const [folders, setFolders] = useState<Folder[]>([])
   const [modules, setModules] = useState<Module[]>([])
+  const [documents, setDocuments] = useState<Document[]>([])
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,6 +28,7 @@ export function useArchiv() {
       const data = await get<FolderContents>(`/api/folders/contents${query}`)
       setFolders(data.folders)
       setModules(data.modules)
+      setDocuments(data.documents || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : t.common.error)
     } finally {
@@ -66,26 +68,32 @@ export function useArchiv() {
     try {
       setError(null)
       await del(`/api/folders/${folderId}`)
-      const query = currentFolderId !== null ? `?parent_id=${currentFolderId}` : ""
-      const data = await get<FolderContents>(`/api/folders/contents${query}`)
-      setFolders(data.folders)
-      setModules(data.modules)
+      await loadContents()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Delete failed")
     }
   }
+
   async function deleteModule(moduleId: number) {
     try {
       setError(null)
       await del(`/api/modules/${moduleId}`)
-      const query = currentFolderId !== null ? `?parent_id=${currentFolderId}` : ""
-      const data = await get<FolderContents>(`/api/folders/contents${query}`)
-      setFolders(data.folders)
-      setModules(data.modules)
+      await loadContents()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Delete failed")
     }
   }
+
+  async function deleteDocument(documentId: number) {
+    try {
+      setError(null)
+      await del(`/api/documents/${documentId}`)
+      await loadContents()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed")
+    }
+  }
+
   // --- Pin ---
   async function togglePinFolder(folderId: number) {
     await put(`/api/folders/${folderId}/pin`, {})
@@ -138,12 +146,12 @@ export function useArchiv() {
   function goToBreadcrumb(folderId: number) { setCurrentFolderId(folderId) }
 
   return {
-    currentFolderId, folders, modules, breadcrumbs,
+    currentFolderId, folders, modules, documents, breadcrumbs,
     loading, error, setError,
-    createFolder, createModule, deleteFolder, deleteModule,
+    createFolder, createModule, deleteFolder, deleteModule, deleteDocument,
     togglePinFolder, togglePinModule,
     renameFolder, renameModule,
     saveSortOrder, moveToFolder,
-    openFolder, goToRoot, goToBreadcrumb,
+    openFolder, goToRoot, goToBreadcrumb, loadContents,
   }
 }
