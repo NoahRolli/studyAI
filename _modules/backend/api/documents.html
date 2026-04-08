@@ -246,8 +246,8 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for backend.api.documents</h1><div class="highlight"><pre>
 <span></span><span class="c1"># API-Endpunkte für Dokument-Upload und Verwaltung</span>
-<span class="c1"># Upload, Rename, Delete für Dokumente + Summary-Titel</span>
-<span class="c1"># Parser extrahiert automatisch Text beim Upload</span>
+<span class="c1"># Upload in Modul oder direkt in Ordner (universell)</span>
+<span class="c1"># Rename, Delete für Dokumente + Summary-Titel</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -257,6 +257,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">Session</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">backend.models.database</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_db</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">backend.models.module</span><span class="w"> </span><span class="kn">import</span> <span class="n">Module</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">backend.models.folder</span><span class="w"> </span><span class="kn">import</span> <span class="n">Folder</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">backend.models.document</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">backend.models.summary</span><span class="w"> </span><span class="kn">import</span> <span class="n">Summary</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">backend.services.parser_service</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_file</span><span class="p">,</span> <span class="n">SUPPORTED_FORMATS</span>
@@ -283,16 +284,29 @@
 
 <span class="c1"># GET /api/modules/{id}/documents — Alle Dokumente eines Moduls</span>
 <span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/modules/</span><span class="si">{module_id}</span><span class="s2">/documents&quot;</span><span class="p">)</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">get_documents</span><span class="p">(</span><span class="n">module_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">)):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_module_documents</span><span class="p">(</span><span class="n">module_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">)):</span>
     <span class="n">module</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Module</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Module</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">module_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">module</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Modul nicht gefunden&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">module</span><span class="o">.</span><span class="n">documents</span>
 
 
-<span class="c1"># POST /api/modules/{id}/documents — Datei hochladen</span>
+<span class="c1"># GET /api/folders/{id}/documents — Lose Dokumente eines Ordners</span>
+<span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/folders/</span><span class="si">{folder_id}</span><span class="s2">/documents&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_folder_documents</span><span class="p">(</span><span class="n">folder_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">)):</span>
+    <span class="n">folder</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Folder</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Folder</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">folder_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">folder</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Ordner nicht gefunden&quot;</span><span class="p">)</span>
+    <span class="n">docs</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Document</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+        <span class="n">Document</span><span class="o">.</span><span class="n">folder_id</span> <span class="o">==</span> <span class="n">folder_id</span><span class="p">,</span>
+        <span class="n">Document</span><span class="o">.</span><span class="n">module_id</span><span class="o">.</span><span class="n">is_</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">Document</span><span class="o">.</span><span class="n">uploaded_at</span><span class="o">.</span><span class="n">desc</span><span class="p">())</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">docs</span>
+
+
+<span class="c1"># POST /api/modules/{id}/documents — Datei in Modul hochladen</span>
 <span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/modules/</span><span class="si">{module_id}</span><span class="s2">/documents&quot;</span><span class="p">)</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">upload_document</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">upload_to_module</span><span class="p">(</span>
     <span class="n">module_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">file</span><span class="p">:</span> <span class="n">UploadFile</span> <span class="o">=</span> <span class="n">File</span><span class="p">(</span><span class="o">...</span><span class="p">),</span>
     <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">),</span>
@@ -300,88 +314,52 @@
     <span class="n">module</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Module</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Module</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">module_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">module</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Modul nicht gefunden&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_save_document</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">module_id</span><span class="o">=</span><span class="n">module_id</span><span class="p">,</span>
+                          <span class="n">storage_sub</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">module_id</span><span class="p">))</span>
 
-    <span class="n">suffix</span> <span class="o">=</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">file</span><span class="o">.</span><span class="n">filename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">suffix</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SUPPORTED_FORMATS</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span>
-            <span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
-            <span class="n">detail</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Dateityp &#39;</span><span class="si">{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&#39; nicht unterstützt. &quot;</span>
-                   <span class="sa">f</span><span class="s2">&quot;Erlaubt: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">SUPPORTED_FORMATS</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-        <span class="p">)</span>
 
-    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-    <span class="n">module_dir</span> <span class="o">=</span> <span class="n">STORAGE_DIR</span> <span class="o">/</span> <span class="nb">str</span><span class="p">(</span><span class="n">module_id</span><span class="p">)</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">module_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-    <span class="n">file_path</span> <span class="o">=</span> <span class="n">module_dir</span> <span class="o">/</span> <span class="n">file</span><span class="o">.</span><span class="n">filename</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">buffer</span><span class="p">:</span>
-        <span class="n">shutil</span><span class="o">.</span><span class="n">copyfileobj</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">file</span><span class="p">,</span> <span class="n">buffer</span><span class="p">)</span>
-
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">raw_text</span> <span class="o">=</span> <span class="n">parse_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">))</span>
-    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
-
-    <span class="n">document</span> <span class="o">=</span> <span class="n">Document</span><span class="p">(</span>
-        <span class="n">module_id</span><span class="o">=</span><span class="n">module_id</span><span class="p">,</span>
-        <span class="n">filename</span><span class="o">=</span><span class="n">file</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span>
-        <span class="n">file_path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">),</span>
-        <span class="n">file_type</span><span class="o">=</span><span class="n">suffix</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
-        <span class="n">raw_text</span><span class="o">=</span><span class="n">raw_text</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="n">db</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
-    <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
-    <span class="n">db</span><span class="o">.</span><span class="n">refresh</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="p">{</span>
-        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
-        <span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span>
-        <span class="s2">&quot;display_name&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">display_name</span><span class="p">,</span>
-        <span class="s2">&quot;file_type&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">file_type</span><span class="p">,</span>
-        <span class="s2">&quot;text_length&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">raw_text</span><span class="p">),</span>
-        <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">file</span><span class="o">.</span><span class="n">filename</span><span class="si">}</span><span class="s2">&#39; hochgeladen und geparst&quot;</span><span class="p">,</span>
-    <span class="p">}</span>
+<span class="c1"># POST /api/folders/{id}/documents — Datei direkt in Ordner hochladen</span>
+<span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/folders/</span><span class="si">{folder_id}</span><span class="s2">/documents&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">upload_to_folder</span><span class="p">(</span>
+    <span class="n">folder_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">file</span><span class="p">:</span> <span class="n">UploadFile</span> <span class="o">=</span> <span class="n">File</span><span class="p">(</span><span class="o">...</span><span class="p">),</span>
+    <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">),</span>
+<span class="p">):</span>
+    <span class="n">folder</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Folder</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Folder</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">folder_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">folder</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Ordner nicht gefunden&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_save_document</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">folder_id</span><span class="o">=</span><span class="n">folder_id</span><span class="p">,</span>
+                          <span class="n">storage_sub</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;folders/</span><span class="si">{</span><span class="n">folder_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
 
 <span class="c1"># PUT /api/documents/{id} — Dokument umbenennen</span>
 <span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/documents/</span><span class="si">{document_id}</span><span class="s2">&quot;</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">rename_document</span><span class="p">(</span>
-    <span class="n">document_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">data</span><span class="p">:</span> <span class="n">RenameDoc</span><span class="p">,</span>
-    <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">),</span>
+    <span class="n">document_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">RenameDoc</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">),</span>
 <span class="p">):</span>
     <span class="n">document</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Document</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Document</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">document_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">document</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Dokument nicht gefunden&quot;</span><span class="p">)</span>
-
     <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">display_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">document</span><span class="o">.</span><span class="n">display_name</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">display_name</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="kc">None</span>
     <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
     <span class="n">db</span><span class="o">.</span><span class="n">refresh</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="p">{</span>
-        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
-        <span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span>
-        <span class="s2">&quot;display_name&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">display_name</span><span class="p">,</span>
-    <span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span>
+            <span class="s2">&quot;display_name&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">display_name</span><span class="p">}</span>
 
 
 <span class="c1"># PUT /api/summaries/{id}/title — Summary-Titel bearbeiten</span>
 <span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/summaries/</span><span class="si">{summary_id}</span><span class="s2">/title&quot;</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">rename_summary</span><span class="p">(</span>
-    <span class="n">summary_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">data</span><span class="p">:</span> <span class="n">RenameSummary</span><span class="p">,</span>
-    <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">),</span>
+    <span class="n">summary_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">RenameSummary</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">Session</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_db</span><span class="p">),</span>
 <span class="p">):</span>
     <span class="n">summary</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Summary</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Summary</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">summary_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">summary</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Summary nicht gefunden&quot;</span><span class="p">)</span>
-
     <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">title</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">summary</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">title</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="kc">None</span>
     <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
     <span class="n">db</span><span class="o">.</span><span class="n">refresh</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
-
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">summary</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">summary</span><span class="o">.</span><span class="n">title</span><span class="p">}</span>
 
 
@@ -391,15 +369,53 @@
     <span class="n">document</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Document</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Document</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">document_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">document</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Dokument nicht gefunden&quot;</span><span class="p">)</span>
-
     <span class="n">file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">document</span><span class="o">.</span><span class="n">file_path</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">file_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
         <span class="n">file_path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
-
     <span class="n">db</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
     <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
-
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">document</span><span class="o">.</span><span class="n">filename</span><span class="si">}</span><span class="s2">&#39; gelöscht&quot;</span><span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_save_document</span><span class="p">(</span>
+    <span class="n">file</span><span class="p">:</span> <span class="n">UploadFile</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">Session</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+    <span class="n">module_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">folder_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">storage_sub</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Gemeinsame Upload-Logik für Modul- und Ordner-Uploads.&quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+    <span class="n">suffix</span> <span class="o">=</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">file</span><span class="o">.</span><span class="n">filename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">suffix</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SUPPORTED_FORMATS</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span>
+            <span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+            <span class="n">detail</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Dateityp &#39;</span><span class="si">{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&#39; nicht unterstützt. &quot;</span>
+                   <span class="sa">f</span><span class="s2">&quot;Erlaubt: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">SUPPORTED_FORMATS</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">target_dir</span> <span class="o">=</span> <span class="n">STORAGE_DIR</span> <span class="o">/</span> <span class="n">storage_sub</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">target_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">target_dir</span> <span class="o">/</span> <span class="n">file</span><span class="o">.</span><span class="n">filename</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">buffer</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copyfileobj</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">file</span><span class="p">,</span> <span class="n">buffer</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">raw_text</span> <span class="o">=</span> <span class="n">parse_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+    <span class="n">document</span> <span class="o">=</span> <span class="n">Document</span><span class="p">(</span>
+        <span class="n">module_id</span><span class="o">=</span><span class="n">module_id</span><span class="p">,</span> <span class="n">folder_id</span><span class="o">=</span><span class="n">folder_id</span><span class="p">,</span>
+        <span class="n">filename</span><span class="o">=</span><span class="n">file</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="n">file_path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">),</span>
+        <span class="n">file_type</span><span class="o">=</span><span class="n">suffix</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span> <span class="n">raw_text</span><span class="o">=</span><span class="n">raw_text</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">refresh</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span>
+        <span class="s2">&quot;display_name&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">display_name</span><span class="p">,</span>
+        <span class="s2">&quot;file_type&quot;</span><span class="p">:</span> <span class="n">document</span><span class="o">.</span><span class="n">file_type</span><span class="p">,</span>
+        <span class="s2">&quot;text_length&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">raw_text</span><span class="p">),</span>
+        <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">file</span><span class="o">.</span><span class="n">filename</span><span class="si">}</span><span class="s2">&#39; hochgeladen und geparst&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
 </pre></div>
         </article>
       </div>
