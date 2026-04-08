@@ -119,7 +119,7 @@ function MindmapPage() {
         <div className="flex items-center gap-4">
           <Link to="/archiv" className="text-xs transition-colors"
             style={{ color: 'var(--color-text-muted)' }}>
-            {t.mindmap.backToDashboard}
+            {t.mindmap.backToArchiv}
           </Link>
           <h1 className="hud-title text-sm text-glow">{t.mindmap.title}</h1>
         </div>

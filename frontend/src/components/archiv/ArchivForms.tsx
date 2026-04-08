@@ -38,21 +38,21 @@ export default function ArchivForms({
       {showFolderForm && (
         <div className="hud-card p-6 mb-6 animate-fade-in">
           <h2 className="hud-title text-sm mb-4" style={{ color: 'var(--color-primary)' }}>
-            {t.dashboard.folderFormTitle}
+            {t.archiv.folderFormTitle}
           </h2>
           <div className="mb-4">
             <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-              {t.dashboard.folderName}
+              {t.archiv.folderName}
             </label>
             <input type="text" value={folderName}
               onChange={(e) => setFolderName(e.target.value)}
-              placeholder={t.dashboard.folderPlaceholder}
+              placeholder={t.archiv.folderPlaceholder}
               className="hud-input"
               onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()} />
           </div>
           <button onClick={handleCreateFolder} disabled={!folderName}
             className="hud-btn hud-btn-primary">
-            {t.dashboard.createFolder}
+            {t.archiv.createFolder}
           </button>
         </div>
       )}
@@ -60,27 +60,27 @@ export default function ArchivForms({
       {showModuleForm && (
         <div className="hud-card p-6 mb-6 animate-fade-in">
           <h2 className="hud-title text-sm mb-4" style={{ color: 'var(--color-primary)' }}>
-            {t.dashboard.moduleFormTitle}
+            {t.archiv.moduleFormTitle}
           </h2>
           <div className="mb-4">
             <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-              {t.dashboard.moduleName}
+              {t.archiv.moduleName}
             </label>
             <input type="text" value={newModule.name}
               onChange={(e) => setNewModule({ ...newModule, name: e.target.value })}
-              placeholder={t.dashboard.modulePlaceholder} className="hud-input" />
+              placeholder={t.archiv.modulePlaceholder} className="hud-input" />
           </div>
           <div className="mb-6">
             <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-              {t.dashboard.moduleDescription}
+              {t.archiv.moduleDescription}
             </label>
             <input type="text" value={newModule.description}
               onChange={(e) => setNewModule({ ...newModule, description: e.target.value })}
-              placeholder={t.dashboard.moduleDescPlaceholder} className="hud-input" />
+              placeholder={t.archiv.moduleDescPlaceholder} className="hud-input" />
           </div>
           <button onClick={handleCreateModule} disabled={!newModule.name}
             className="hud-btn hud-btn-primary">
-            {t.dashboard.createModule}
+            {t.archiv.createModule}
           </button>
         </div>
       )}

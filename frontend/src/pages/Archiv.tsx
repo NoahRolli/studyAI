@@ -67,7 +67,7 @@ function Archiv() {
     if (targetId.startsWith('drop-folder-')) {
       const targetFolderId = parseInt(targetId.replace('drop-folder-', ''))
       try { await db.moveToFolder(draggedId, targetFolderId) }
-      catch { db.setError(t.dashboard.moveFailed) }
+      catch { db.setError(t.archiv.moveFailed) }
       return
     }
 
@@ -104,13 +104,13 @@ function Archiv() {
     <div className="animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="hud-title text-glow text-2xl">{t.dashboard.title}</h1>
+        <h1 className="hud-title text-glow text-2xl">{t.archiv.title}</h1>
         <div className="flex items-center gap-3">
           <button onClick={() => { setShowFolderForm(!showFolderForm); setShowModuleForm(false) }} className="hud-btn">
-            {showFolderForm ? t.common.cancel : t.dashboard.newFolder}
+            {showFolderForm ? t.common.cancel : t.archiv.newFolder}
           </button>
           <button onClick={() => { setShowModuleForm(!showModuleForm); setShowFolderForm(false) }} className="hud-btn">
-            {showModuleForm ? t.common.cancel : t.dashboard.newModule}
+            {showModuleForm ? t.common.cancel : t.archiv.newModule}
           </button>
         </div>
       </div>
@@ -119,7 +119,7 @@ function Archiv() {
       <div className="flex items-center gap-2 mb-6 text-xs flex-wrap">
         <button onClick={db.goToRoot} className="transition-colors"
           style={{ color: db.currentFolderId === null ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
-          {t.sidebar.dashboard}
+          {t.sidebar.archiv}
         </button>
         {db.breadcrumbs.map((crumb, i) => (
           <span key={crumb.id} className="flex items-center gap-2">
@@ -152,9 +152,9 @@ function Archiv() {
       {!db.loading && db.folders.length === 0 && db.modules.length === 0 && (
         <div className="text-center py-16">
           <p className="text-lg mb-2" style={{ color: 'var(--color-text-muted)' }}>
-            {db.currentFolderId === null ? t.dashboard.emptyRoot : t.dashboard.emptyFolder}
+            {db.currentFolderId === null ? t.archiv.emptyRoot : t.archiv.emptyFolder}
           </p>
-          <p style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>{t.dashboard.emptyHint}</p>
+          <p style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>{t.archiv.emptyHint}</p>
         </div>
       )}
 

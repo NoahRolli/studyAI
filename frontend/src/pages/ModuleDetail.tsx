@@ -117,7 +117,7 @@ function ModuleDetail() {
     <div className="text-center py-16 animate-fade-in">
       <p className="text-lg mb-4" style={{ color: 'var(--color-text-muted)' }}>{t.moduleDetail.notFound}</p>
       <Link to="/archiv" className="text-sm" style={{ color: 'var(--color-primary)' }}>
-        {t.moduleDetail.backToDashboard}
+        {t.moduleDetail.backToArchiv}
       </Link>
     </div>
   )
@@ -130,7 +130,7 @@ function ModuleDetail() {
 
       <Link to="/archiv" className="text-xs mb-4 inline-block transition-colors"
         style={{ color: 'var(--color-text-muted)' }}>
-        {t.moduleDetail.backToDashboard}
+        {t.moduleDetail.backToArchiv}
       </Link>
 
       <div className="mb-8">
