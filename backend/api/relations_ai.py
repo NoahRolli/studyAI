@@ -1,20 +1,18 @@
 # Relations AI — Ollama-basierte Erkennung von Wissensrelationen
-# Nutzt bestätigte + abgelehnte Relationen als Kontext (Learning Loop)
-# Vorschläge werden mit Status 'suggested' + Begründung gespeichert
+# Nutzt bestätigte + abgelehnte concept_edges als Kontext (Learning Loop)
+# Vorschläge werden als concept_edges mit origin='ai_suggested' gespeichert
 
 import json
 import re
-from backend.infra.config import OLLAMA_MODEL
 import logging
+import httpx
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from backend.models.database import get_db
+from backend.models.concept import Concept, ConceptEdge
+from backend.models.relation import RelationType
+from backend.infra.config import OLLAMA_MODEL
 from backend.infra.ollama_connector import get_ollama_url
-from backend.models.relation import Relation, RelationType
-from backend.models.note import Note
-from backend.models.document import Document
-from backend.models.summary import Summary
-import httpx
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/relations", tags=["relations-ai"])
@@ -41,7 +39,7 @@ async def _ollama_chat(prompt: str, system: str = "") -> str:
 
 
 def _parse_json(text: str) -> list:
-    """JSON aus Ollama-Antwort extrahieren (Markdown/Raw Fallback)"""
+    """JSON aus Ollama-Antwort extrahieren"""
     cleaned = text.strip()
     if "```json" in cleaned:
         cleaned = cleaned.split("```json")[1].split("```")[0].strip()
@@ -59,90 +57,79 @@ def _parse_json(text: str) -> list:
         return []
 
 
-def _get_all_nodes(db: Session) -> list[dict]:
-    """Alle Notes + Summaries als Node-Dicts mit mehr Kontext"""
-    nodes = []
-    for note in db.query(Note).all():
-        content = note.content or ""
-        clean = re.sub(r'<[^>]+>', '', content)[:400]
-        nodes.append({
-            "type": "note", "id": note.id,
-            "title": note.title, "content": clean,
-        })
-    for summary in db.query(Summary).all():
-        doc = db.query(Document).filter(Document.id == summary.document_id).first()
-        title = doc.filename if doc else f"Summary {summary.id}"
-        content = (summary.content or "")[:400]
-        nodes.append({
-            "type": "summary", "id": summary.id,
-            "title": title, "content": content,
-        })
-    return nodes
-
-
-def _get_confirmed_relations(db: Session) -> list[dict]:
-    """Bestätigte Relationen als Positivbeispiele"""
-    rels = db.query(Relation).filter(Relation.status == "confirmed").all()
+def _get_confirmed_edges(db: Session) -> list[dict]:
+    """Bestätigte Edges als Positivbeispiele für Learning Loop"""
+    edges = db.query(ConceptEdge).filter(
+        ConceptEdge.status == "confirmed"
+    ).all()
     type_map = {t.id: t.name for t in db.query(RelationType).all()}
+    concept_map = {c.id: c.name for c in db.query(Concept).all()}
     return [{
-        "source": f"{r.source_type}:{r.source_id}",
-        "target": f"{r.target_type}:{r.target_id}",
-        "type": type_map.get(r.relation_type_id, "unknown"),
-        "reason": r.reason or "",
-    } for r in rels]
+        "source": concept_map.get(e.source_concept_id, "?"),
+        "target": concept_map.get(e.target_concept_id, "?"),
+        "type": type_map.get(e.relation_type_id, "unknown"),
+        "reason": e.reason or "",
+    } for e in edges]
 
 
-def _get_rejected_relations(db: Session) -> list[dict]:
-    """Abgelehnte Relationen als Negativbeispiele"""
-    rels = db.query(Relation).filter(Relation.status == "rejected").all()
+def _get_rejected_edges(db: Session) -> list[dict]:
+    """Abgelehnte Edges als Negativbeispiele"""
+    edges = db.query(ConceptEdge).filter(
+        ConceptEdge.status == "rejected"
+    ).all()
     type_map = {t.id: t.name for t in db.query(RelationType).all()}
+    concept_map = {c.id: c.name for c in db.query(Concept).all()}
     return [{
-        "source": f"{r.source_type}:{r.source_id}",
-        "target": f"{r.target_type}:{r.target_id}",
-        "type": type_map.get(r.relation_type_id, "unknown"),
-    } for r in rels]
+        "source": concept_map.get(e.source_concept_id, "?"),
+        "target": concept_map.get(e.target_concept_id, "?"),
+        "type": type_map.get(e.relation_type_id, "unknown"),
+    } for e in edges]
 
 
 def _get_existing_pairs(db: Session) -> set:
-    """Bereits vorhandene Paare (nicht-rejected)"""
-    rels = db.query(Relation).filter(Relation.status != "rejected").all()
+    """Bestehende Paare (nicht-rejected)"""
+    edges = db.query(ConceptEdge).filter(
+        ConceptEdge.status != "rejected"
+    ).all()
     pairs = set()
-    for r in rels:
-        pairs.add((r.source_type, r.source_id, r.target_type, r.target_id))
-        pairs.add((r.target_type, r.target_id, r.source_type, r.source_id))
+    for e in edges:
+        pairs.add((e.source_concept_id, e.target_concept_id))
+        pairs.add((e.target_concept_id, e.source_concept_id))
     return pairs
 
 
 def _get_rejected_pairs(db: Session) -> set:
     """Abgelehnte Paare — nie wieder vorschlagen"""
-    rels = db.query(Relation).filter(Relation.status == "rejected").all()
+    edges = db.query(ConceptEdge).filter(
+        ConceptEdge.status == "rejected"
+    ).all()
     pairs = set()
-    for r in rels:
-        pairs.add((r.source_type, r.source_id, r.target_type, r.target_id))
-        pairs.add((r.target_type, r.target_id, r.source_type, r.source_id))
+    for e in edges:
+        pairs.add((e.source_concept_id, e.target_concept_id))
+        pairs.add((e.target_concept_id, e.source_concept_id))
     return pairs
 
 
 @router.post("/detect")
 async def detect_relations(db: Session = Depends(get_db)):
-    """Ollama analysiert Nodes und schlägt typisierte Relationen vor"""
-    nodes = _get_all_nodes(db)
-    if len(nodes) < 2:
-        return {"suggested": 0, "message": "Zu wenige Nodes"}
+    """Ollama analysiert Konzepte und schlägt typisierte Edges vor"""
+    concepts = db.query(Concept).all()
+    if len(concepts) < 2:
+        return {"suggested": 0, "message": "Zu wenige Konzepte"}
 
-    valid_keys = {f"{n['type']}:{n['id']}" for n in nodes}
+    name_to_id = {c.name: c.id for c in concepts}
     types = db.query(RelationType).all()
     type_map = {t.name: t.id for t in types}
 
-    # Typ-Beschreibungen mit Beispielen
+    # Typ-Beschreibungen
     type_desc = "\n".join(
         f"- {t.name} ({t.label_en}): {t.description or t.label_en}"
         for t in types
     )
 
-    # Kontexte: bestätigt (Positiv) + abgelehnt (Negativ)
-    confirmed = _get_confirmed_relations(db)
-    rejected = _get_rejected_relations(db)
+    # Learning Loop: bestätigt + abgelehnt als Kontext
+    confirmed = _get_confirmed_edges(db)
+    rejected = _get_rejected_edges(db)
 
     confirmed_ctx = ""
     if confirmed:
@@ -150,7 +137,6 @@ async def detect_relations(db: Session = Depends(get_db)):
             "\n\nACCEPTED relations (follow this pattern):\n"
             + json.dumps(confirmed[:20], ensure_ascii=False)
         )
-
     rejected_ctx = ""
     if rejected:
         rejected_ctx = (
@@ -158,10 +144,10 @@ async def detect_relations(db: Session = Depends(get_db)):
             + json.dumps(rejected[:20], ensure_ascii=False)
         )
 
-    # Node-Übersicht mit mehr Content
-    node_list = "\n".join(
-        f"- {n['type']}:{n['id']} \"{n['title']}\": {n['content'][:300]}"
-        for n in nodes[:40]
+    # Konzept-Liste (max 60 für Prompt-Länge)
+    concept_list = "\n".join(
+        f"- {c.name}" + (f": {c.description[:200]}" if c.description else "")
+        for c in concepts[:60]
     )
 
     existing = _get_existing_pairs(db)
@@ -169,34 +155,29 @@ async def detect_relations(db: Session = Depends(get_db)):
 
     system = (
         "You are a knowledge representation expert. "
-        "You analyze knowledge nodes and identify precise semantic relations. "
+        "You analyze concepts and identify precise semantic relations. "
         "You learn from accepted and rejected examples. "
         "Respond ONLY in valid JSON."
     )
 
-    prompt = f"""Analyze these knowledge nodes and find PRECISE typed relations:
+    prompt = f"""Analyze these concepts and find PRECISE typed relations:
 
-NODES:
-{node_list}
+CONCEPTS:
+{concept_list}
 
-RELATION TYPES (use the most specific type that fits):
+RELATION TYPES (use the most specific type):
 {type_desc}
 {confirmed_ctx}
 {rejected_ctx}
 
 STRICT RULES:
-1. Only suggest relations where the content clearly supports the connection
-2. Use the MOST SPECIFIC type — avoid "related_to" unless no other type fits
-3. "part_of" means A is literally a component/section of B
-4. "builds_on" means A requires understanding B first
-5. "is_a" means A is an instance of category B
-6. "contradicts" means A and B make opposing claims
-7. Do NOT connect nodes just because they are in the same course/module
-8. Do NOT repeat previously rejected patterns
-9. Each reason must cite specific content from BOTH nodes
+1. Only suggest where content clearly supports the connection
+2. Use MOST SPECIFIC type — avoid "related_to" unless nothing else fits
+3. Do NOT repeat previously rejected patterns
+4. Each reason must explain WHY these concepts are connected
 
-Find 2-5 HIGH-CONFIDENCE relations only. JSON format:
-{{"relations": [{{"source": "type:id", "target": "type:id", "relation_type": "name", "reason": "Specific evidence from both nodes"}}]}}"""
+Find 3-8 HIGH-CONFIDENCE relations. JSON format:
+{{"relations": [{{"source": "concept_name", "target": "concept_name", "relation_type": "name", "reason": "Why connected"}}]}}"""
 
     raw = await _ollama_chat(prompt, system)
     suggestions = _parse_json(raw)
@@ -205,45 +186,35 @@ Find 2-5 HIGH-CONFIDENCE relations only. JSON format:
     for s in suggestions:
         if not isinstance(s, dict):
             continue
-        source_ref = s.get("source", "")
-        target_ref = s.get("target", "")
+        src_name = s.get("source", "").strip().lower()
+        tgt_name = s.get("target", "").strip().lower()
         rel_type_name = s.get("relation_type", "related_to")
         reason = s.get("reason", "")
 
-        try:
-            s_type, s_id = source_ref.split(":")
-            t_type, t_id = target_ref.split(":")
-            s_id, t_id = int(s_id), int(t_id)
-        except (ValueError, AttributeError):
+        src_id = name_to_id.get(src_name)
+        tgt_id = name_to_id.get(tgt_name)
+        if not src_id or not tgt_id or src_id == tgt_id:
             continue
 
         rt_id = type_map.get(rel_type_name, type_map.get("related_to"))
         if not rt_id:
             continue
 
-        # Duplikat-Check (bestehende + rejected Paare)
-        if (s_type, s_id, t_type, t_id) in existing:
+        if (src_id, tgt_id) in existing:
             continue
-        if (s_type, s_id, t_type, t_id) in rejected_pairs:
-            logger.info(f"Übersprungen (rejected): {source_ref} → {target_ref}")
-            continue
-
-        # Validierung: Node-Existenz + keine Selbstreferenz
-        if f"{s_type}:{s_id}" not in valid_keys:
-            continue
-        if f"{t_type}:{t_id}" not in valid_keys:
-            continue
-        if s_type == t_type and s_id == t_id:
+        if (src_id, tgt_id) in rejected_pairs:
+            logger.info(f"Übersprungen (rejected): {src_name} → {tgt_name}")
             continue
 
-        db.add(Relation(
-            source_type=s_type, source_id=s_id,
-            target_type=t_type, target_id=t_id,
-            relation_type_id=rt_id, status="suggested",
-            reason=reason, created_by="ollama",
+        db.add(ConceptEdge(
+            source_concept_id=src_id,
+            target_concept_id=tgt_id,
+            relation_type_id=rt_id, strength=0.5,
+            origin="ai_suggested", status="suggested",
+            reason=reason,
         ))
-        existing.add((s_type, s_id, t_type, t_id))
+        existing.add((src_id, tgt_id))
         created += 1
 
     db.commit()
-    return {"suggested": created, "total_nodes": len(nodes)}
+    return {"suggested": created, "total_concepts": len(concepts)}

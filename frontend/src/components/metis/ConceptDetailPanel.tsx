@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { get, put } from '../../hooks/useAPI'
+import { get } from '../../hooks/useAPI'
 import type { ConceptDetail } from '../../types/metis'
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 }
 
 export default function ConceptDetailPanel({
-  conceptId, onClose, onEdgeReviewed,
+  conceptId, onClose,
 }: Props) {
   const navigate = useNavigate()
   const [detail, setDetail] = useState<ConceptDetail | null>(null)
@@ -39,16 +39,6 @@ export default function ConceptDetailPanel({
     else if (type === 'summary') navigate('/archiv')
   }
 
-  // Edge bestätigen/ablehnen
-  const reviewEdge = async (edgeId: number, confirmed: boolean) => {
-    try {
-      await put(`/api/concepts/edges/${edgeId}`, { confirmed })
-      onEdgeReviewed?.()
-      loadDetail()
-    } catch (err) {
-      console.error('Edge review failed:', err)
-    }
-  }
 
   // Relationstyp-Farbe
   const relColor = (type: string) => {

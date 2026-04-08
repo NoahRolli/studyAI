@@ -12,7 +12,7 @@ interface Props {
   onRefresh: () => void
 }
 
-export default function ConceptListView({ graph, onRefresh }: Props) {
+export default function ConceptListView({ graph, onRefresh: _onRefresh }: Props) {
   const { t } = useLanguage()
   const navigate = useNavigate()
   const [expandedId, setExpandedId] = useState<number | null>(null)

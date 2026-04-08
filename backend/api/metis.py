@@ -1,6 +1,7 @@
-# Metis API — Knowledge-Graph Endpunkte
-# Sync, Graph-Abfrage, Node-Position, Edge CRUD, Confirm/Reject.
-# AI-Endpunkte (Auto-Link, Auto-Cluster) sind in metis_ai.py.
+# Metis API — Knowledge-Graph Endpunkte (Legacy-Wrapper)
+# Graph + Nodes zeigen jetzt Konzepte (via /api/concepts/graph)
+# Edge-Endpoints sind Wrapper auf concept_edges für Abwärtskompatibilität
+# MetisNodes existieren noch in DB, werden aber nicht mehr aktiv genutzt
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -8,279 +9,187 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone
 from backend.models.database import get_db
+from backend.models.concept import Concept, ConceptSource, ConceptEdge
+from backend.models.relation import RelationType
 from backend.models.metis_node import MetisNode
-from backend.models.metis_edge import MetisEdge
 from backend.models.metis_cluster import MetisCluster, MetisClusterMember
 from backend.models.note import Note
 from backend.models.summary import Summary
 from backend.models.document import Document
-from backend.api.metis_sync import sync_nodes, sync_wikilinks
-from backend.models.relation import Relation, RelationType
 
 router = APIRouter(prefix="/api/metis", tags=["metis"])
 
 
 # --- Pydantic Schemas ---
 
-class PositionUpdate(BaseModel):
-    """Schema für Node-Position Update (Pin)."""
-    pos_x: Optional[float] = None
-    pos_y: Optional[float] = None
-
-
 class EdgeCreate(BaseModel):
-    """Schema für manuelles Edge-Erstellen."""
     source_node_id: int
     target_node_id: int
     relation_type: str = "related"
-    strength: float = 0.5
-
-
-class EdgeReview(BaseModel):
-    """Schema für Edge-Bestätigung/Ablehnung."""
-    reason: Optional[str] = None
-
-
 
 class EdgeUpdate(BaseModel):
-    """Schema für Edge-Bearbeitung (Typ + Begründung)."""
     relation_type: Optional[str] = None
     reason: Optional[str] = None
 
-# --- Hilfs-Funktionen ---
 
-def _node_to_dict(node: MetisNode, db: Session) -> dict:
-    """Konvertiert einen MetisNode zu einem Dict mit Quell-Titel."""
-    title = ""
-    module_id = None
-    if node.type == "note":
-        note = db.query(Note).filter(Note.id == node.source_id).first()
-        title = note.title if note else "(gelöscht)"
-    elif node.type == "summary":
-        summary = db.query(Summary).filter(
-            Summary.id == node.source_id
-        ).first()
-        if summary:
-            doc = db.query(Document).filter(
-                Document.id == summary.document_id
-            ).first()
-            title = doc.filename if doc else f"Summary #{node.source_id}"
-            module_id = doc.module_id if doc else None
-        else:
-            title = "(gelöscht)"
+# --- Mapping: relation_type String → relation_type_id ---
 
+RELATION_TYPE_MAP = {
+    "related": 8, "related_to": 8,
+    "builds_on": 4, "contradicts": 6,
+    "part_of": 3, "is_a": 1,
+    "subclass_of": 2, "requires": 5, "example_of": 7,
+    "wikilink": 8, "similarity": 8,
+}
+
+
+def _edge_to_dict(e: ConceptEdge, type_map: dict) -> dict:
+    """ConceptEdge als Metis-kompatibles Dict"""
+    rt = type_map.get(e.relation_type_id)
     return {
-        "id": node.id,
-        "type": node.type,
-        "source_id": node.source_id,
-        "title": title,
-        "pos_x": node.pos_x,
-        "pos_y": node.pos_y,
-        "module_id": module_id,
-        "embedding_stale": node.embedding_stale,
-        "cluster_ids": [m.cluster_id for m in node.cluster_memberships],
+        "id": e.id,
+        "source_node_id": e.source_concept_id,
+        "target_node_id": e.target_concept_id,
+        "relation_type": rt.name if rt else "related_to",
+        "strength": e.strength,
+        "status": e.status,
+        "reason": e.reason,
+        "reviewed_at": e.reviewed_at.isoformat() if e.reviewed_at else None,
+        "created_at": e.created_at.isoformat() if e.created_at else None,
     }
 
 
-def _edge_to_dict(edge: MetisEdge) -> dict:
-    """Konvertiert eine MetisEdge zu einem Dict inkl. Status."""
-    return {
-        "id": edge.id,
-        "source_node_id": edge.source_node_id,
-        "target_node_id": edge.target_node_id,
-        "relation_type": edge.relation_type,
-        "strength": edge.strength,
-        "status": edge.status,
-        "reason": edge.reason,
-    }
-
-
-def _cluster_to_dict(cluster: MetisCluster) -> dict:
-    """Konvertiert einen MetisCluster zu einem Dict."""
-    return {
-        "id": cluster.id,
-        "label": cluster.label,
-        "description": cluster.description,
-        "color": cluster.color,
-        "node_ids": [m.node_id for m in cluster.members],
-    }
-
-
-# --- Endpunkte ---
+# --- Graph (Konzept-basiert) ---
 
 @router.get("/graph")
 def get_graph(db: Session = Depends(get_db)):
-    """Kompletter Knowledge-Graph: Nodes + Edges + Clusters + Ontology."""
-    nodes = db.query(MetisNode).all()
-    # Rejected Edges nicht an Frontend liefern
-    edges = db.query(MetisEdge).filter(
-        MetisEdge.status != "rejected"
+    """Graph aus Konzepten + concept_edges (Legacy-kompatibel)."""
+    from sqlalchemy import func
+    concepts = db.query(Concept).all()
+    type_map = {t.id: t for t in db.query(RelationType).all()}
+
+    # Nodes aus Konzepten bauen (Metis-Node-Format)
+    nodes = []
+    for c in concepts:
+        src_count = db.query(ConceptSource).filter(
+            ConceptSource.concept_id == c.id
+        ).count()
+        nodes.append({
+            "id": c.id, "title": c.name,
+            "source_type": "concept", "source_id": c.id,
+            "x": None, "y": None, "z": None,
+            "source_count": src_count,
+        })
+
+    # Edges (nicht abgelehnte)
+    edges = db.query(ConceptEdge).filter(
+        ConceptEdge.status != "rejected"
     ).all()
+    edge_list = [_edge_to_dict(e, type_map) for e in edges]
+
+    # Cluster
     clusters = db.query(MetisCluster).all()
+    cluster_list = [{
+        "id": cl.id, "label": cl.label,
+        "description": cl.description,
+        "node_ids": [m.node_id for m in cl.members],
+    } for cl in clusters]
 
-    edge_list = [_edge_to_dict(e) for e in edges]
+    return {"nodes": nodes, "edges": edge_list, "clusters": cluster_list}
 
-    # Ontology-Relationen als Extra-Edges einspeisen
-    node_lookup = {(n.type, n.source_id): n.id for n in nodes}
-    type_map = {t.id: t.name for t in db.query(RelationType).all()}
-    ontology_rels = db.query(Relation).filter(
-        Relation.status == "confirmed"
-    ).all()
-    for rel in ontology_rels:
-        src_nid = node_lookup.get((rel.source_type, rel.source_id))
-        tgt_nid = node_lookup.get((rel.target_type, rel.target_id))
-        if src_nid and tgt_nid:
-            edge_list.append({
-                "id": -rel.id,
-                "source_node_id": src_nid,
-                "target_node_id": tgt_nid,
-                "relation_type": type_map.get(
-                    rel.relation_type_id, "related_to"
-                ),
-                "strength": 0.8,
-                "status": "confirmed",
-                "reason": rel.reason,
-            })
 
-    return {
-        "nodes": [_node_to_dict(n, db) for n in nodes],
-        "edges": edge_list,
-        "clusters": [_cluster_to_dict(c) for c in clusters],
-    }
-
+# --- Edge CRUD (Wrapper auf concept_edges) ---
 
 @router.get("/edges")
-def get_edges(
-    status: Optional[str] = None,
-    db: Session = Depends(get_db),
-):
-    """Edges abfragen, optional nach Status filtern."""
-    query = db.query(MetisEdge)
+def get_edges(status: Optional[str] = None,
+              db: Session = Depends(get_db)):
+    """Alle Edges, optional nach Status gefiltert."""
+    q = db.query(ConceptEdge)
     if status:
-        query = query.filter(MetisEdge.status == status)
-    return [_edge_to_dict(e) for e in query.all()]
-
-
-@router.post("/sync")
-def sync_graph(db: Session = Depends(get_db)):
-    """Synchronisiert Notes + Summaries mit dem Graph."""
-    node_stats = sync_nodes(db)
-    wikilinks_synced = sync_wikilinks(db)
-    db.commit()
-    return {
-        "nodes_added": node_stats["added"],
-        "nodes_removed": node_stats["removed"],
-        "wikilinks_synced": wikilinks_synced,
-    }
-
-
-@router.put("/nodes/{node_id}/position")
-def update_position(
-    node_id: int,
-    data: PositionUpdate,
-    db: Session = Depends(get_db),
-):
-    """Node-Position speichern (Pin). Null = Auto-Layout."""
-    node = db.query(MetisNode).filter(MetisNode.id == node_id).first()
-    if not node:
-        raise HTTPException(status_code=404, detail="Node nicht gefunden")
-    node.pos_x = data.pos_x
-    node.pos_y = data.pos_y
-    db.commit()
-    return {"ok": True}
+        q = q.filter(ConceptEdge.status == status)
+    type_map = {t.id: t for t in db.query(RelationType).all()}
+    return [_edge_to_dict(e, type_map) for e in q.all()]
 
 
 @router.post("/edges")
 def create_edge(data: EdgeCreate, db: Session = Depends(get_db)):
-    """Manuell eine Edge erstellen (Status: confirmed)."""
-    source = db.query(MetisNode).filter(
-        MetisNode.id == data.source_node_id
-    ).first()
-    target = db.query(MetisNode).filter(
-        MetisNode.id == data.target_node_id
-    ).first()
-    if not source or not target:
-        raise HTTPException(status_code=404, detail="Node nicht gefunden")
-
-    existing = db.query(MetisEdge).filter(
-        MetisEdge.source_node_id == data.source_node_id,
-        MetisEdge.target_node_id == data.target_node_id,
-        MetisEdge.relation_type == data.relation_type,
+    """Edge erstellen (Legacy-Signatur mit node_ids)."""
+    if data.source_node_id == data.target_node_id:
+        raise HTTPException(400, "Selbst-Referenz nicht erlaubt")
+    existing = db.query(ConceptEdge).filter(
+        ConceptEdge.source_concept_id == data.source_node_id,
+        ConceptEdge.target_concept_id == data.target_node_id,
     ).first()
     if existing:
-        raise HTTPException(status_code=409, detail="Edge existiert bereits")
-
-    edge = MetisEdge(
-        source_node_id=data.source_node_id,
-        target_node_id=data.target_node_id,
-        relation_type=data.relation_type,
-        strength=data.strength,
-        status="confirmed",
+        raise HTTPException(409, "Edge existiert bereits")
+    rel_id = RELATION_TYPE_MAP.get(data.relation_type, 8)
+    edge = ConceptEdge(
+        source_concept_id=data.source_node_id,
+        target_concept_id=data.target_node_id,
+        relation_type_id=rel_id, strength=1.0,
+        origin="manual", status="confirmed",
+        reviewed_at=datetime.now(timezone.utc),
     )
     db.add(edge)
     db.commit()
-    db.refresh(edge)
-    return _edge_to_dict(edge)
-
-
+    type_map = {t.id: t for t in db.query(RelationType).all()}
+    return _edge_to_dict(edge, type_map)
 
 
 @router.put("/edges/{edge_id}")
-def update_edge(
-    edge_id: int,
-    data: EdgeUpdate,
-    db: Session = Depends(get_db),
-):
-    """Edge bearbeiten — Typ und Begründung ändern."""
-    edge = db.query(MetisEdge).filter(MetisEdge.id == edge_id).first()
+def update_edge(edge_id: int, data: EdgeUpdate,
+                db: Session = Depends(get_db)):
+    """Edge bearbeiten."""
+    edge = db.query(ConceptEdge).filter(ConceptEdge.id == edge_id).first()
     if not edge:
-        raise HTTPException(status_code=404, detail="Edge nicht gefunden")
+        raise HTTPException(404, "Edge nicht gefunden")
     if data.relation_type is not None:
-        edge.relation_type = data.relation_type
+        edge.relation_type_id = RELATION_TYPE_MAP.get(data.relation_type, 8)
     if data.reason is not None:
         edge.reason = data.reason
     db.commit()
-    return _edge_to_dict(edge)
+    type_map = {t.id: t for t in db.query(RelationType).all()}
+    return _edge_to_dict(edge, type_map)
 
-def confirm_edge(
-    edge_id: int,
-    data: EdgeReview = EdgeReview(),
-    db: Session = Depends(get_db),
-):
-    """Edge bestätigen — wird stärker dargestellt."""
-    edge = db.query(MetisEdge).filter(MetisEdge.id == edge_id).first()
+
+@router.put("/edges/{edge_id}/confirm")
+def confirm_edge(edge_id: int, db: Session = Depends(get_db)):
+    """Edge bestätigen."""
+    edge = db.query(ConceptEdge).filter(ConceptEdge.id == edge_id).first()
     if not edge:
-        raise HTTPException(status_code=404, detail="Edge nicht gefunden")
+        raise HTTPException(404, "Edge nicht gefunden")
     edge.status = "confirmed"
-    edge.reason = data.reason
     edge.reviewed_at = datetime.now(timezone.utc)
     db.commit()
-    return _edge_to_dict(edge)
+    return {"confirmed": True}
 
 
 @router.put("/edges/{edge_id}/reject")
-def reject_edge(
-    edge_id: int,
-    data: EdgeReview = EdgeReview(),
-    db: Session = Depends(get_db),
-):
-    """Edge ablehnen — verschwindet aus dem Graph."""
-    edge = db.query(MetisEdge).filter(MetisEdge.id == edge_id).first()
+def reject_edge(edge_id: int, db: Session = Depends(get_db)):
+    """Edge ablehnen."""
+    edge = db.query(ConceptEdge).filter(ConceptEdge.id == edge_id).first()
     if not edge:
-        raise HTTPException(status_code=404, detail="Edge nicht gefunden")
+        raise HTTPException(404, "Edge nicht gefunden")
     edge.status = "rejected"
-    edge.reason = data.reason
     edge.reviewed_at = datetime.now(timezone.utc)
     db.commit()
-    return _edge_to_dict(edge)
+    return {"rejected": True}
 
 
 @router.delete("/edges/{edge_id}")
 def delete_edge(edge_id: int, db: Session = Depends(get_db)):
-    """Edge endgültig löschen."""
-    edge = db.query(MetisEdge).filter(MetisEdge.id == edge_id).first()
+    """Edge löschen."""
+    edge = db.query(ConceptEdge).filter(ConceptEdge.id == edge_id).first()
     if not edge:
-        raise HTTPException(status_code=404, detail="Edge nicht gefunden")
+        raise HTTPException(404, "Edge nicht gefunden")
     db.delete(edge)
     db.commit()
-    return {"ok": True}
+    return {"deleted": True}
+
+
+# --- Sync (Legacy, leitet auf Concept-Sync um) ---
+
+@router.post("/sync")
+def sync_graph(db: Session = Depends(get_db)):
+    """Legacy Sync — weiterleiten auf Concept-System."""
+    return {"message": "Use /api/concepts/sync instead", "ok": True}

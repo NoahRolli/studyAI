@@ -1,4 +1,4 @@
-# Konzept-Graph AI Service — Sync, Auto-Link, Merge-Suggestions
+# Konzept-Graph AI Service — Sync, Auto-Link
 # Sync: Extrahiert Keywords aus Notes (Ollama) und Summaries (key_terms)
 # Auto-Link: Gruppiert Konzepte nach Quelle, schlägt Edges vor
 # Ollama-only — kein Claude, kein externer API-Call
@@ -13,10 +13,18 @@ from backend.models.database import get_db
 from backend.models.concept import Concept, ConceptSource, ConceptEdge
 from backend.models.note import Note
 from backend.models.summary import Summary
-from backend.infra.config import OLLAMA_MODEL, OLLAMA_EMBED_MODEL
+from backend.infra.config import OLLAMA_MODEL
 from backend.infra.ollama_connector import get_ollama_url
 
 router = APIRouter(prefix="/api/concepts", tags=["concepts-ai"])
+
+# Mapping: Ollama-String → relation_type_id (aus relation_types Tabelle)
+RELATION_TYPE_MAP = {
+    "related": 8, "related_to": 8,
+    "builds_on": 4, "contradicts": 6,
+    "part_of": 3, "is_a": 1,
+    "subclass_of": 2, "requires": 5, "example_of": 7,
+}
 
 
 def _normalize_name(name: str) -> str:
@@ -51,7 +59,7 @@ async def _ollama_chat(prompt: str) -> str:
         resp = await client.post(f"{base_url}/api/chat", json={
             "model": OLLAMA_MODEL,
             "messages": [{"role": "user", "content": prompt}],
-            "stream": False, "think": False
+            "stream": False, "think": False,
         })
         resp.raise_for_status()
         return resp.json().get("message", {}).get("content", "")
@@ -79,12 +87,12 @@ def _link_source(db: Session, concept: Concept,
     existing = db.query(ConceptSource).filter(
         ConceptSource.concept_id == concept.id,
         ConceptSource.source_type == source_type,
-        ConceptSource.source_id == source_id
+        ConceptSource.source_id == source_id,
     ).first()
     if not existing:
         db.add(ConceptSource(
             concept_id=concept.id, source_type=source_type,
-            source_id=source_id, relevance=relevance
+            source_id=source_id, relevance=relevance,
         ))
 
 
@@ -106,13 +114,13 @@ async def _extract_keywords_ollama(content: str) -> list[str]:
 
 async def _link_batch(db: Session, names: list[str],
                       name_to_id: dict) -> int:
-    """Ollama analysiert eine Gruppe von Konzepten und schlägt Edges vor."""
+    """Ollama analysiert Konzept-Gruppe und schlägt Edges vor."""
     if len(names) < 2:
         return 0
     prompt = (
         "These concepts are related to each other. "
         "Suggest pairs and their relation type: "
-        "related, builds_on, contradicts, or part_of. "
+        "related, builds_on, contradicts, part_of, is_a, requires. "
         "Return ONLY a JSON array of objects with "
         "source, target, and relation fields.\n\n"
         f"Concepts: {json.dumps(names[:40])}"
@@ -123,7 +131,6 @@ async def _link_batch(db: Session, names: list[str],
         return 0
 
     count = 0
-    valid_types = {"related", "builds_on", "contradicts", "part_of"}
     for item in parsed:
         if not isinstance(item, dict):
             continue
@@ -134,16 +141,20 @@ async def _link_batch(db: Session, names: list[str],
             continue
         if src == tgt:
             continue
+        # Relation-String → relation_type_id
+        rel_id = RELATION_TYPE_MAP.get(rel, 8)
         exists = db.query(ConceptEdge).filter(
             ConceptEdge.source_concept_id == name_to_id[src],
-            ConceptEdge.target_concept_id == name_to_id[tgt]
+            ConceptEdge.target_concept_id == name_to_id[tgt],
         ).first()
         if not exists:
             db.add(ConceptEdge(
                 source_concept_id=name_to_id[src],
                 target_concept_id=name_to_id[tgt],
-                relation_type=rel if rel in valid_types else "related",
-                strength=0.5, ai_generated=True, confirmed=None
+                relation_type_id=rel_id,
+                strength=0.5,
+                origin="ai_auto_link",
+                status="suggested",
             ))
             count += 1
     return count
@@ -177,7 +188,7 @@ async def sync_concepts(db: Session = Depends(get_db)):
     for note in notes:
         existing_links = db.query(ConceptSource).filter(
             ConceptSource.source_type == "note",
-            ConceptSource.source_id == note.id
+            ConceptSource.source_id == note.id,
         ).count()
         if existing_links > 0:
             continue
@@ -199,7 +210,7 @@ async def sync_concepts(db: Session = Depends(get_db)):
 
 @router.post("/auto-link")
 async def auto_link_concepts(db: Session = Depends(get_db)):
-    """Gruppiert Konzepte nach Quelle (Ordner/Note) und linkt per Batch."""
+    """Gruppiert Konzepte nach Quelle und linkt per Batch."""
     concepts = db.query(Concept).all()
     if len(concepts) < 2:
         return {"suggestions": 0}
@@ -207,8 +218,7 @@ async def auto_link_concepts(db: Session = Depends(get_db)):
     name_to_id = {c.name: c.id for c in concepts}
     total = 0
 
-    # Gruppen sammeln: Konzepte die gleiche Quellen teilen
-    # Pro Summary-Modul (= Ordner-Kontext)
+    # Ko-Vorkommen: Konzepte die gleiche Quellen teilen
     rows = db.execute(text(
         "SELECT DISTINCT cs1.concept_id, cs2.concept_id "
         "FROM concept_sources cs1 "
@@ -217,14 +227,12 @@ async def auto_link_concepts(db: Session = Depends(get_db)):
         "AND cs1.concept_id < cs2.concept_id"
     )).fetchall()
 
-    # Konzepte nach Ko-Vorkommen gruppieren
     groups: dict[int, set[int]] = {}
     for c1, c2 in rows:
         if c1 not in groups:
             groups[c1] = {c1}
         groups[c1].add(c2)
 
-    # Gruppen zu Batches zusammenfassen
     processed = set()
     batches: list[list[str]] = []
     for seed, members in sorted(groups.items(), key=lambda x: -len(x[1])):
@@ -240,14 +248,12 @@ async def auto_link_concepts(db: Session = Depends(get_db)):
         if len(batch_names) >= 2:
             batches.append(batch_names)
 
-    # Restliche Konzepte in 30er-Batches
     remaining = [c.name for c in concepts if c.id not in processed]
     for i in range(0, len(remaining), 30):
-        chunk = remaining[i:i+30]
+        chunk = remaining[i:i + 30]
         if len(chunk) >= 2:
             batches.append(chunk)
 
-    # Batches an Ollama schicken
     for batch in batches:
         count = await _link_batch(db, batch, name_to_id)
         total += count

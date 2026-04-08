@@ -24,7 +24,7 @@ export default function MetisPage() {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [linking, setLinking] = useState(false)
-  const [, setSelectedConceptId] = useState<number | null>(null)
+  const [selectedConceptId, setSelectedConceptId] = useState<number | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const [showLabels, setShowLabels] = useState(false)
 

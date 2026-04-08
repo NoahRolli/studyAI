@@ -1,14 +1,16 @@
-# Relations API — CRUD, Bestätigung/Ablehnung, Typ-Management
-# Typisierte Wissensrelationen zwischen Notes, Summaries, Modules
-# Built-in Typen werden beim ersten Aufruf automatisch angelegt
+# Relations API — Wrapper auf concept_edges (Abwärtskompatibilität)
+# Ontologie-Frontend ruft /api/relations/* auf, Backend liest/schreibt concept_edges
+# relation_types bleiben unverändert als eigener Router
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime, timezone
 from backend.models.database import get_db
-from backend.models.relation import Relation, RelationType
+from backend.models.concept import Concept, ConceptSource, ConceptEdge
+from backend.models.relation import RelationType
 from backend.models.note import Note
 from backend.models.summary import Summary
 from backend.models.document import Document
@@ -17,7 +19,7 @@ from backend.models.module import Module
 router = APIRouter(prefix="/api/relations", tags=["relations"])
 type_router = APIRouter(prefix="/api/relation-types", tags=["relations"])
 
-# --- Built-in Relationstypen (werden automatisch angelegt) ---
+# Built-in Typen (automatisch angelegt)
 BUILTIN_TYPES = [
     ("is_a", "ist ein(e)", "is a", "Instanz einer Klasse"),
     ("subclass_of", "Unterklasse von", "subclass of", "Hierarchische Vererbung"),
@@ -31,7 +33,7 @@ BUILTIN_TYPES = [
 
 
 def _ensure_builtin_types(db: Session):
-    """Erstellt Built-in Typen falls sie noch nicht existieren"""
+    """Erstellt Built-in Typen falls nicht vorhanden"""
     existing = {t.name for t in db.query(RelationType.name).all()}
     for name, de, en, desc in BUILTIN_TYPES:
         if name not in existing:
@@ -42,7 +44,8 @@ def _ensure_builtin_types(db: Session):
     db.commit()
 
 
-# --- Pydantic Schemas ---
+# --- Pydantic Schemas (gleiche Signatur wie vorher) ---
+
 class RelationCreate(BaseModel):
     source_type: str
     source_id: int
@@ -55,131 +58,194 @@ class RelationUpdate(BaseModel):
     relation_type_id: Optional[int] = None
     reason: Optional[str] = None
 
-class RelationTypeCreate(BaseModel):
-    name: str
-    label_de: str
-    label_en: str
-    description: Optional[str] = None
+
+# --- Hilfs-Funktionen ---
+
+def _build_title_cache(db: Session) -> dict:
+    """Titel-Cache für Konzepte + Quell-Dokumente"""
+    cache = {}
+    for c in db.query(Concept).all():
+        cache[f"concept:{c.id}"] = c.name
+    for n in db.query(Note).all():
+        cache[f"note:{n.id}"] = n.title
+    for s in db.query(Summary).all():
+        doc = db.query(Document).filter(Document.id == s.document_id).first()
+        cache[f"summary:{s.id}"] = doc.filename if doc else f"Summary {s.id}"
+    for m in db.query(Module).all():
+        cache[f"module:{m.id}"] = m.name
+    return cache
 
 
-# --- Relation CRUD ---
+def _edge_to_relation(e: ConceptEdge, type_map: dict,
+                      title_cache: dict) -> dict:
+    """ConceptEdge als Relation-kompatibles Dict serialisieren"""
+    rt = type_map.get(e.relation_type_id)
+    src_name = title_cache.get(f"concept:{e.source_concept_id}",
+                                f"Konzept #{e.source_concept_id}")
+    tgt_name = title_cache.get(f"concept:{e.target_concept_id}",
+                                f"Konzept #{e.target_concept_id}")
+    return {
+        "id": e.id,
+        "source_type": "concept", "source_id": e.source_concept_id,
+        "source_title": src_name,
+        "target_type": "concept", "target_id": e.target_concept_id,
+        "target_title": tgt_name,
+        "relation_type": {
+            "id": rt.id, "name": rt.name,
+            "label_de": rt.label_de, "label_en": rt.label_en,
+        } if rt else None,
+        "status": e.status,
+        "reason": e.reason,
+        "created_by": "user" if e.origin == "manual" else "ollama",
+        "origin": e.origin,
+        "confidence": e.confidence,
+        "created_at": e.created_at.isoformat() if e.created_at else None,
+    }
+
+
+# --- Relation CRUD (auf concept_edges) ---
+
 @router.get("")
 def get_relations(
     status: Optional[str] = None,
     source_type: Optional[str] = None,
     source_id: Optional[int] = None,
     relation_type_id: Optional[int] = None,
+    origin: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    """Alle Relationen laden, optional gefiltert"""
+    """Alle Edges laden, optional gefiltert"""
     _ensure_builtin_types(db)
-    q = db.query(Relation)
+    q = db.query(ConceptEdge)
+    if origin:
+        q = q.filter(ConceptEdge.origin == origin)
     if status:
-        q = q.filter(Relation.status == status)
-    if source_type and source_id:
-        # Relationen wo Node Subjekt ODER Objekt ist
+        q = q.filter(ConceptEdge.status == status)
+    if source_type == "concept" and source_id:
         q = q.filter(or_(
-            (Relation.source_type == source_type) & (Relation.source_id == source_id),
-            (Relation.target_type == source_type) & (Relation.target_id == source_id),
+            ConceptEdge.source_concept_id == source_id,
+            ConceptEdge.target_concept_id == source_id,
         ))
     if relation_type_id:
-        q = q.filter(Relation.relation_type_id == relation_type_id)
-    relations = q.order_by(Relation.created_at.desc()).all()
-    # Typ-Info mitlesen
+        q = q.filter(ConceptEdge.relation_type_id == relation_type_id)
+    edges = q.order_by(ConceptEdge.created_at.desc()).all()
     type_map = {t.id: t for t in db.query(RelationType).all()}
-    title_cache = _build_title_cache(db)
-    return [_serialize_relation(r, type_map, title_cache) for r in relations]
+    tc = _build_title_cache(db)
+    return [_edge_to_relation(e, type_map, tc) for e in edges]
 
 
 @router.post("")
 def create_relation(data: RelationCreate, db: Session = Depends(get_db)):
-    """Manuell eine Relation erstellen (Status: confirmed)"""
-    rel = Relation(
-        source_type=data.source_type, source_id=data.source_id,
-        target_type=data.target_type, target_id=data.target_id,
+    """Manuell eine Edge erstellen (origin=manual, status=confirmed)"""
+    # source_type/target_type werden ignoriert — wir brauchen concept_ids
+    # Frontend muss concept_ids in source_id/target_id schicken
+    existing = db.query(ConceptEdge).filter(
+        ConceptEdge.source_concept_id == data.source_id,
+        ConceptEdge.target_concept_id == data.target_id,
+    ).first()
+    if existing:
+        return {"error": "Edge existiert bereits"}
+    edge = ConceptEdge(
+        source_concept_id=data.source_id,
+        target_concept_id=data.target_id,
         relation_type_id=data.relation_type_id,
-        reason=data.reason, status="confirmed", created_by="user",
+        strength=1.0, origin="manual", status="confirmed",
+        reason=data.reason,
+        reviewed_at=datetime.now(timezone.utc),
     )
-    db.add(rel)
+    db.add(edge)
     db.commit()
-    db.refresh(rel)
+    db.refresh(edge)
     type_map = {t.id: t for t in db.query(RelationType).all()}
     tc = _build_title_cache(db)
-    return _serialize_relation(rel, type_map, tc)
+    return _edge_to_relation(edge, type_map, tc)
 
 
 @router.put("/{relation_id}")
-def update_relation(
-    relation_id: int, data: RelationUpdate, db: Session = Depends(get_db),
-):
-    """Relation bearbeiten (Typ oder Begründung ändern)"""
-    rel = db.query(Relation).filter(Relation.id == relation_id).first()
-    if not rel:
+def update_relation(relation_id: int, data: RelationUpdate,
+                    db: Session = Depends(get_db)):
+    """Edge bearbeiten (Typ oder Begründung)"""
+    edge = db.query(ConceptEdge).filter(ConceptEdge.id == relation_id).first()
+    if not edge:
         return {"error": "Relation nicht gefunden"}
     if data.relation_type_id is not None:
-        rel.relation_type_id = data.relation_type_id
+        edge.relation_type_id = data.relation_type_id
     if data.reason is not None:
-        rel.reason = data.reason
+        edge.reason = data.reason
     db.commit()
-    db.refresh(rel)
     type_map = {t.id: t for t in db.query(RelationType).all()}
     tc = _build_title_cache(db)
-    return _serialize_relation(rel, type_map, tc)
+    return _edge_to_relation(edge, type_map, tc)
 
 
 @router.delete("/{relation_id}")
 def delete_relation(relation_id: int, db: Session = Depends(get_db)):
-    """Relation löschen"""
-    rel = db.query(Relation).filter(Relation.id == relation_id).first()
-    if not rel:
+    """Edge löschen"""
+    edge = db.query(ConceptEdge).filter(ConceptEdge.id == relation_id).first()
+    if not edge:
         return {"error": "Relation nicht gefunden"}
-    db.delete(rel)
+    db.delete(edge)
     db.commit()
     return {"deleted": True}
 
 
 @router.put("/{relation_id}/confirm")
 def confirm_relation(relation_id: int, db: Session = Depends(get_db)):
-    """AI-Vorschlag bestätigen → wird zur fixen Relation"""
-    rel = db.query(Relation).filter(Relation.id == relation_id).first()
-    if not rel:
+    """Edge bestätigen"""
+    edge = db.query(ConceptEdge).filter(ConceptEdge.id == relation_id).first()
+    if not edge:
         return {"error": "Relation nicht gefunden"}
-    rel.status = "confirmed"
+    edge.status = "confirmed"
+    edge.reviewed_at = datetime.now(timezone.utc)
     db.commit()
     return {"confirmed": True}
 
 
 @router.put("/{relation_id}/reject")
 def reject_relation(relation_id: int, db: Session = Depends(get_db)):
-    """AI-Vorschlag ablehnen"""
-    rel = db.query(Relation).filter(Relation.id == relation_id).first()
-    if not rel:
+    """Edge ablehnen"""
+    edge = db.query(ConceptEdge).filter(ConceptEdge.id == relation_id).first()
+    if not edge:
         return {"error": "Relation nicht gefunden"}
-    rel.status = "rejected"
+    edge.status = "rejected"
+    edge.reviewed_at = datetime.now(timezone.utc)
     db.commit()
     return {"rejected": True}
 
 
-# --- Relationstypen ---
+# --- Relation Targets (für Dropdowns) ---
+
+@router.get("/targets")
+def get_relation_targets(type: str = "concept",
+                         db: Session = Depends(get_db)):
+    """Alle Konzepte als Targets für Dropdown"""
+    return [{"id": c.id, "title": c.name} for c in db.query(Concept).all()]
+
+
+# --- Relationstypen (unverändert) ---
+
+class RelationTypeCreate(BaseModel):
+    name: str
+    label_de: str
+    label_en: str
+    description: Optional[str] = None
+
 @type_router.get("")
 def get_relation_types(db: Session = Depends(get_db)):
-    """Alle Relationstypen (built-in + custom)"""
     _ensure_builtin_types(db)
     types = db.query(RelationType).order_by(RelationType.is_builtin.desc()).all()
-    return [
-        {
-            "id": t.id, "name": t.name,
-            "label_de": t.label_de, "label_en": t.label_en,
-            "description": t.description, "is_builtin": t.is_builtin,
-        }
-        for t in types
-    ]
-
+    return [{
+        "id": t.id, "name": t.name,
+        "label_de": t.label_de, "label_en": t.label_en,
+        "description": t.description, "is_builtin": t.is_builtin,
+    } for t in types]
 
 @type_router.post("")
-def create_relation_type(data: RelationTypeCreate, db: Session = Depends(get_db)):
-    """Custom Relationstyp hinzufügen"""
-    existing = db.query(RelationType).filter(RelationType.name == data.name).first()
+def create_relation_type(data: RelationTypeCreate,
+                         db: Session = Depends(get_db)):
+    existing = db.query(RelationType).filter(
+        RelationType.name == data.name
+    ).first()
     if existing:
         return {"error": f"Typ '{data.name}' existiert bereits"}
     rt = RelationType(
@@ -190,59 +256,3 @@ def create_relation_type(data: RelationTypeCreate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(rt)
     return {"id": rt.id, "name": rt.name, "label_de": rt.label_de}
-
-
-# --- Hilfsfunktionen ---
-
-
-@router.get("/targets")
-def get_relation_targets(type: str = "note", db: Session = Depends(get_db)):
-    """Alle verfügbaren Targets eines Typs für Dropdown"""
-    if type == "note":
-        return [{"id": n.id, "title": n.title} for n in db.query(Note).all()]
-    elif type == "summary":
-        results = []
-        for s in db.query(Summary).all():
-            doc = db.query(Document).filter(Document.id == s.document_id).first()
-            results.append({"id": s.id, "title": doc.filename if doc else f"Summary {s.id}"})
-        return results
-    elif type == "module":
-        return [{"id": m.id, "title": m.name} for m in db.query(Module).all()]
-    return []
-def _build_title_cache(db: Session) -> dict:
-    """Titel-Cache für alle Node-Typen aufbauen"""
-    cache = {}
-    for note in db.query(Note).all():
-        cache[f"note:{note.id}"] = note.title
-    for summary in db.query(Summary).all():
-        doc = db.query(Document).filter(Document.id == summary.document_id).first()
-        cache[f"summary:{summary.id}"] = doc.filename if doc else f"Summary {summary.id}"
-    for module in db.query(Module).all():
-        cache[f"module:{module.id}"] = module.name
-    return cache
-
-
-def _serialize_relation(rel: Relation, type_map: dict, title_cache: dict = {}) -> dict:
-    """Relation als Dict mit Typ-Info und Node-Titeln serialisieren"""
-    rt = type_map.get(rel.relation_type_id)
-    return {
-        "id": rel.id,
-        "source_type": rel.source_type, "source_id": rel.source_id,
-        "source_title": title_cache.get(
-            f"{rel.source_type}:{rel.source_id}",
-            f"{rel.source_type} #{rel.source_id}",
-        ),
-        "target_type": rel.target_type, "target_id": rel.target_id,
-        "target_title": title_cache.get(
-            f"{rel.target_type}:{rel.target_id}",
-            f"{rel.target_type} #{rel.target_id}",
-        ),
-        "relation_type": {
-            "id": rt.id, "name": rt.name,
-            "label_de": rt.label_de, "label_en": rt.label_en,
-        } if rt else None,
-        "status": rel.status,
-        "reason": rel.reason,
-        "created_by": rel.created_by,
-        "created_at": rel.created_at.isoformat() if rel.created_at else None,
-    }

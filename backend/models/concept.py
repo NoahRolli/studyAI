@@ -1,6 +1,7 @@
 # Konzept-Graph Models — Schlagworte als eigenständige Entitäten
-# Drei Tabellen: concepts (Nodes), concept_sources (many-to-many Brücke),
-# concept_edges (Relationen zwischen Konzepten)
+# concepts (Nodes), concept_sources (many-to-many Brücke),
+# concept_edges (vereinheitlichte Relationen — ersetzt relations + metis_edges),
+# concept_clusters + concept_cluster_members (thematische Gruppierung)
 
 from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime
 from sqlalchemy import ForeignKey, UniqueConstraint
@@ -83,7 +84,10 @@ class ConceptSource(Base):
 
 
 class ConceptEdge(Base):
-    """Relation zwischen zwei Konzepten."""
+    """Vereinheitlichte Relation zwischen zwei Konzepten.
+    Ersetzt: relations + metis_edges + alte concept_edges.
+    Confidence ergibt sich aus origin + status (berechnet, nicht gespeichert).
+    """
     __tablename__ = "concept_edges"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -100,17 +104,29 @@ class ConceptEdge(Base):
         nullable=False
     )
 
-    # Relationstyp: related, builds_on, contradicts, part_of
-    relation_type = Column(String, default="related", nullable=False)
+    # Relationstyp als FK auf relation_types (is_a, builds_on, etc.)
+    relation_type_id = Column(
+        Integer, ForeignKey("relation_types.id"),
+        nullable=False
+    )
 
     # Stärke der Verbindung (0.0 - 1.0)
     strength = Column(Float, default=0.5, nullable=False)
 
-    # Von AI erstellt?
-    ai_generated = Column(Boolean, default=True, nullable=False)
+    # Herkunft der Edge
+    # manual = manuell erstellt, ai_suggested = Ollama Einzelvorschlag,
+    # ai_auto_link = Batch Auto-Link, wikilink = aus [[Link]],
+    # folder_implicit = Archiv-Ordnerstruktur impliziert
+    origin = Column(String, default="ai_suggested", nullable=False)
 
-    # Vom User bestätigt/abgelehnt? (None = pending)
-    confirmed = Column(Boolean, nullable=True)
+    # Review-Status: suggested, confirmed, rejected
+    status = Column(String, default="suggested", nullable=False)
+
+    # Begründung (AI-Erklärung oder User-Notiz)
+    reason = Column(Text, nullable=True)
+
+    # Zeitpunkt der Bestätigung/Ablehnung
+    reviewed_at = Column(DateTime, nullable=True)
 
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc)
@@ -132,6 +148,24 @@ class ConceptEdge(Base):
         "Concept", foreign_keys=[target_concept_id],
         back_populates="edges_in"
     )
+
+    @property
+    def confidence(self) -> float:
+        """Berechnete Confidence basierend auf origin + status."""
+        if self.status == "rejected":
+            return 0.0
+        scores = {
+            "manual": 1.0,
+            "wikilink": 0.9,
+            "folder_implicit": 0.7,
+            "ai_suggested": 0.3,
+            "ai_auto_link": 0.3,
+        }
+        base = scores.get(self.origin, 0.3)
+        # Bestätigung hebt AI-Edges auf 0.8
+        if self.status == "confirmed" and base < 0.8:
+            return 0.8
+        return base
 
 
 class ConceptCluster(Base):

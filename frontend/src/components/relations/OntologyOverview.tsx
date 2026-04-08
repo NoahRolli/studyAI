@@ -66,7 +66,7 @@ export default function OntologyOverview({ showMarkers, onNodeFocus }: Props) {
   const loadData = useCallback(async () => {
     try {
       const [rels, typs, graph, inf] = await Promise.all([
-        get<RelationData[]>('/api/relations'),
+        get<RelationData[]>('/api/relations?origin=manual'),
         get<RelationType[]>('/api/relation-types'),
         get<MetisGraph>('/api/metis/graph'),
         get<InferredRelation[]>('/api/relations/inferred'),

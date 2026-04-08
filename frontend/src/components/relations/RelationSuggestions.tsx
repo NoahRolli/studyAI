@@ -1,11 +1,13 @@
 // RelationSuggestions — Globale Queue aller AI-Vorschläge
-// Zeigt alle offenen Vorschläge, Detect-Button, Bestätigen/Ablehnen
-// Wird in der OntologyPage und optional als eigenständige Ansicht genutzt
+// Edit-Button öffnet Modal zum Typ ändern vor Bestätigung
+// Detect-Button, Bestätigen/Ablehnen einzeln oder alle
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { get, post, put } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
+import OntologyEditModal from './OntologyEditModal'
+import type { EditTarget } from './OntologyEditModal'
 import type { RelationData } from '../../types/relations'
 
 interface Props {
@@ -19,6 +21,7 @@ export default function RelationSuggestions({ onChanged }: Props) {
   const [detecting, setDetecting] = useState(false)
   const [detectResult, setDetectResult] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
 
   const loadSuggestions = useCallback(async () => {
     try {
@@ -36,12 +39,12 @@ export default function RelationSuggestions({ onChanged }: Props) {
     setDetecting(true)
     setDetectResult(null)
     try {
-      const result = await post<{ suggested: number; total_nodes: number }>(
+      const result = await post<{ suggested: number; total_concepts: number }>(
         '/api/relations/detect',
       )
       const msg = language === 'de'
-        ? `${result.suggested} neue Vorschläge aus ${result.total_nodes} Nodes`
-        : `${result.suggested} new suggestions from ${result.total_nodes} nodes`
+        ? `${result.suggested} neue Vorschläge aus ${result.total_concepts} Konzepten`
+        : `${result.suggested} new suggestions from ${result.total_concepts} concepts`
       setDetectResult(msg)
       await loadSuggestions()
       onChanged?.()
@@ -57,9 +60,7 @@ export default function RelationSuggestions({ onChanged }: Props) {
       await put(`/api/relations/${id}/confirm`)
       setSuggestions(prev => prev.filter(s => s.id !== id))
       onChanged?.()
-    } catch (err) {
-      console.error('Bestätigung fehlgeschlagen:', err)
-    }
+    } catch (err) { console.error('Bestätigung fehlgeschlagen:', err) }
   }
 
   // Ablehnen
@@ -68,49 +69,43 @@ export default function RelationSuggestions({ onChanged }: Props) {
       await put(`/api/relations/${id}/reject`)
       setSuggestions(prev => prev.filter(s => s.id !== id))
       onChanged?.()
-    } catch (err) {
-      console.error('Ablehnung fehlgeschlagen:', err)
-    }
+    } catch (err) { console.error('Ablehnung fehlgeschlagen:', err) }
   }
 
-  // Alle bestätigen
+  // Alle bestätigen / ablehnen
   const handleConfirmAll = async () => {
-    for (const s of suggestions) {
-      await put(`/api/relations/${s.id}/confirm`)
-    }
+    for (const s of suggestions) await put(`/api/relations/${s.id}/confirm`)
+    setSuggestions([])
+    onChanged?.()
+  }
+  const handleRejectAll = async () => {
+    for (const s of suggestions) await put(`/api/relations/${s.id}/reject`)
     setSuggestions([])
     onChanged?.()
   }
 
-  // Alle ablehnen
-  const handleRejectAll = async () => {
-    for (const s of suggestions) {
-      await put(`/api/relations/${s.id}/reject`)
-    }
-    setSuggestions([])
-    onChanged?.()
+  // Edit-Modal öffnen
+  const handleEdit = (s: RelationData) => {
+    setEditTarget({
+      mode: 'relation', id: s.id,
+      sourceTitle: s.source_title || `Konzept #${s.source_id}`,
+      targetTitle: s.target_title || `Konzept #${s.target_id}`,
+      typeId: s.relation_type?.id || 0,
+      reason: s.reason || '',
+    })
   }
 
   const typeLabel = (rt: RelationData['relation_type']) =>
     rt ? (language === 'de' ? rt.label_de : rt.label_en) : '?'
 
-  const nodeLabel = (type: string, id: number, title?: string) => {
-    if (title) return title
-    const labels: Record<string, string> = {
-      note: 'Note', summary: 'Summary', module: 'Module',
-    }
-    return `${labels[type] || type} #${id}`
-  }
-
-
-  // Doppelklick → zur Quelle navigieren
   const navigateToSource = (type: string, id: number) => {
     if (type === 'note') navigate(`/notes?open=${id}`)
     else if (type === 'summary' || type === 'module') navigate(`/modules/${id}`)
   }
+
   return (
     <div className="space-y-4">
-      {/* Header + Detect Button */}
+      {/* Header + Detect */}
       <div className="flex items-center justify-between">
         <h3 className="hud-title text-glow text-lg">
           {language === 'de' ? 'AI-VORSCHLÄGE' : 'AI SUGGESTIONS'}
@@ -131,10 +126,7 @@ export default function RelationSuggestions({ onChanged }: Props) {
       {/* Detect-Resultat */}
       {detectResult && (
         <p className="text-xs px-3 py-2 rounded"
-          style={{
-            background: 'var(--color-hover-bg)',
-            color: 'var(--color-text-secondary)',
-          }}>
+          style={{ background: 'var(--color-hover-bg)', color: 'var(--color-text-secondary)' }}>
           {detectResult}
         </p>
       )}
@@ -173,22 +165,21 @@ export default function RelationSuggestions({ onChanged }: Props) {
                 background: 'var(--color-bg-surface)',
                 borderColor: 'rgba(255, 170, 0, 0.2)',
               }}>
-              {/* Tripel-Darstellung */}
+              {/* Tripel */}
               <div className="flex items-center gap-2 text-sm flex-wrap">
-                <span className="cursor-pointer hover:underline" style={{ color: 'var(--color-text-primary)' }}
+                <span className="cursor-pointer hover:underline"
+                  style={{ color: 'var(--color-text-primary)' }}
                   onDoubleClick={() => navigateToSource(s.source_type, s.source_id)}>
-                  {nodeLabel(s.source_type, s.source_id, s.source_title)}
+                  {s.source_title || `Konzept #${s.source_id}`}
                 </span>
                 <span className="font-semibold px-2 py-0.5 rounded text-xs"
-                  style={{
-                    color: 'var(--color-warning)',
-                    background: 'rgba(255, 170, 0, 0.1)',
-                  }}>
+                  style={{ color: 'var(--color-warning)', background: 'rgba(255, 170, 0, 0.1)' }}>
                   {typeLabel(s.relation_type)}
                 </span>
-                <span className="cursor-pointer hover:underline" style={{ color: 'var(--color-text-primary)' }}
+                <span className="cursor-pointer hover:underline"
+                  style={{ color: 'var(--color-text-primary)' }}
                   onDoubleClick={() => navigateToSource(s.target_type, s.target_id)}>
-                  {nodeLabel(s.target_type, s.target_id, s.target_title)}
+                  {s.target_title || `Konzept #${s.target_id}`}
                 </span>
               </div>
 
@@ -200,8 +191,13 @@ export default function RelationSuggestions({ onChanged }: Props) {
                 </p>
               )}
 
-              {/* Aktionen */}
+              {/* Aktionen: Edit + Confirm + Reject */}
               <div className="flex gap-2 mt-2">
+                <button onClick={() => handleEdit(s)}
+                  className="hud-btn text-xs px-3 py-1"
+                  style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}>
+                  {language === 'de' ? 'Bearbeiten' : 'Edit'}
+                </button>
                 <button onClick={() => handleConfirm(s.id)}
                   className="hud-btn text-xs px-3 py-1"
                   style={{ borderColor: 'var(--color-success)', color: 'var(--color-success)' }}>
@@ -216,6 +212,15 @@ export default function RelationSuggestions({ onChanged }: Props) {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Edit Modal */}
+      {editTarget && (
+        <OntologyEditModal
+          target={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSaved={() => { loadSuggestions(); onChanged?.() }}
+        />
       )}
     </div>
   )
