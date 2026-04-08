@@ -67,7 +67,7 @@ export default function MetisLinksTab() {
   const navigateTo = (node: MetisNode) => {
     if (node.type === 'note') navigate(`/notes?open=${node.source_id}`)
     else if (node.type === 'summary' && node.module_id) navigate(`/modules/${node.module_id}`)
-    else navigate('/dashboard')
+    else navigate('/archiv')
   }
 
   // Confirm/Reject
