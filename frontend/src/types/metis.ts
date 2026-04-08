@@ -80,6 +80,7 @@ export interface ConceptDetail extends ConceptNode {
 export interface ConceptGraph {
   nodes: ConceptNode[]
   edges: ConceptEdge[]
+  clusters: { id: number; label: string; description: string | null; node_ids: number[] }[]
 }
 // --- Journal Metis (verschlüsselt, merged view) ---
 

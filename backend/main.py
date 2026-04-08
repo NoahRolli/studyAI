@@ -38,6 +38,8 @@ from backend.api.relations_inference import router as relations_inference_router
 from backend.api.git_tracker import router as git_tracker_router
 from backend.api.concepts import router as concepts_router
 from backend.api.concepts_ai import router as concepts_ai_router
+from backend.api.concepts_cluster import router as concepts_cluster_router
+from backend.api.concepts_cluster import router as concepts_cluster_router
 from backend.models.module import Module  # noqa: F401
 from backend.models.document import Document  # noqa: F401
 from backend.models.summary import Summary  # noqa: F401
@@ -56,6 +58,8 @@ from backend.models.git_commit import GitCommit  # noqa: F401
 from backend.models.concept import Concept  # noqa: F401
 from backend.models.concept import ConceptSource  # noqa: F401
 from backend.models.concept import ConceptEdge  # noqa: F401
+from backend.models.concept import ConceptCluster  # noqa: F401
+from backend.models.concept import ConceptClusterMember  # noqa: F401
 from backend.journal.models.journal_entry import JournalEntry  # noqa: F401
 from backend.journal.models.medication import Medication  # noqa: F401
 from backend.journal.models.medication import IntakeLog  # noqa: F401
@@ -151,7 +155,9 @@ app.include_router(relations_ai_router)
 app.include_router(relations_inference_router)
 app.include_router(git_tracker_router)
 app.include_router(concepts_router)
+app.include_router(concepts_cluster_router)
 app.include_router(concepts_ai_router)
+app.include_router(concepts_cluster_router)
 
 # Static Files — gebautes Frontend servieren (nur in Production)
 if _HAS_FRONTEND:

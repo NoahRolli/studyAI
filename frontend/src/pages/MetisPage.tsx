@@ -17,13 +17,13 @@ const MetisSphere3D = lazy(
 export default function MetisPage() {
   const { t } = useLanguage()
   const [conceptGraph, setConceptGraph] = useState<ConceptGraph>({
-    nodes: [], edges: [],
+    nodes: [], edges: [], clusters: [],
   })
   const [view, setView] = useState<MetisViewMode>('3d')
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [linking, setLinking] = useState(false)
-  const [selectedConceptId, setSelectedConceptId] = useState<number | null>(null)
+  const [, setSelectedConceptId] = useState<number | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const [showLabels, setShowLabels] = useState(false)
 
@@ -59,7 +59,11 @@ export default function MetisPage() {
         : e.confirmed ? 'confirmed' : 'rejected'
       ) as 'suggested' | 'confirmed' | 'rejected',
     })),
-    clusters: [],
+    clusters: conceptGraph.clusters.map(cl => ({
+      id: cl.id, label: cl.label,
+      description: cl.description,
+      color: null, node_ids: cl.node_ids,
+    })),
   }), [conceptGraph])
 
   // Konzept-Graph laden
@@ -99,6 +103,20 @@ export default function MetisPage() {
       console.error('Concept auto-link failed:', err)
     } finally {
       setLinking(false)
+    }
+  }, [loadGraph])
+
+  // Auto-Cluster — Ollama gruppiert Konzepte thematisch
+  const [clustering, setClustering] = useState(false)
+  const handleAutoCluster = useCallback(async () => {
+    setClustering(true)
+    try {
+      await post("/api/concepts/auto-cluster")
+      await loadGraph()
+    } catch (err) {
+      console.error("Concept auto-cluster failed:", err)
+    } finally {
+      setClustering(false)
     }
   }, [loadGraph])
 
@@ -143,13 +161,13 @@ export default function MetisPage() {
           onViewChange={setView}
           onSync={handleSync}
           onAutoLink={handleAutoLink}
-          onAutoCluster={handleSync}
+          onAutoCluster={handleAutoCluster}
           syncing={syncing}
           linking={linking}
-          clustering={false}
+          clustering={clustering}
           nodeCount={conceptGraph.nodes.length}
           edgeCount={conceptGraph.edges.length}
-          clusterCount={0}
+          clusterCount={conceptGraph.clusters.length}
         />
       </div>
 

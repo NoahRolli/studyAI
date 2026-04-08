@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel
 from backend.models.database import get_db
-from backend.models.concept import Concept, ConceptSource, ConceptEdge
+from backend.models.concept import Concept, ConceptSource, ConceptEdge, ConceptCluster, ConceptClusterMember
 from backend.models.note import Note
 from backend.models.summary import Summary
 
@@ -95,7 +95,18 @@ def get_concept_graph(db: Session = Depends(get_db)):
         "confirmed": e.confirmed
     } for e in edges]
 
-    return {"nodes": nodes, "edges": edge_list}
+    # Cluster
+    clusters = db.query(ConceptCluster).all()
+    cluster_list = []
+    for cl in clusters:
+        member_ids = [m.concept_id for m in cl.members]
+        cluster_list.append({
+            "id": cl.id, "label": cl.label,
+            "description": cl.description,
+            "node_ids": member_ids
+        })
+
+    return {"nodes": nodes, "edges": edge_list, "clusters": cluster_list}
 
 
 @router.get("/{concept_id}")

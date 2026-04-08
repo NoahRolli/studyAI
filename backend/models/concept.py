@@ -132,3 +132,45 @@ class ConceptEdge(Base):
         "Concept", foreign_keys=[target_concept_id],
         back_populates="edges_in"
     )
+
+
+class ConceptCluster(Base):
+    """Thematische Gruppierung von Konzepten (AI-generiert)."""
+    __tablename__ = "concept_clusters"
+
+    id = Column(Integer, primary_key=True, index=True)
+    label = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    created_at = Column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+
+    members = relationship(
+        "ConceptClusterMember", back_populates="cluster",
+        cascade="all, delete-orphan"
+    )
+
+
+class ConceptClusterMember(Base):
+    """Zuordnung Konzept → Cluster."""
+    __tablename__ = "concept_cluster_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cluster_id = Column(
+        Integer, ForeignKey("concept_clusters.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    concept_id = Column(
+        Integer, ForeignKey("concepts.id", ondelete="CASCADE"),
+        nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "cluster_id", "concept_id",
+            name="uq_concept_cluster_member"
+        ),
+    )
+
+    cluster = relationship("ConceptCluster", back_populates="members")
+    concept = relationship("Concept")
