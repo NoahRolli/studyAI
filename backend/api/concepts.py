@@ -1,6 +1,7 @@
 # Konzept-Graph CRUD API — Lesen, Editieren, Mergen, Löschen
 # Endpunkte für Graph-View, Liste, Detail und Edge-Management
 
+from sqlalchemy import or_
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -81,7 +82,7 @@ def get_concept_graph(db: Session = Depends(get_db)):
 
     # Edges (nur bestätigte oder pending, nicht abgelehnte)
     edges = db.query(ConceptEdge).filter(
-        ConceptEdge.confirmed != False
+        or_(ConceptEdge.confirmed == None, ConceptEdge.confirmed == True)
     ).all()
 
     edge_list = [{
@@ -117,11 +118,11 @@ def get_concept_detail(concept_id: int, db: Session = Depends(get_db)):
     # Verwandte Konzepte (über Edges)
     edges_out = db.query(ConceptEdge).filter(
         ConceptEdge.source_concept_id == concept_id,
-        ConceptEdge.confirmed != False
+        or_(ConceptEdge.confirmed == None, ConceptEdge.confirmed == True)
     ).all()
     edges_in = db.query(ConceptEdge).filter(
         ConceptEdge.target_concept_id == concept_id,
-        ConceptEdge.confirmed != False
+        or_(ConceptEdge.confirmed == None, ConceptEdge.confirmed == True)
     ).all()
 
     related = []
