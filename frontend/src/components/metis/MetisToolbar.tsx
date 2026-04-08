@@ -28,7 +28,6 @@ export default function MetisToolbar({
   const views: { key: MetisViewMode; label: string }[] = [
     { key: '3d', label: t.metis.view3D },
     { key: 'list', label: t.metis.viewList },
-    { key: 'concepts', label: t.metis.viewConcepts || 'Konzepte' },
   ]
 
   return (

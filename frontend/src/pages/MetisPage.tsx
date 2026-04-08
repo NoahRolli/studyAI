@@ -1,16 +1,14 @@
 // MetisPage — Orchestrator für den Metis Knowledge-Graph
-// 3D-Sphäre, Listen-Ansicht, Konzept-Graph.
+// Konzept-Graph: Schlagworte als Nodes in 3D-Sphäre oder Liste.
 // Toolbar, Detail-Panel, MiniMap, Fullscreen, Label-Toggle.
 
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react'
 import { get, post } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import MetisToolbar from '../components/metis/MetisToolbar'
-import MetisListView from '../components/metis/MetisListView'
 import ConceptListView from '../components/metis/ConceptListView'
-import MetisNodeDetail from '../components/metis/MetisNodeDetail'
 import MetisMiniMap3D from '../components/metis/MetisMiniMap3D'
-import type { MetisGraph, MetisViewMode, MetisNode, ConceptGraph } from '../types/metis'
+import type { MetisViewMode, ConceptGraph, MetisGraph } from '../types/metis'
 
 const MetisSphere3D = lazy(
   () => import('../components/metis/MetisSphere3D')
@@ -18,9 +16,6 @@ const MetisSphere3D = lazy(
 
 export default function MetisPage() {
   const { t } = useLanguage()
-  const [graph, setGraph] = useState<MetisGraph>({
-    nodes: [], edges: [], clusters: [],
-  })
   const [conceptGraph, setConceptGraph] = useState<ConceptGraph>({
     nodes: [], edges: [],
   })
@@ -28,8 +23,7 @@ export default function MetisPage() {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [linking, setLinking] = useState(false)
-  const [clustering, setClustering] = useState(false)
-  const [selectedNode, setSelectedNode] = useState<MetisNode | null>(null)
+  const [selectedConceptId, setSelectedConceptId] = useState<number | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const [showLabels, setShowLabels] = useState(false)
 
@@ -49,81 +43,69 @@ export default function MetisPage() {
     }
   }, [])
 
-  // Metis-Graph laden (Datei-Nodes)
-  const loadGraph = useCallback(async () => {
-    try {
-      const data = await get<MetisGraph>('/api/metis/graph')
-      setGraph(data)
-    } catch (err) {
-      console.error('Metis graph load failed:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // Konzept-Graph als MetisGraph-Format (für Sphäre)
+  const sphereGraph = useMemo<MetisGraph>(() => ({
+    nodes: conceptGraph.nodes.map(c => ({
+      id: c.id, type: 'note' as const, source_id: c.id,
+      title: c.name, pos_x: null, pos_y: null,
+      embedding_stale: false, cluster_ids: [],
+    })),
+    edges: conceptGraph.edges.map(e => ({
+      id: e.id, source_node_id: e.source,
+      target_node_id: e.target,
+      relation_type: e.relation_type,
+      strength: e.strength,
+      status: (e.confirmed === null ? 'suggested'
+        : e.confirmed ? 'confirmed' : 'rejected'
+      ) as 'suggested' | 'confirmed' | 'rejected',
+    })),
+    clusters: [],
+  }), [conceptGraph])
 
   // Konzept-Graph laden
-  const loadConceptGraph = useCallback(async () => {
+  const loadGraph = useCallback(async () => {
     try {
       const data = await get<ConceptGraph>('/api/concepts/graph')
       setConceptGraph(data)
     } catch (err) {
       console.error('Concept graph load failed:', err)
+    } finally {
+      setLoading(false)
     }
   }, [])
 
-  useEffect(() => {
-    loadGraph()
-    loadConceptGraph()
-  }, [loadGraph, loadConceptGraph])
+  useEffect(() => { loadGraph() }, [loadGraph])
 
-  // Sync — beide Graphen aktualisieren
+  // Sync — Konzepte aus Notes + Summaries extrahieren
   const handleSync = useCallback(async () => {
     setSyncing(true)
     try {
-      await post('/api/metis/sync')
       await post('/api/concepts/sync')
       await loadGraph()
-      await loadConceptGraph()
     } catch (err) {
-      console.error('Sync failed:', err)
+      console.error('Concept sync failed:', err)
     } finally {
       setSyncing(false)
     }
-  }, [loadGraph, loadConceptGraph])
+  }, [loadGraph])
 
+  // Auto-Link — Ollama schlägt Relationen vor
   const handleAutoLink = useCallback(async () => {
     setLinking(true)
     try {
-      if (view === 'concepts') {
-        await post('/api/concepts/auto-link')
-        await loadConceptGraph()
-      } else {
-        await post('/api/metis/auto-link')
-        await loadGraph()
-      }
+      await post('/api/concepts/auto-link')
+      await loadGraph()
     } catch (err) {
-      console.error('Auto-link failed:', err)
+      console.error('Concept auto-link failed:', err)
     } finally {
       setLinking(false)
     }
-  }, [view, loadGraph, loadConceptGraph])
-
-  const handleAutoCluster = useCallback(async () => {
-    setClustering(true)
-    try {
-      await post('/api/metis/auto-cluster')
-      await loadGraph()
-    } catch (err) {
-      console.error('Auto-cluster failed:', err)
-    } finally {
-      setClustering(false)
-    }
   }, [loadGraph])
 
+  // Node-Klick in der Sphäre
   const handleNodeClick = useCallback((nodeId: number) => {
-    const node = graph.nodes.find(n => n.id === nodeId)
-    setSelectedNode(node || null)
-  }, [graph.nodes])
+    setSelectedConceptId(nodeId)
+  }, [])
 
   // Fullscreen toggle mit Escape-Listener
   useEffect(() => {
@@ -141,10 +123,6 @@ export default function MetisPage() {
       </div>
     )
   }
-
-  // Aktive Counts je nach View
-  const activeNodes = view === 'concepts' ? conceptGraph.nodes.length : graph.nodes.length
-  const activeEdges = view === 'concepts' ? conceptGraph.edges.length : graph.edges.length
 
   const wrapperClass = fullscreen
     ? 'fixed inset-0 z-50 flex flex-col bg-[var(--color-bg-deep)]'
@@ -165,29 +143,29 @@ export default function MetisPage() {
           onViewChange={setView}
           onSync={handleSync}
           onAutoLink={handleAutoLink}
-          onAutoCluster={handleAutoCluster}
+          onAutoCluster={handleSync}
           syncing={syncing}
           linking={linking}
-          clustering={clustering}
-          nodeCount={activeNodes}
-          edgeCount={activeEdges}
-          clusterCount={graph.clusters.length}
+          clustering={false}
+          nodeCount={conceptGraph.nodes.length}
+          edgeCount={conceptGraph.edges.length}
+          clusterCount={0}
         />
       </div>
 
-      {/* Graph / Liste / Konzepte */}
+      {/* Sphäre oder Liste */}
       <div className={graphClass}>
-        {view === 'concepts' ? (
-          <ConceptListView
-            graph={conceptGraph}
-            onRefresh={loadConceptGraph}
-          />
-        ) : activeNodes === 0 ? (
+        {conceptGraph.nodes.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-[var(--color-text-muted)]">{t.metis.noNodes}</p>
+            <p className="text-[var(--color-text-muted)]">
+              {t.metis.noConcepts || 'Keine Konzepte. Starte einen Sync.'}
+            </p>
           </div>
         ) : view === 'list' ? (
-          <MetisListView graph={graph} />
+          <ConceptListView
+            graph={conceptGraph}
+            onRefresh={loadGraph}
+          />
         ) : (
           <Suspense fallback={
             <div className="flex items-center justify-center h-full">
@@ -195,7 +173,7 @@ export default function MetisPage() {
             </div>
           }>
             <MetisSphere3D
-              graph={graph}
+              graph={sphereGraph}
               onNodeClick={handleNodeClick}
               onCameraMove={handleCameraMove}
               transparent={true}
@@ -205,7 +183,7 @@ export default function MetisPage() {
         )}
 
         {/* Overlay Controls — nur bei 3D */}
-        {view === '3d' && graph.nodes.length > 0 && (
+        {view === '3d' && conceptGraph.nodes.length > 0 && (
           <>
             <div className="absolute top-2 left-2 z-20">
               <button
@@ -226,22 +204,12 @@ export default function MetisPage() {
         )}
 
         {/* MiniMap für 3D */}
-        {view === '3d' && graph.nodes.length > 0 && (
+        {view === '3d' && conceptGraph.nodes.length > 0 && (
           <MetisMiniMap3D
-            graph={graph}
+            graph={sphereGraph}
             cameraAzimuth={cameraRef.current.azimuth}
             cameraElevation={cameraRef.current.elevation}
             cameraDistance={cameraRef.current.distance}
-          />
-        )}
-
-        {/* Detail-Panel — nur bei Datei-Graph */}
-        {selectedNode && view !== 'concepts' && (
-          <MetisNodeDetail
-            node={selectedNode}
-            graph={graph}
-            onClose={() => setSelectedNode(null)}
-            onEdgeReviewed={loadGraph}
           />
         )}
       </div>
