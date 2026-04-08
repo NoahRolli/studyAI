@@ -1,21 +1,21 @@
-// Dashboard — Ordner-Hierarchie mit DnD, Pin, Inline-Edit
-// Nutzt useDashboard Hook für State und Logik
+// Archiv — Ordner-Hierarchie mit DnD, Pin, Inline-Edit
+// Nutzt useArchiv Hook für State und Logik
 
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../hooks/useLanguage'
-import { useDashboard } from '../hooks/useDashboard'
+import { useArchiv } from '../hooks/useArchiv'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import DraggableCard from '../components/DraggableCard'
 import DroppableFolder from '../components/DroppableFolder'
-import DashboardForms from '../components/dashboard/DashboardForms'
+import ArchivForms from '../components/archiv/ArchivForms'
 import type { ModuleCreate } from '../types/models'
 
-function Dashboard() {
+function Archiv() {
   const { t } = useLanguage()
-  const db = useDashboard()
+  const db = useArchiv()
   const [dragLabel, setDragLabel] = useState<string | null>(null)
   const [showFolderForm, setShowFolderForm] = useState(false)
   const [showModuleForm, setShowModuleForm] = useState(false)
@@ -140,7 +140,7 @@ function Dashboard() {
       )}
 
       {/* Formulare */}
-      <DashboardForms
+      <ArchivForms
         showFolderForm={showFolderForm}
         showModuleForm={showModuleForm}
         onCreateFolder={handleCreateFolder}
@@ -254,4 +254,4 @@ function Dashboard() {
   )
 }
 
-export default Dashboard
+export default Archiv
