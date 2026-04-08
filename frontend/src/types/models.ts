@@ -195,6 +195,7 @@ export interface FolderContents {
   parent_id: number | null
   folders: Folder[]
   modules: Module[]
+  documents: Document[]
 }
 
 // Breadcrumb-Eintrag (von GET /api/folders/{id}/breadcrumbs)
