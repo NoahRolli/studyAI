@@ -5,6 +5,7 @@
 import shutil
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -123,6 +124,18 @@ def delete_document(document_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"'{document.filename}' gelöscht"}
 
+
+
+# GET /api/documents/{id}/file — Datei ausliefern (Preview/Download)
+@router.get("/documents/{document_id}/file")
+def serve_document_file(document_id: int, db: Session = Depends(get_db)):
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Dokument nicht gefunden")
+    file_path = Path(document.file_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Datei nicht gefunden")
+    return FileResponse(str(file_path), filename=document.filename)
 
 def _save_document(
     file: UploadFile, db: Session, *,
