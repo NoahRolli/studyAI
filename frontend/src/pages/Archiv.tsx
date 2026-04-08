@@ -11,6 +11,7 @@ import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import DraggableCard from '../components/DraggableCard'
 import DroppableFolder from '../components/DroppableFolder'
 import ArchivForms from '../components/archiv/ArchivForms'
+import ArchivDocuments from '../components/archiv/ArchivDocuments'
 import type { ModuleCreate } from '../types/models'
 
 function Archiv() {
@@ -147,9 +148,17 @@ function Archiv() {
         onCreateModule={handleCreateModule}
       />
 
+
+      {/* Lose Dokumente + Upload-Zone */}
+      <ArchivDocuments folderId={db.currentFolderId}
+        documents={db.documents} onReload={db.loadContents} />
+      {/* Lose Dokumente + Upload */}
+      <ArchivDocuments folderId={db.currentFolderId}
+        documents={db.documents} onReload={db.loadContents} />
+
       {db.loading && <p style={{ color: 'var(--color-text-muted)' }}>{t.common.loading}</p>}
 
-      {!db.loading && db.folders.length === 0 && db.modules.length === 0 && (
+      {!db.loading && db.folders.length === 0 && db.modules.length === 0 && db.documents.length === 0 && (
         <div className="text-center py-16">
           <p className="text-lg mb-2" style={{ color: 'var(--color-text-muted)' }}>
             {db.currentFolderId === null ? t.archiv.emptyRoot : t.archiv.emptyFolder}
