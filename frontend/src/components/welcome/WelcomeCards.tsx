@@ -28,7 +28,7 @@ const COLOR_MAP: Record<string, string> = {
 
 // Einzelne Karten-Definition
 const CARDS = [
-  { to: '/dashboard', titleKey: 'dashboardTitle', descKey: 'dashboardDesc' },
+  { to: '/archiv', titleKey: 'dashboardTitle', descKey: 'dashboardDesc' },
   { to: '/journal', titleKey: 'journalTitle', descKey: 'journalDesc' },
   { to: '/calendar', titleKey: 'calendarTitle', descKey: 'calendarDesc' },
   { to: '/notes', titleKey: 'notesTitle', descKey: 'notesDesc' },
