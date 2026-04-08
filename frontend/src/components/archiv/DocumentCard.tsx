@@ -36,6 +36,8 @@ export default function DocumentCard({
   const [editingSummary, setEditingSummary] = useState(false)
   const [summaryTitle, setSummaryTitle] = useState(summary?.title || '')
   const [editingContent, setEditingContent] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+  const isPdf = doc.file_type === "pdf"
 
   const displayName = doc.display_name || doc.filename
   const icon = FILE_ICONS[doc.file_type] || 'FILE'
@@ -92,6 +94,13 @@ export default function DocumentCard({
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
+          {isPdf && (
+            <button onClick={() => setShowPreview(!showPreview)}
+              className="text-xs px-2 py-0.5 rounded transition-colors
+                text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
+              {showPreview ? "Preview aus" : "Preview"}
+            </button>
+          )}
           <button onClick={onSummarize} disabled={generating}
             className="hud-btn hud-btn-primary" style={{ fontSize: '0.65rem' }}>
             {generating ? t.moduleDetail.generating : t.moduleDetail.summarize}
@@ -106,6 +115,18 @@ export default function DocumentCard({
         </div>
       </div>
 
+
+      {/* PDF-Preview */}
+      {showPreview && isPdf && (
+        <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--color-border)" }}>
+          <iframe
+            src={`${import.meta.env.DEV ? "http://localhost:8000" : ""}/api/documents/${doc.id}/file`}
+            className="w-full rounded border"
+            style={{ height: "500px", borderColor: "var(--color-border)" }}
+            title={doc.filename}
+          />
+        </div>
+      )}
       {summary && (
         <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
           <div className="flex items-center justify-between mb-2">
