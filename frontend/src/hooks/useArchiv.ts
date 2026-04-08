@@ -1,4 +1,4 @@
-// useDashboard — State + Logik für Dashboard
+// useArchiv — State + Logik für Archiv
 // Lädt Ordner + Module, CRUD, DnD-Reihenfolge, Pin, Rename
 
 import { useState, useEffect, useCallback } from 'react'
@@ -9,7 +9,7 @@ import type {
   FolderContents, BreadcrumbItem,
 } from '../types/models'
 
-export function useDashboard() {
+export function useArchiv() {
   const { t } = useLanguage()
   const [currentFolderId, setCurrentFolderId] = useState<number | null>(null)
   const [folders, setFolders] = useState<Folder[]>([])
