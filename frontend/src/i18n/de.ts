@@ -70,7 +70,7 @@ const de = {
     emptyRoot: 'Noch nichts vorhanden.',
     emptyFolder: 'Ordner ist leer.',
     emptyHint: 'Erstelle einen Ordner oder ein Modul um loszulegen.',
-    moveFailed: 'Verschieben fehlgeschlagen',
+    moveFailed: 'Verschieben fehlgeschlagen',    uploadTitle: 'Datei hochladen',    uploadButton: 'Datei wählen',    uploading: 'Hochladen...',    dropHere: 'Datei hier ablegen...',    uploadNeedsFolder: 'Bitte zuerst einen Ordner öffnen.',    looseDocuments: 'Dokumente',
   },
 
   // Hauptkalender
