@@ -1,5 +1,5 @@
-// DashboardForms — Formulare für Ordner + Modul erstellen
-// Extrahiert aus Dashboard für Dateigrößen-Limit
+// ArchivForms — Formulare für Ordner + Modul erstellen
+// Extrahiert aus Archiv für Dateigrößen-Limit
 
 import { useState } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
@@ -12,7 +12,7 @@ interface Props {
   onCreateModule: (data: ModuleCreate) => Promise<void>
 }
 
-export default function DashboardForms({
+export default function ArchivForms({
   showFolderForm, showModuleForm, onCreateFolder, onCreateModule,
 }: Props) {
   const { t } = useLanguage()
