@@ -42,8 +42,45 @@ export interface MetisGraph {
 }
 
 // Ansichts-Modi
-export type MetisViewMode = '3d' | 'list'
+export type MetisViewMode = '3d' | 'list' | 'concepts'
 
+
+// --- Konzept-Graph ---
+
+export interface ConceptNode {
+  id: number
+  name: string
+  description: string | null
+  source_count: number
+  created_at: string | null
+}
+
+export interface ConceptEdge {
+  id: number
+  source: number
+  target: number
+  relation_type: string
+  strength: number
+  ai_generated: boolean
+  confirmed: boolean | null
+}
+
+export interface ConceptSource {
+  type: string
+  id: number
+  title: string
+  relevance: number
+}
+
+export interface ConceptDetail extends ConceptNode {
+  sources: ConceptSource[]
+  related: { id: number; name: string; relation: string; direction: string }[]
+}
+
+export interface ConceptGraph {
+  nodes: ConceptNode[]
+  edges: ConceptEdge[]
+}
 // --- Journal Metis (verschlüsselt, merged view) ---
 
 // Node im merged Journal-Metis-Graph
