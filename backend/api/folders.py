@@ -23,6 +23,7 @@ class FolderCreate(BaseModel):
     parent_id: Optional[int] = None
 
 class FolderUpdate(BaseModel):
+    description: Optional[str] = None
     name: Optional[str] = None
     parent_id: Optional[int] = None
 
@@ -70,7 +71,7 @@ def get_folder_contents(
         "folders": [
             {
                 "id": f.id, "name": f.name, "parent_id": f.parent_id,
-                "sort_order": f.sort_order, "is_pinned": f.is_pinned,
+                "sort_order": f.sort_order, "is_pinned": f.is_pinned, "description": f.description,
                 "created_at": f.created_at.isoformat(),
             }
             for f in folders
@@ -120,6 +121,8 @@ def get_breadcrumbs(folder_id: int, db: Session = Depends(get_db)):
 @router.post("/")
 def create_folder(data: FolderCreate, db: Session = Depends(get_db)):
     """Neuen Ordner erstellen."""
+    if data.description is not None:
+        folder.description = data.description
     if data.parent_id is not None:
         parent = db.query(Folder).filter(Folder.id == data.parent_id).first()
         if not parent:
@@ -140,6 +143,8 @@ def update_folder(folder_id: int, data: FolderUpdate, db: Session = Depends(get_
         raise HTTPException(status_code=404, detail="Ordner nicht gefunden")
     if data.name is not None:
         folder.name = data.name
+    if data.description is not None:
+        folder.description = data.description
     if data.parent_id is not None:
         if data.parent_id == folder_id:
             raise HTTPException(status_code=400, detail="Ordner kann nicht in sich selbst verschoben werden")
