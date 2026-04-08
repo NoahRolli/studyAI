@@ -7,6 +7,7 @@ import { get, post } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import MetisToolbar from '../components/metis/MetisToolbar'
 import ConceptListView from '../components/metis/ConceptListView'
+import ConceptDetailPanel from "../components/metis/ConceptDetailPanel"
 import MetisMiniMap3D from '../components/metis/MetisMiniMap3D'
 import type { MetisViewMode, ConceptGraph, MetisGraph } from '../types/metis'
 
@@ -228,6 +229,15 @@ export default function MetisPage() {
             cameraAzimuth={cameraRef.current.azimuth}
             cameraElevation={cameraRef.current.elevation}
             cameraDistance={cameraRef.current.distance}
+          />
+        )}
+
+        {/* Konzept-Detail-Panel */}
+        {selectedConceptId && (
+          <ConceptDetailPanel
+            conceptId={selectedConceptId}
+            onClose={() => setSelectedConceptId(null)}
+            onEdgeReviewed={loadGraph}
           />
         )}
       </div>
