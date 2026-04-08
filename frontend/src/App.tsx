@@ -3,7 +3,7 @@
 // Routen:
 // - "/login" → Login-Seite (nur für Olymp-Server)
 // - "/" → Begrüssungsseite
-// - "/dashboard" → Dashboard (Module + Ordner)
+// - "/archiv" → Archiv (Module + Ordner)
 // - "/modules/:id" → Modul-Detailseite
 // - "/calendar" → Hauptkalender
 // - "/mindmap/:summaryId" → Fullscreen Study-Mindmap
@@ -15,7 +15,7 @@ import { LanguageProvider } from './hooks/useLanguage'
 import { ThemeProvider } from './hooks/useTheme'
 import Layout from './components/Layout'
 import WelcomePage from './pages/WelcomePage'
-import Dashboard from './pages/Dashboard'
+import Archiv from './pages/Archiv'
 import ModuleDetail from './pages/ModuleDetail'
 import CalendarPage from './pages/CalendarPage'
 import NotesPage from './pages/NotesPage'
@@ -36,7 +36,7 @@ function App() {
             <Route path="login" element={<LoginPage />} />
             <Route path="/" element={<Layout />}>
               <Route index element={<WelcomePage />} />
-              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="archiv" element={<Archiv />} />
               <Route path="modules/:id" element={<ModuleDetail />} />
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="notes" element={<NotesPage />} />
