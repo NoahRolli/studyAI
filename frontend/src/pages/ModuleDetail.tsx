@@ -7,7 +7,7 @@ import { useParams, Link } from 'react-router-dom'
 import { get, post, del } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import type { Module, Document, Summary } from '../types/models'
-import DocumentCard from '../components/dashboard/DocumentCard'
+import DocumentCard from '../components/archiv/DocumentCard'
 
 function ModuleDetail() {
   const { id } = useParams<{ id: string }>()
@@ -116,7 +116,7 @@ function ModuleDetail() {
   if (!module) return (
     <div className="text-center py-16 animate-fade-in">
       <p className="text-lg mb-4" style={{ color: 'var(--color-text-muted)' }}>{t.moduleDetail.notFound}</p>
-      <Link to="/dashboard" className="text-sm" style={{ color: 'var(--color-primary)' }}>
+      <Link to="/archiv" className="text-sm" style={{ color: 'var(--color-primary)' }}>
         {t.moduleDetail.backToDashboard}
       </Link>
     </div>
@@ -128,7 +128,7 @@ function ModuleDetail() {
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}>
 
-      <Link to="/dashboard" className="text-xs mb-4 inline-block transition-colors"
+      <Link to="/archiv" className="text-xs mb-4 inline-block transition-colors"
         style={{ color: 'var(--color-text-muted)' }}>
         {t.moduleDetail.backToDashboard}
       </Link>
