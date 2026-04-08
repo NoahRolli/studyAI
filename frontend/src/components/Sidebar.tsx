@@ -2,7 +2,7 @@
 // Einklappbar (Toggle), resizable (Drag am rechten Rand)
 // Collapsed-State wird in localStorage gespeichert
 // Pallas-Logo klickbar → Begrüssungsseite (/)
-// Nav-Links: Dashboard, Journal, Kalender, Notes, Metis
+// Nav-Links: Archiv, Journal, Kalender, Notes, Metis
 // Logout-Button (nur wenn Auth aktiv auf Olymp-Server)
 // Language-Toggle und Theme-Selector unten (nur wenn ausgeklappt)
 // Ollama-Status-Indikator im Footer (MacBook/Server/Offline)
@@ -186,8 +186,8 @@ function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex flex-col gap-2">
-          <NavLink to="/dashboard" className={linkStyle} title={t.sidebar.dashboard}>
-            {collapsed ? 'D' : t.sidebar.dashboard}
+          <NavLink to="/archiv" className={linkStyle} title={t.sidebar.archiv}>
+            {collapsed ? 'A' : t.sidebar.archiv}
           </NavLink>
           <NavLink to="/journal" className={linkStyle} title={t.sidebar.journal}>
             {collapsed ? 'J' : t.sidebar.journal}
