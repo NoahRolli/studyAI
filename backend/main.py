@@ -51,6 +51,9 @@ from backend.models.metis_edge import MetisEdge  # noqa: F401
 from backend.models.metis_cluster import MetisCluster  # noqa: F401
 from backend.models.metis_cluster import MetisClusterMember  # noqa: F401
 from backend.models.git_commit import GitCommit  # noqa: F401
+from backend.models.concept import Concept  # noqa: F401
+from backend.models.concept import ConceptSource  # noqa: F401
+from backend.models.concept import ConceptEdge  # noqa: F401
 from backend.journal.models.journal_entry import JournalEntry  # noqa: F401
 from backend.journal.models.medication import Medication  # noqa: F401
 from backend.journal.models.medication import IntakeLog  # noqa: F401
