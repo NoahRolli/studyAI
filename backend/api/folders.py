@@ -71,7 +71,7 @@ def get_folder_contents(
         "folders": [
             {
                 "id": f.id, "name": f.name, "parent_id": f.parent_id,
-                "sort_order": f.sort_order, "is_pinned": f.is_pinned, "description": f.description,
+                "sort_order": f.sort_order, "is_pinned": f.is_pinned, "metis_enabled": f.metis_enabled, "description": f.description,
                 "created_at": f.created_at.isoformat(),
             }
             for f in folders
@@ -96,7 +96,7 @@ def get_folder(folder_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Ordner nicht gefunden")
     return {
         "id": folder.id, "name": folder.name, "parent_id": folder.parent_id,
-        "sort_order": folder.sort_order, "is_pinned": folder.is_pinned,
+        "sort_order": folder.sort_order, "is_pinned": folder.is_pinned, "metis_enabled": folder.metis_enabled,
         "created_at": folder.created_at.isoformat(),
     }
 
@@ -164,6 +164,16 @@ def toggle_pin_folder(folder_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"id": folder.id, "is_pinned": folder.is_pinned}
 
+
+@router.put("/{folder_id}/metis")
+def toggle_metis_folder(folder_id: int, db: Session = Depends(get_db)):
+    """Metis-Sichtbarkeit eines Ordners umschalten."""
+    folder = db.query(Folder).filter(Folder.id == folder_id).first()
+    if not folder:
+        raise HTTPException(status_code=404, detail="Ordner nicht gefunden")
+    folder.metis_enabled = not folder.metis_enabled
+    db.commit()
+    return {"id": folder.id, "metis_enabled": folder.metis_enabled}
 
 @router.put("/sort-order/update")
 def update_sort_order(data: SortOrderUpdate, db: Session = Depends(get_db)):

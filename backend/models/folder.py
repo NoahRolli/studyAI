@@ -21,6 +21,8 @@ class Folder(Base):
     # Gepinnte Ordner erscheinen immer zuerst
     is_pinned = Column(Boolean, default=False)
 
+    # Ordner-Inhalte in Metis-Sphäre anzeigen
+    metis_enabled = Column(Boolean, default=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
                         onupdate=lambda: datetime.now(timezone.utc))
