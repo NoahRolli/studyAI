@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from backend.models.database import get_db
 from backend.models.concept import Concept, ConceptCluster, ConceptClusterMember
-from backend.api.concepts_ai import _ollama_chat, _parse_json_response
+from backend.api.concepts_ai import ollama_chat, parse_json_response
 
 router = APIRouter(prefix="/api/concepts", tags=["concepts-cluster"])
 
@@ -40,8 +40,8 @@ async def auto_cluster_concepts(db: Session = Depends(get_db)):
             "Example: [{\"label\": \"Ethics\", \"members\": [\"autonomy\", \"privacy\"]}]\n\n"
             f"Concepts: {json.dumps(batch)}"
         )
-        response = await _ollama_chat(prompt)
-        parsed = _parse_json_response(response)
+        response = await ollama_chat(prompt)
+        parsed = parse_json_response(response)
         if not isinstance(parsed, list):
             continue
         for item in parsed:
