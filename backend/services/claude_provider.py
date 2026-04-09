@@ -42,6 +42,13 @@ class ClaudeProvider:
 1. Eine strukturierte Zusammenfassung (maximal 500 Wörter)
 2. Eine Liste der 5-10 wichtigsten Fachbegriffe
 
+REGELN für key_terms:
+- NUR fachspezifische Substantive oder Fachbegriffe
+- KEINE generischen Wörter wie: Test, Daten, System, Methode, Prozess, Funktion, Ergebnis, Information, Struktur, Konzept, Modell, Ansatz, Lösung, Problem, Beispiel, Tabelle, Liste, Wert, Format, Inhalt, Schichten, Filtern, Padding
+- KEINE Verben oder Adjektive
+- Deutsche und englische Fachbegriffe sind OK
+- Bevorzuge etablierte Terminologie
+
 Antworte im JSON-Format:
 {{"summary": "...", "key_terms": ["Begriff1", "Begriff2", ...]}}
 
