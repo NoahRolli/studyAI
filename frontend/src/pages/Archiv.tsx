@@ -195,12 +195,10 @@ function Archiv() {
                       </span>
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => db.togglePinFolder(folder.id)}
-                          className="text-xs px-1.5 py-0.5 rounded transition-all duration-200"
-                          style={{ color: folder.is_pinned ? 'var(--color-primary)' : 'var(--color-text-muted)' }}
+                          className={`text-xs px-1.5 py-0.5 rounded transition-all duration-200 hover:text-[var(--color-primary)] ${folder.is_pinned ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}`}
                           title="Pin">&#9650;</button>
                         <button onClick={() => db.toggleMetisFolder(folder.id)}
-                          className="text-xs px-1.5 py-0.5 rounded transition-all duration-200"
-                          style={{ color: folder.metis_enabled ? 'var(--color-primary)' : 'var(--color-text-muted)' }}
+                          className={`text-xs px-1.5 py-0.5 rounded transition-all duration-200 hover:text-[var(--color-primary)] ${folder.metis_enabled ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}`}
                           title="Metis Sphäre">&#9673;</button>
                         <button onClick={() => startEdit('folder', folder.id, folder.name)}
                           className="text-xs px-1.5 py-0.5 rounded transition-all duration-200 text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
