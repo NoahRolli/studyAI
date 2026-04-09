@@ -181,6 +181,7 @@ export interface Folder {
   parent_id: number | null
   sort_order: number
   is_pinned: boolean
+  metis_enabled: boolean
   description: string
   created_at: string
 }

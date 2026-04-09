@@ -1,5 +1,6 @@
 # Konzept-Graph AI Service — Sync + Keyword-Extraction
 # Sync: Extrahiert Keywords aus Notes (Ollama) und Summaries (key_terms)
+# Nur Dokumente aus Ordnern mit metis_enabled=True werden gescannt
 # Ollama-only — kein Claude, kein externer API-Call
 
 import json
@@ -7,10 +8,14 @@ import re
 import httpx
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from backend.models.database import get_db
 from backend.models.concept import Concept, ConceptSource
 from backend.models.note import Note
 from backend.models.summary import Summary
+from backend.models.document import Document
+from backend.models.module import Module
+from backend.models.folder import Folder
 from backend.infra.config import OLLAMA_MODEL
 from backend.infra.ollama_connector import get_ollama_url
 
@@ -117,6 +122,34 @@ async def extract_keywords_ollama(content: str) -> list[str]:
     return []
 
 
+def _get_enabled_folder_ids(db: Session) -> set[int]:
+    """IDs aller Ordner mit metis_enabled=True."""
+    rows = db.query(Folder.id).filter(Folder.metis_enabled == True).all()
+    return {r[0] for r in rows}
+
+
+def _get_enabled_summary_ids(db: Session,
+                             folder_ids: set[int]) -> set[int]:
+    """Summary-IDs deren Dokumente in aktivierten Ordnern liegen."""
+    if not folder_ids:
+        return set()
+    # Dokumente direkt in aktiviertem Ordner
+    direct = db.query(Document.id).filter(
+        Document.folder_id.in_(folder_ids)
+    ).all()
+    # Dokumente via Module in aktiviertem Ordner
+    via_module = db.query(Document.id).join(
+        Module, Document.module_id == Module.id
+    ).filter(Module.folder_id.in_(folder_ids)).all()
+    doc_ids = {r[0] for r in direct} | {r[0] for r in via_module}
+    if not doc_ids:
+        return set()
+    rows = db.query(Summary.id).filter(
+        Summary.document_id.in_(doc_ids)
+    ).all()
+    return {r[0] for r in rows}
+
+
 @router.post("/sync")
 async def sync_concepts(
     db: Session = Depends(get_db),
@@ -124,12 +157,19 @@ async def sync_concepts(
         False, description="Re-scan auch bereits verknüpfte Notes"
     ),
 ):
-    """Scannt Notes + Summaries, extrahiert Keywords, erstellt Konzepte."""
-    stats = {"new_concepts": 0, "new_links": 0, "sources_scanned": 0}
+    """Scannt Notes + Summaries aus aktivierten Ordnern."""
+    stats = {"new_concepts": 0, "new_links": 0,
+             "sources_scanned": 0, "skipped_disabled": 0}
 
-    # 1. Summaries — key_terms direkt übernehmen
+    folder_ids = _get_enabled_folder_ids(db)
+    enabled_sids = _get_enabled_summary_ids(db, folder_ids)
+
+    # 1. Summaries — nur aus aktivierten Ordnern
     summaries = db.query(Summary).all()
     for s in summaries:
+        if s.id not in enabled_sids:
+            stats["skipped_disabled"] += 1
+            continue
         terms = s.key_terms or []
         if isinstance(terms, str):
             try:
@@ -145,7 +185,7 @@ async def sync_concepts(
                 stats["new_links"] += 1
         stats["sources_scanned"] += 1
 
-    # 2. Notes — Ollama-Extraction
+    # 2. Notes — immer scannen (Notes sind ordnerunabhängig)
     notes = db.query(Note).all()
     for note in notes:
         if not force:
