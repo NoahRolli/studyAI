@@ -100,6 +100,10 @@ export function useArchiv() {
     await loadContents()
   }
 
+  async function toggleMetisFolder(folderId: number) {
+    await put(`/api/folders/${folderId}/metis`, {})
+    await loadContents()
+  }
   async function togglePinModule(moduleId: number) {
     await put(`/api/modules/${moduleId}/pin`, {})
     await loadContents()
@@ -149,7 +153,7 @@ export function useArchiv() {
     currentFolderId, folders, modules, documents, breadcrumbs,
     loading, error, setError,
     createFolder, createModule, deleteFolder, deleteModule, deleteDocument,
-    togglePinFolder, togglePinModule,
+    togglePinFolder, togglePinModule, toggleMetisFolder,
     updateFolder, renameModule,
     saveSortOrder, moveToFolder,
     openFolder, goToRoot, goToBreadcrumb, loadContents,

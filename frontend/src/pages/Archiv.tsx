@@ -198,6 +198,10 @@ function Archiv() {
                           className="text-xs px-1.5 py-0.5 rounded transition-all duration-200"
                           style={{ color: folder.is_pinned ? 'var(--color-primary)' : 'var(--color-text-muted)' }}
                           title="Pin">&#9650;</button>
+                        <button onClick={() => db.toggleMetisFolder(folder.id)}
+                          className="text-xs px-1.5 py-0.5 rounded transition-all duration-200"
+                          style={{ color: folder.metis_enabled ? 'var(--color-primary)' : 'var(--color-text-muted)' }}
+                          title="Metis Sphäre">&#9673;</button>
                         <button onClick={() => startEdit('folder', folder.id, folder.name)}
                           className="text-xs px-1.5 py-0.5 rounded transition-all duration-200 text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
                           title={t.common.edit}>&#9998;</button>
@@ -236,7 +240,6 @@ function Archiv() {
                         className="text-xs px-1.5 py-0.5 rounded transition-all duration-200"
                         style={{ color: module.is_pinned ? 'var(--color-primary)' : 'var(--color-text-muted)' }}
                         title="Pin">&#9650;</button>
-                      <button onClick={(e) => { e.preventDefault(); startEdit('module', module.id, module.name) }}
                         className="text-xs px-1.5 py-0.5 rounded transition-all duration-200 text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
                         title={t.common.edit}>&#9998;</button>
                       <button onClick={(e) => { e.preventDefault(); db.deleteModule(module.id) }}
