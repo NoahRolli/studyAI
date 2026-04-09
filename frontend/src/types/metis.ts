@@ -61,9 +61,18 @@ export interface ConceptEdge {
   target: number
   relation_type: string
   strength: number
-  ai_generated: boolean
-  confirmed: boolean | null
+  origin: string
+  status: "suggested" | "confirmed" | "rejected"
+  reason?: string | null
 }
+
+
+
+
+
+
+
+
 
 export interface ConceptSource {
   type: string

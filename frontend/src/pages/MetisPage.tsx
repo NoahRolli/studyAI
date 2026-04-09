@@ -49,16 +49,15 @@ export default function MetisPage() {
     nodes: conceptGraph.nodes.map(c => ({
       id: c.id, type: 'note' as const, source_id: c.id,
       title: c.name, pos_x: null, pos_y: null,
-      embedding_stale: false, cluster_ids: [],
+      embedding_stale: false, cluster_ids: [], source_count: c.source_count,
     })),
     edges: conceptGraph.edges.map(e => ({
       id: e.id, source_node_id: e.source,
       target_node_id: e.target,
       relation_type: e.relation_type,
       strength: e.strength,
-      status: (e.confirmed === null ? 'suggested'
-        : e.confirmed ? 'confirmed' : 'rejected'
-      ) as 'suggested' | 'confirmed' | 'rejected',
+      status: e.status || 'suggested',
+      reason: e.reason,
     })),
     clusters: conceptGraph.clusters.map(cl => ({
       id: cl.id, label: cl.label,
