@@ -12,7 +12,7 @@ export interface MetisNode {
   pos_y: number | null
   embedding_stale: boolean
   cluster_ids: number[]
-}
+  source_count?: number}
 
 // Eine Kante zwischen zwei Nodes
 export interface MetisEdge {

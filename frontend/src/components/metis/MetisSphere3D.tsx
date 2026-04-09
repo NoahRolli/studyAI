@@ -313,9 +313,14 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
         {graph.nodes.map(node => {
           const pos = nodePositions.get(node.id)
           if (!pos) return null
-          const color = settings.showNodeColors ? (COLORS[node.type] || COLORS.note) : new THREE.Color("#ffffff")
-          return <GlowNode key={node.id} position={pos} color={color} glowMul={settings.nodeGlow} colorMul={settings.colorIntensity}
-            size={0.12} label={node.title}
+          const hub = hubData.find(h => h.memberNodeIds.includes(node.id))
+          const clusterColor = hub ? hub.color.clone() : new THREE.Color("#ffffff")
+          const baseColor = settings.showNodeColors ? clusterColor : new THREE.Color("#ffffff")
+          const sc = node.source_count || 1
+          const nodeSize = 0.08 + Math.min(sc * 0.04, 0.3)
+          return <GlowNode key={node.id} position={pos} color={baseColor}
+            glowMul={settings.nodeGlow} colorMul={settings.colorIntensity}
+            size={nodeSize} label={node.title}
             onClick={() => handleNodeClick(node.id)}
             showLabel={false} />
         })}
