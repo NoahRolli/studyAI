@@ -316,11 +316,11 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
           const hub = hubData.find(h => h.memberNodeIds.includes(node.id))
           const clusterColor = hub ? hub.color.clone() : new THREE.Color("#ffffff")
           const baseColor = settings.showNodeColors ? clusterColor : new THREE.Color("#ffffff")
-          const sc = node.source_count || 1
-          const nodeSize = 0.08 + Math.min(sc * 0.04, 0.3)
+
+
           return <GlowNode key={node.id} position={pos} color={baseColor}
             glowMul={settings.nodeGlow} colorMul={settings.colorIntensity}
-            size={nodeSize} label={node.title}
+            size={0.12} label={node.title}
             onClick={() => handleNodeClick(node.id)}
             showLabel={false} />
         })}
