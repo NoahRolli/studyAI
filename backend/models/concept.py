@@ -122,6 +122,9 @@ class ConceptEdge(Base):
     # Review-Status: suggested, confirmed, rejected
     status = Column(String, default="suggested", nullable=False)
 
+    # Welches Modell hat diese Edge vorgeschlagen
+    model_used = Column(String, nullable=True)
+
     # Begründung (AI-Erklärung oder User-Notiz)
     reason = Column(Text, nullable=True)
 

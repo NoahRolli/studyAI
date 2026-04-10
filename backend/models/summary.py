@@ -26,7 +26,11 @@ class Summary(Base):
     key_terms = Column(JSON, default=list)
 
     # Welcher AI-Provider wurde genutzt ("claude" oder "ollama")
+    # Legacy-Feld, wird weiterhin gesetzt für Abwärtskompatibilität
     ai_provider = Column(String, nullable=False)
+
+    # Welches Modell genau (z.B. "groq:llama-3.3-70b-versatile", "ollama_local:gemma4:e2b")
+    model_used = Column(String, nullable=True)
 
     # Zeitstempel der Erstellung
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
