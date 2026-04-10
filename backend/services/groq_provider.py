@@ -20,7 +20,8 @@ class GroqProvider:
         self.base_url = GROQ_BASE_URL
         self.api_key = GROQ_API_KEY
 
-    async def chat(self, prompt: str, system: str = "", max_tokens: int = 4000) -> str:
+    async def chat(self, prompt: str, system: str = "",
+                   max_tokens: int = 4000) -> str:
         """Sendet Chat-Anfrage an Groq. Gibt Antwort-Text zurück."""
         if not self.api_key:
             raise ConnectionError(
@@ -51,8 +52,12 @@ class GroqProvider:
                     "Groq Rate Limit erreicht. Warte oder wechsle auf Ollama."
                 )
             if response.status_code != 200:
-                logger.error(f"Groq Fehler {response.status_code}: {response.text}")
-                raise ConnectionError(f"Groq API Fehler (Status {response.status_code})")
+                logger.error(
+                    f"Groq Fehler {response.status_code}: {response.text}"
+                )
+                raise ConnectionError(
+                    f"Groq API Fehler (Status {response.status_code})"
+                )
 
             data = response.json()
             return data["choices"][0]["message"]["content"]
@@ -74,7 +79,11 @@ class GroqProvider:
     def parse_json(self, text: str):
         """
         Extrahiert JSON aus Groq-Antworten.
-        Drei Strategien: Codeblock → erstes JSON → Rohtext.
+        Vier Strategien — robuster bei langen Summaries:
+        1. JSON aus Markdown-Codeblock
+        2. Greedy: erstes Opener bis letztes Closer
+        3. Nicht-greedy Regex als Fallback
+        4. Rohtext direkt
         """
         # Strategie 1: JSON aus Markdown-Codeblock
         match = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
@@ -83,22 +92,30 @@ class GroqProvider:
                 return json.loads(match.group(1).strip())
             except json.JSONDecodeError:
                 pass
-        # Strategie 2: Erstes JSON-Array oder -Objekt
-        match = re.search(r'(\[[\s\S]*\]|\{[\s\S]*\})', text)
+        # Strategie 2: Greedy — erstes { bis letztes }
+        for opener, closer in [('{', '}'), ('[', ']')]:
+            start = text.find(opener)
+            end = text.rfind(closer)
+            if start != -1 and end > start:
+                try:
+                    return json.loads(text[start:end + 1])
+                except json.JSONDecodeError:
+                    pass
+        # Strategie 3: Nicht-greedy Regex
+        match = re.search(r'(\{[\s\S]*?\}|\[[\s\S]*?\])', text)
         if match:
             try:
                 return json.loads(match.group(1))
             except json.JSONDecodeError:
                 pass
-        # Strategie 3: Rohtext als JSON
+        # Strategie 4: Rohtext direkt
         try:
             return json.loads(text.strip())
         except json.JSONDecodeError:
-            logger.warning(f"Groq JSON-Parsing fehlgeschlagen: {text[:200]}")
+            logger.warning(
+                f"Groq JSON-Parsing fehlgeschlagen: {text[:200]}"
+            )
             return None
-
-
-    # --- High-Level Methoden (gleiche Signatur wie OllamaProvider) ---
 
     async def summarize(self, text: str) -> dict:
         """Generiert Zusammenfassung mit Schlüsselbegriffen."""
@@ -106,15 +123,15 @@ class GroqProvider:
 1. Eine ausführliche, strukturierte Zusammenfassung (800-1500 Wörter)
 2. Eine Liste der 5-10 wichtigsten Fachbegriffe
 
-REGELN für key_terms:
+REGELN fuer key_terms:
 - NUR fachspezifische Substantive oder Fachbegriffe
-- KEINE generischen Wörter wie: Test, Daten, System, Methode, Prozess, Funktion, Ergebnis, Information, Struktur, Konzept, Modell, Ansatz, Lösung, Problem, Beispiel, Tabelle, Liste, Wert, Format, Inhalt
+- KEINE generischen Woerter wie: Test, Daten, System, Methode, Prozess, Funktion, Ergebnis, Information, Struktur, Konzept, Modell, Ansatz, Loesung, Problem, Beispiel, Tabelle, Liste, Wert, Format, Inhalt
 - KEINE Verben oder Adjektive
 - Deutsche und englische Fachbegriffe sind OK
 - Bevorzuge etablierte Terminologie
 
-Antworte NUR im JSON-Format, kein anderer Text:
-{{"summary": "...", "key_terms": ["Begriff1", "Begriff2", ...]}}
+WICHTIG: Antworte NUR mit einem JSON-Objekt. Kein Text davor oder danach.
+Format: {{"summary": "Deine Zusammenfassung hier...", "key_terms": ["Begriff1", "Begriff2"]}}
 
 Text:
 {text[:8000]}"""
@@ -128,20 +145,20 @@ Text:
             return {"summary": response_text, "key_terms": []}
 
     async def explain_term(self, term: str, context: str) -> str:
-        """Erklärt einen Fachbegriff im Kontext."""
-        prompt = f"""Erkläre den Fachbegriff "{term}" einfach und verständlich.
+        """Erklaert einen Fachbegriff im Kontext."""
+        prompt = f"""Erklaere den Fachbegriff "{term}" einfach und verstaendlich.
 Beziehe dich dabei auf folgenden Kontext:
 
 {context[:2000]}
 
-Antworte in 2-3 Sätzen, verständlich für Studierende."""
+Antworte in 2-3 Saetzen, verstaendlich fuer Studierende."""
         return await self.chat(prompt, max_tokens=500)
 
     async def generate_mindmap(self, text: str) -> list[dict]:
         """Generiert eine Mindmap-Struktur aus Text."""
         prompt = f"""Erstelle eine hierarchische Mindmap-Struktur aus diesem Text.
 Antworte NUR im JSON-Format als Liste von Knoten:
-[{{"label": "Hauptthema", "detail": "Kurze Erklärung", "children": [
+[{{"label": "Hauptthema", "detail": "Kurze Erklaerung", "children": [
     {{"label": "Unterthema", "detail": "...", "children": []}}
 ]}}]
 
@@ -154,14 +171,17 @@ Text:
             result = self.parse_json(response_text)
             if isinstance(result, list):
                 return result
-            return [{"label": "Fehler", "detail": response_text, "children": []}]
+            return [{"label": "Fehler", "detail": response_text,
+                     "children": []}]
         except Exception:
-            return [{"label": "Fehler", "detail": response_text, "children": []}]
+            return [{"label": "Fehler", "detail": response_text,
+                     "children": []}]
 
-    async def deep_dive(self, node_label: str, node_detail: str, context: str) -> list[dict]:
-        """Generiert Unterknoten für einen Mindmap-Knoten."""
-        prompt = f"""Für eine Mindmap: Erstelle 3-5 detailliertere Unterknoten
-für das Thema "{node_label}" ({node_detail}).
+    async def deep_dive(self, node_label: str, node_detail: str,
+                        context: str) -> list[dict]:
+        """Generiert Unterknoten fuer einen Mindmap-Knoten."""
+        prompt = f"""Fuer eine Mindmap: Erstelle 3-5 detailliertere Unterknoten
+fuer das Thema "{node_label}" ({node_detail}).
 
 Kontext aus dem Originaldokument:
 {context[:2000]}
@@ -173,6 +193,8 @@ Antworte NUR im JSON-Format:
             result = self.parse_json(response_text)
             if isinstance(result, list):
                 return result
-            return [{"label": "Fehler", "detail": response_text, "children": []}]
+            return [{"label": "Fehler", "detail": response_text,
+                     "children": []}]
         except Exception:
-            return [{"label": "Fehler", "detail": response_text, "children": []}]
+            return [{"label": "Fehler", "detail": response_text,
+                     "children": []}]
