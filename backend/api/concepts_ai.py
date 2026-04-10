@@ -1,14 +1,13 @@
 # Konzept-Graph AI Service — Sync + Keyword-Extraction
-# Sync: Extrahiert Keywords aus Notes (Ollama) und Summaries (key_terms)
+# Sync: Extrahiert Keywords aus Notes und Summaries (key_terms)
 # Nur Dokumente aus Ordnern mit metis_enabled=True werden gescannt
-# Ollama-only — kein Claude, kein externer API-Call
+# Nutzt den aktiven Provider (Groq/Ollama) via model_router
 
 import json
 import re
 import httpx
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import text
 from backend.models.database import get_db
 from backend.models.concept import Concept, ConceptSource
 from backend.models.note import Note
@@ -16,10 +15,15 @@ from backend.models.summary import Summary
 from backend.models.document import Document
 from backend.models.module import Module
 from backend.models.folder import Folder
-from backend.infra.config import OLLAMA_MODEL
+from backend.infra.config import OLLAMA_MODEL, OLLAMA_MODEL_SERVER
 from backend.infra.ollama_connector import get_ollama_url
+from backend.infra.model_router import get_active_provider, get_model_used
+from backend.services.groq_provider import GroqProvider
 
 router = APIRouter(prefix="/api/concepts", tags=["concepts-ai"])
+
+# Groq-Instanz (wiederverwendbar)
+_groq = GroqProvider()
 
 
 def normalize_name(name: str) -> str:
@@ -28,7 +32,7 @@ def normalize_name(name: str) -> str:
 
 
 def parse_json_response(text_val: str) -> list | dict | None:
-    """Ollama JSON-Antwort parsen (3-Strategie-Fallback)."""
+    """JSON-Antwort parsen (3-Strategie-Fallback)."""
     md_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", text_val)
     if md_match:
         try:
@@ -47,17 +51,28 @@ def parse_json_response(text_val: str) -> list | dict | None:
         return None
 
 
-async def ollama_chat(prompt: str) -> str:
-    """Einzelner Ollama-Chat-Call, gibt Text zurück."""
+async def ai_chat(prompt: str, page: str = "metis") -> str:
+    """Zentraler AI-Chat — routet zum aktiven Provider."""
+    provider = get_active_provider(page)
+    if provider == "groq":
+        return await _groq.chat(prompt)
+    # Ollama (local oder server)
     base_url = await get_ollama_url()
+    model = OLLAMA_MODEL if provider == "ollama_local" else OLLAMA_MODEL_SERVER
     async with httpx.AsyncClient(timeout=120.0) as client:
         resp = await client.post(f"{base_url}/api/chat", json={
-            "model": OLLAMA_MODEL,
+            "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False, "think": False,
         })
         resp.raise_for_status()
         return resp.json().get("message", {}).get("content", "")
+
+
+# Alias für Abwärtskompatibilität (concepts_cluster.py importiert diesen Namen)
+async def ollama_chat(prompt: str) -> str:
+    """Legacy-Wrapper — nutzt jetzt ai_chat mit Routing."""
+    return await ai_chat(prompt)
 
 
 def get_or_create_concept(db: Session, name: str) -> Concept:
@@ -92,7 +107,7 @@ def link_source(db: Session, concept: Concept,
 
 
 async def extract_keywords_ollama(content: str) -> list[str]:
-    """Extrahiert 3-8 fachliche Konzepte aus Text via Ollama."""
+    """Extrahiert 3-8 fachliche Konzepte aus Text via aktivem Provider."""
     prompt = (
         "Extract 3 to 8 key concepts from this text.\n\n"
         "RULES:\n"
@@ -106,15 +121,14 @@ async def extract_keywords_ollama(content: str) -> list[str]:
         "format, structure, model, database, server, client, user, "
         "application, interface, feature, tool, option, setting, "
         "version, update, change, problem, solution, approach\n"
-        "- NO verbs or adjectives (NOT 'stores automatically', "
-        "'is important', 'creates entries')\n"
+        "- NO verbs or adjectives\n"
         "- NO single characters, IDs, variable names, or file paths\n"
         "- German academic terms are welcome\n"
         "- Prefer established terminology over invented phrases\n"
         "Return ONLY a JSON array of lowercase strings.\n\n"
         f"Text: {content[:2000]}"
     )
-    response = await ollama_chat(prompt)
+    response = await ai_chat(prompt)
     parsed = parse_json_response(response)
     if isinstance(parsed, list):
         return [str(k).strip().lower() for k in parsed
@@ -133,11 +147,9 @@ def _get_enabled_summary_ids(db: Session,
     """Summary-IDs deren Dokumente in aktivierten Ordnern liegen."""
     if not folder_ids:
         return set()
-    # Dokumente direkt in aktiviertem Ordner
     direct = db.query(Document.id).filter(
         Document.folder_id.in_(folder_ids)
     ).all()
-    # Dokumente via Module in aktiviertem Ordner
     via_module = db.query(Document.id).join(
         Module, Document.module_id == Module.id
     ).filter(Module.folder_id.in_(folder_ids)).all()
@@ -159,7 +171,8 @@ async def sync_concepts(
 ):
     """Scannt Notes + Summaries aus aktivierten Ordnern."""
     stats = {"new_concepts": 0, "new_links": 0,
-             "sources_scanned": 0, "skipped_disabled": 0}
+             "sources_scanned": 0, "skipped_disabled": 0,
+             "model_used": get_model_used(page="metis")}
 
     folder_ids = _get_enabled_folder_ids(db)
     enabled_sids = _get_enabled_summary_ids(db, folder_ids)
@@ -185,7 +198,7 @@ async def sync_concepts(
                 stats["new_links"] += 1
         stats["sources_scanned"] += 1
 
-    # 2. Notes — immer scannen (Notes sind ordnerunabhängig)
+    # 2. Notes — immer scannen (ordnerunabhängig)
     notes = db.query(Note).all()
     for note in notes:
         if not force:
