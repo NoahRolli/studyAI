@@ -96,3 +96,83 @@ class GroqProvider:
         except json.JSONDecodeError:
             logger.warning(f"Groq JSON-Parsing fehlgeschlagen: {text[:200]}")
             return None
+
+
+    # --- High-Level Methoden (gleiche Signatur wie OllamaProvider) ---
+
+    async def summarize(self, text: str) -> dict:
+        """Generiert Zusammenfassung mit Schlüsselbegriffen."""
+        prompt = f"""Analysiere den folgenden Text und erstelle:
+1. Eine strukturierte Zusammenfassung (maximal 500 Wörter)
+2. Eine Liste der 5-10 wichtigsten Fachbegriffe
+
+REGELN für key_terms:
+- NUR fachspezifische Substantive oder Fachbegriffe
+- KEINE generischen Wörter wie: Test, Daten, System, Methode, Prozess, Funktion, Ergebnis, Information, Struktur, Konzept, Modell, Ansatz, Lösung, Problem, Beispiel, Tabelle, Liste, Wert, Format, Inhalt
+- KEINE Verben oder Adjektive
+- Deutsche und englische Fachbegriffe sind OK
+- Bevorzuge etablierte Terminologie
+
+Antworte NUR im JSON-Format, kein anderer Text:
+{{"summary": "...", "key_terms": ["Begriff1", "Begriff2", ...]}}
+
+Text:
+{text[:4000]}"""
+        response_text = await self.chat(prompt)
+        try:
+            result = self.parse_json(response_text)
+            if isinstance(result, dict) and "summary" in result:
+                return result
+            return {"summary": response_text, "key_terms": []}
+        except Exception:
+            return {"summary": response_text, "key_terms": []}
+
+    async def explain_term(self, term: str, context: str) -> str:
+        """Erklärt einen Fachbegriff im Kontext."""
+        prompt = f"""Erkläre den Fachbegriff "{term}" einfach und verständlich.
+Beziehe dich dabei auf folgenden Kontext:
+
+{context[:2000]}
+
+Antworte in 2-3 Sätzen, verständlich für Studierende."""
+        return await self.chat(prompt, max_tokens=500)
+
+    async def generate_mindmap(self, text: str) -> list[dict]:
+        """Generiert eine Mindmap-Struktur aus Text."""
+        prompt = f"""Erstelle eine hierarchische Mindmap-Struktur aus diesem Text.
+Antworte NUR im JSON-Format als Liste von Knoten:
+[{{"label": "Hauptthema", "detail": "Kurze Erklärung", "children": [
+    {{"label": "Unterthema", "detail": "...", "children": []}}
+]}}]
+
+Maximal 3 Ebenen tief, 3-5 Knoten pro Ebene.
+
+Text:
+{text[:3000]}"""
+        response_text = await self.chat(prompt)
+        try:
+            result = self.parse_json(response_text)
+            if isinstance(result, list):
+                return result
+            return [{"label": "Fehler", "detail": response_text, "children": []}]
+        except Exception:
+            return [{"label": "Fehler", "detail": response_text, "children": []}]
+
+    async def deep_dive(self, node_label: str, node_detail: str, context: str) -> list[dict]:
+        """Generiert Unterknoten für einen Mindmap-Knoten."""
+        prompt = f"""Für eine Mindmap: Erstelle 3-5 detailliertere Unterknoten
+für das Thema "{node_label}" ({node_detail}).
+
+Kontext aus dem Originaldokument:
+{context[:2000]}
+
+Antworte NUR im JSON-Format:
+[{{"label": "...", "detail": "...", "children": []}}]"""
+        response_text = await self.chat(prompt)
+        try:
+            result = self.parse_json(response_text)
+            if isinstance(result, list):
+                return result
+            return [{"label": "Fehler", "detail": response_text, "children": []}]
+        except Exception:
+            return [{"label": "Fehler", "detail": response_text, "children": []}]
