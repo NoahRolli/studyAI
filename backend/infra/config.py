@@ -29,20 +29,35 @@ os.makedirs(STORAGE_DIR, exist_ok=True)
 DB_PATH = os.environ.get("PALLAS_DB_PATH", str(BASE_DIR / "pallas.db"))
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
-# AI Provider: "claude" oder "ollama"
+# --- AI Provider System (3 Stufen) ---
+# ollama_local: MacBook gemma4:e2b (Apple Silicon, schnell)
+# ollama_server: Olymp gemma4:e4b (CPU, grösseres Modell)
+# groq: Cloud llama-3.3-70b-versatile (schnell, bestes Modell)
+# Journal nutzt IMMER Ollama — nie Groq (erzwungen in journal_ai_service)
+PROVIDERS = ["ollama_local", "ollama_server", "groq"]
+DEFAULT_PROVIDER = os.environ.get("PALLAS_DEFAULT_PROVIDER", "groq")
+
+# Legacy: wird noch von ai_service.py genutzt (claude/ollama Switch für Study)
 AI_PROVIDER = os.environ.get("PALLAS_AI_PROVIDER", "ollama")
 
-# Claude API
+# Claude API (nur Study-Features: Summarize, Mindmap)
 CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY", "")
 CLAUDE_MODEL = "claude-sonnet-4-20250514"
 
-# Ollama — Primary (MacBook) mit Fallback (lokal)
-# OLLAMA_PRIMARY_URL: Schnelles MacBook-Ollama (optional, leer = deaktiviert)
-# OLLAMA_BASE_URL: Fallback auf lokales Ollama
+# Ollama — Zwei Instanzen mit unterschiedlichen Modellen
+# Local: MacBook (Apple Silicon, e2b)
+# Server: Olymp (CPU, e4b — grösser, bessere Qualität)
 OLLAMA_PRIMARY_URL = os.environ.get("OLLAMA_PRIMARY_URL", "")
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma4:e2b")
-OLLAMA_EMBED_MODEL = "nomic-embed-text"  # Für Metis Embeddings
+OLLAMA_MODEL_LOCAL = os.environ.get("OLLAMA_MODEL_LOCAL", "gemma4:e2b")
+OLLAMA_MODEL_SERVER = os.environ.get("OLLAMA_MODEL_SERVER", "gemma4:e4b")
+OLLAMA_EMBED_MODEL = "nomic-embed-text"
+
+# Groq Cloud API (kostenlos, LPU-Hardware, grosses Modell)
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 # GitHub — Public API für Commit-Kalender + Zeittracking
 GITHUB_USERNAME = os.environ.get("GITHUB_USERNAME", "NoahRolli")
