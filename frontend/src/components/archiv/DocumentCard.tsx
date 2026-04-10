@@ -1,12 +1,14 @@
 // DocumentCard — Einzelne Dokument-Karte in ModuleDetail
-// Inline-Edit für Dokumenttitel, Datei-Typ-Badge
+// Inline-Edit fuer Dokumenttitel, Datei-Typ-Badge
 // Summary mit editierbarem Titel + TipTap-Editor Toggle
+// Key terms editierbar: loeschen (X) + hinzufuegen (Input)
 
 import { useState } from 'react'
 import { put } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { Document, Summary } from '../../types/models'
 import SummaryEditor from './SummaryEditor'
+import KeyTermsEditor from './KeyTermsEditor'
 
 // Datei-Typ Badges (Text, keine Emojis)
 const FILE_ICONS: Record<string, string> = {
@@ -65,17 +67,18 @@ export default function DocumentCard({
     } catch (err) { console.error('Summary-Rename fehlgeschlagen:', err) }
   }
 
+  // Provider-Anzeige: model_used bevorzugt, ai_provider als Fallback
+  const providerLabel = summary?.model_used || summary?.ai_provider || ''
+
   return (
     <div className="hud-card p-5 animate-fade-in">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          {/* Datei-Typ Badge */}
           <span className="text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0"
             style={{ color: 'var(--color-primary)', background: 'var(--color-hover-bg)',
               border: '1px solid var(--color-border)' }}>
             {icon}
           </span>
-          {/* Titel (editierbar) */}
           <div className="min-w-0 flex-1">
             {editingDoc ? (
               <input value={docTitle} onChange={e => setDocTitle(e.target.value)}
@@ -115,8 +118,6 @@ export default function DocumentCard({
         </div>
       </div>
 
-
-      {/* PDF-Preview */}
       {showPreview && isPdf && (
         <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--color-border)" }}>
           <iframe
@@ -127,6 +128,7 @@ export default function DocumentCard({
           />
         </div>
       )}
+
       {summary && (
         <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
           <div className="flex items-center justify-between mb-2">
@@ -135,7 +137,6 @@ export default function DocumentCard({
                 style={{ color: 'var(--color-text-secondary)' }}>
                 {t.moduleDetail.summaryTitle}
               </h4>
-              {/* Summary-Titel (editierbar) */}
               {editingSummary ? (
                 <input value={summaryTitle}
                   onChange={e => setSummaryTitle(e.target.value)}
@@ -150,9 +151,11 @@ export default function DocumentCard({
                   {summary.title || '(click to add title)'}
                 </span>
               )}
-              <span className="text-xs shrink-0" style={{ color: 'var(--color-text-muted)' }}>
-                via {summary.ai_provider}
-              </span>
+              {providerLabel && (
+                <span className="text-xs shrink-0" style={{ color: 'var(--color-text-muted)' }}>
+                  via {providerLabel}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button onClick={() => setEditingContent(!editingContent)}
@@ -167,7 +170,6 @@ export default function DocumentCard({
             </div>
           </div>
 
-          {/* Summary Content — Editor oder Read-only */}
           {editingContent ? (
             <SummaryEditor
               summaryId={summary.id}
@@ -183,20 +185,11 @@ export default function DocumentCard({
             </p>
           )}
 
-          {summary.key_terms.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {summary.key_terms.map((term, i) => (
-                <span key={i} className="text-xs px-2 py-1 rounded border"
-                  style={{
-                    backgroundColor: 'var(--color-hover-bg)',
-                    borderColor: 'var(--color-border-glow)',
-                    color: 'var(--color-text-secondary)',
-                  }}>
-                  {term}
-                </span>
-              ))}
-            </div>
-          )}
+          <KeyTermsEditor
+            summaryId={summary.id}
+            terms={summary.key_terms}
+            onUpdated={() => onReload?.()}
+          />
         </div>
       )}
     </div>
