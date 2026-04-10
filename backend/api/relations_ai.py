@@ -1,60 +1,19 @@
-# Relations AI — Ollama-basierte Erkennung von Wissensrelationen
+# Relations AI — Erkennung von Wissensrelationen via aktivem Provider
 # Nutzt bestätigte + abgelehnte concept_edges als Kontext (Learning Loop)
 # Vorschläge werden als concept_edges mit origin='ai_suggested' gespeichert
+# Routet über ai_chat() aus concepts_ai → model_router (Groq/Ollama)
 
 import json
-import re
 import logging
-import httpx
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from backend.models.database import get_db
 from backend.models.concept import Concept, ConceptEdge
 from backend.models.relation import RelationType
-from backend.infra.config import OLLAMA_MODEL
-from backend.infra.ollama_connector import get_ollama_url
+from backend.api.concepts_ai import ai_chat, parse_json_response
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/relations", tags=["relations-ai"])
-
-
-async def _ollama_chat(prompt: str, system: str = "") -> str:
-    """Ollama Chat-Anfrage mit Timeout"""
-    url = await get_ollama_url()
-    messages = []
-    if system:
-        messages.append({"role": "system", "content": system})
-    messages.append({"role": "user", "content": prompt})
-    try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(f"{url}/api/chat", json={
-                "model": OLLAMA_MODEL, "messages": messages,
-                "stream": False, "format": "json", "think": False,
-            })
-            data = resp.json()
-            return data.get("message", {}).get("content", "")
-    except Exception as e:
-        logger.error(f"Ollama Chat-Fehler: {e}")
-        return ""
-
-
-def _parse_json(text: str) -> list:
-    """JSON aus Ollama-Antwort extrahieren"""
-    cleaned = text.strip()
-    if "```json" in cleaned:
-        cleaned = cleaned.split("```json")[1].split("```")[0].strip()
-    elif "```" in cleaned:
-        cleaned = cleaned.split("```")[1].split("```")[0].strip()
-    try:
-        result = json.loads(cleaned)
-        if isinstance(result, dict) and "relations" in result:
-            return result["relations"]
-        if isinstance(result, list):
-            return result
-        return []
-    except json.JSONDecodeError:
-        logger.warning(f"JSON-Parse fehlgeschlagen: {cleaned[:200]}")
-        return []
 
 
 def _get_confirmed_edges(db: Session) -> list[dict]:
@@ -110,9 +69,19 @@ def _get_rejected_pairs(db: Session) -> set:
     return pairs
 
 
+def _parse_relations(raw: str) -> list:
+    """JSON-Array aus AI-Antwort extrahieren."""
+    parsed = parse_json_response(raw)
+    if isinstance(parsed, dict) and "relations" in parsed:
+        return parsed["relations"]
+    if isinstance(parsed, list):
+        return parsed
+    return []
+
+
 @router.post("/detect")
 async def detect_relations(db: Session = Depends(get_db)):
-    """Ollama analysiert Konzepte und schlägt typisierte Edges vor"""
+    """AI analysiert Konzepte und schlägt typisierte Edges vor."""
     concepts = db.query(Concept).all()
     if len(concepts) < 2:
         return {"suggested": 0, "message": "Zu wenige Konzepte"}
@@ -121,7 +90,7 @@ async def detect_relations(db: Session = Depends(get_db)):
     types = db.query(RelationType).all()
     type_map = {t.name: t.id for t in types}
 
-    # Typ-Beschreibungen
+    # Typ-Beschreibungen für Prompt
     type_desc = "\n".join(
         f"- {t.name} ({t.label_en}): {t.description or t.label_en}"
         for t in types
@@ -153,14 +122,11 @@ async def detect_relations(db: Session = Depends(get_db)):
     existing = _get_existing_pairs(db)
     rejected_pairs = _get_rejected_pairs(db)
 
-    system = (
-        "You are a knowledge representation expert. "
-        "You analyze concepts and identify precise semantic relations. "
-        "You learn from accepted and rejected examples. "
-        "Respond ONLY in valid JSON."
-    )
+    prompt = f"""You are a knowledge representation expert.
+You analyze concepts and identify precise semantic relations.
+You learn from accepted and rejected examples.
 
-    prompt = f"""Analyze these concepts and find PRECISE typed relations:
+Analyze these concepts and find PRECISE typed relations:
 
 CONCEPTS:
 {concept_list}
@@ -176,11 +142,12 @@ STRICT RULES:
 3. Do NOT repeat previously rejected patterns
 4. Each reason must explain WHY these concepts are connected
 
-Find 3-8 HIGH-CONFIDENCE relations. JSON format:
+Find 3-8 HIGH-CONFIDENCE relations. Respond ONLY in valid JSON:
 {{"relations": [{{"source": "concept_name", "target": "concept_name", "relation_type": "name", "reason": "Why connected"}}]}}"""
 
-    raw = await _ollama_chat(prompt, system)
-    suggestions = _parse_json(raw)
+    # Routet über model_router (Groq/Ollama local/server)
+    raw = await ai_chat(prompt, page="ontology")
+    suggestions = _parse_relations(raw)
 
     created = 0
     for s in suggestions:
