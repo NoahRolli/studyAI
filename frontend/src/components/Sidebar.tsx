@@ -13,6 +13,7 @@ import { useLanguage } from '../hooks/useLanguage'
 import { post } from '../hooks/useAPI'
 import LanguageToggle from './LanguageToggle'
 import ThemeSelector from './ThemeSelector'
+import ProviderSwitch from './ProviderSwitch'
 
 // Breiten-Limits für Resize (in px)
 const MIN_WIDTH = 180
@@ -208,6 +209,9 @@ function Sidebar() {
 
         {/* Spacer */}
         <div className="mt-auto" />
+
+        {/* Provider Switch */}
+        <ProviderSwitch collapsed={collapsed} />
 
         {/* Theme + Language nur wenn ausgeklappt */}
         {!collapsed && (
