@@ -20,7 +20,7 @@ class GroqProvider:
         self.base_url = GROQ_BASE_URL
         self.api_key = GROQ_API_KEY
 
-    async def chat(self, prompt: str, system: str = "", max_tokens: int = 2000) -> str:
+    async def chat(self, prompt: str, system: str = "", max_tokens: int = 4000) -> str:
         """Sendet Chat-Anfrage an Groq. Gibt Antwort-Text zurück."""
         if not self.api_key:
             raise ConnectionError(
@@ -103,7 +103,7 @@ class GroqProvider:
     async def summarize(self, text: str) -> dict:
         """Generiert Zusammenfassung mit Schlüsselbegriffen."""
         prompt = f"""Analysiere den folgenden Text und erstelle:
-1. Eine strukturierte Zusammenfassung (maximal 500 Wörter)
+1. Eine ausführliche, strukturierte Zusammenfassung (800-1500 Wörter)
 2. Eine Liste der 5-10 wichtigsten Fachbegriffe
 
 REGELN für key_terms:
@@ -117,7 +117,7 @@ Antworte NUR im JSON-Format, kein anderer Text:
 {{"summary": "...", "key_terms": ["Begriff1", "Begriff2", ...]}}
 
 Text:
-{text[:4000]}"""
+{text[:8000]}"""
         response_text = await self.chat(prompt)
         try:
             result = self.parse_json(response_text)
