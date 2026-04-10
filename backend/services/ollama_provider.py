@@ -6,15 +6,16 @@
 import json
 import re
 import httpx
-from backend.infra.config import OLLAMA_MODEL
+from backend.infra.config import OLLAMA_MODEL_LOCAL
 from backend.infra.ollama_connector import get_ollama_url
 
 
 class OllamaProvider:
     """AI-Provider für die lokale Ollama-Instanz."""
 
-    def __init__(self):
-        self.model = OLLAMA_MODEL
+    def __init__(self, model: str = ""):
+        # Modell wird beim Erstellen festgelegt (local oder server)
+        self.model = model or OLLAMA_MODEL_LOCAL
 
     async def _get_url(self) -> str:
         """Holt die aktuell erreichbare Ollama-URL (gecacht)."""
@@ -61,11 +62,8 @@ class OllamaProvider:
     def _parse_json(self, text: str):
         """
         Extrahiert JSON aus Ollama-Antworten.
-        Ollama packt JSON oft in Markdown-Backticks und fügt
-        Erklärtext davor/danach hinzu — beides muss entfernt werden.
-
         Drei Strategien, von spezifisch zu allgemein:
-        1. JSON aus Markdown-Codeblock (```json ... ```)
+        1. JSON aus Markdown-Codeblock
         2. Erstes JSON-Array oder -Objekt im Rohtext
         3. Rohtext direkt parsen
         """
@@ -83,10 +81,7 @@ class OllamaProvider:
         return json.loads(text.strip())
 
     async def summarize(self, text: str) -> dict:
-        """
-        Generiert eine Zusammenfassung mit Schlüsselbegriffen.
-        Gibt zurück: {"summary": str, "key_terms": list[str]}
-        """
+        """Generiert eine Zusammenfassung mit Schlüsselbegriffen."""
         prompt = f"""Analysiere den folgenden Text und erstelle:
 1. Eine strukturierte Zusammenfassung (maximal 500 Wörter)
 2. Eine Liste der 5-10 wichtigsten Fachbegriffe
@@ -122,10 +117,7 @@ Antworte in 2-3 Sätzen, verständlich für Studierende."""
         return await self._chat(prompt, max_tokens=500)
 
     async def generate_mindmap(self, text: str) -> list[dict]:
-        """
-        Generiert eine Mindmap-Struktur aus einem Text.
-        Gibt verschachtelte Knoten zurück.
-        """
+        """Generiert eine Mindmap-Struktur aus einem Text."""
         prompt = f"""Erstelle eine hierarchische Mindmap-Struktur aus diesem Text.
 Antworte NUR im JSON-Format als Liste von Knoten:
 [{{"label": "Hauptthema", "detail": "Kurze Erklärung", "children": [

@@ -3,16 +3,17 @@
 # Nutzt model_router für 3-Stufen System (groq/ollama_local/ollama_server)
 # Legacy: Claude bleibt als Option für Study-Features
 
-from backend.infra.config import AI_PROVIDER
+from backend.infra.config import AI_PROVIDER, OLLAMA_MODEL_LOCAL, OLLAMA_MODEL_SERVER
 from backend.infra.model_router import get_active_provider
 from backend.services.claude_provider import ClaudeProvider
 from backend.services.ollama_provider import OllamaProvider
 from backend.services.groq_provider import GroqProvider
 
 
-# Provider-Instanzen
+# Provider-Instanzen — zwei Ollama mit unterschiedlichem Modell
 _claude = ClaudeProvider()
-_ollama = OllamaProvider()
+_ollama_local = OllamaProvider(model=OLLAMA_MODEL_LOCAL)
+_ollama_server = OllamaProvider(model=OLLAMA_MODEL_SERVER)
 _groq = GroqProvider()
 
 
@@ -21,10 +22,12 @@ def get_provider():
     active = get_active_provider()
     if active == "groq":
         return _groq
+    if active == "ollama_server":
+        return _ollama_server
     # Claude wird nur genutzt wenn explizit als Legacy konfiguriert
     if AI_PROVIDER == "claude":
         return _claude
-    return _ollama
+    return _ollama_local
 
 
 def get_active_provider_name() -> str:
