@@ -9,6 +9,7 @@ from backend.models.database import get_db
 from backend.models.document import Document
 from backend.models.summary import Summary
 from backend.services.ai_service import summarize, get_active_provider_name
+from backend.infra.model_router import get_model_used
 
 router = APIRouter(prefix="/api", tags=["summaries"])
 
@@ -37,6 +38,7 @@ async def create_summary(document_id: int, db: Session = Depends(get_db)):
         document_id=document_id, content=result["summary"],
         key_terms=result["key_terms"],
         ai_provider=get_active_provider_name(),
+        model_used=get_model_used(),
     )
     db.add(summary)
     db.commit()
@@ -44,7 +46,7 @@ async def create_summary(document_id: int, db: Session = Depends(get_db)):
     return {
         "id": summary.id, "document_id": document_id,
         "summary": summary.content, "key_terms": summary.key_terms,
-        "ai_provider": summary.ai_provider,
+        "ai_provider": summary.ai_provider, "model_used": summary.model_used,
         "message": "Zusammenfassung erfolgreich generiert.",
     }
 
@@ -59,7 +61,7 @@ def get_summaries(document_id: int, db: Session = Depends(get_db)):
         Summary.document_id == document_id).all()
     return [
         {"id": s.id, "summary": s.content, "title": s.title,
-         "key_terms": s.key_terms, "ai_provider": s.ai_provider,
+         "key_terms": s.key_terms, "ai_provider": s.ai_provider, "model_used": s.model_used,
          "created_at": s.created_at.isoformat()}
         for s in summaries
     ]
@@ -74,7 +76,7 @@ def get_summary(summary_id: int, db: Session = Depends(get_db)):
     return {
         "id": summary.id, "document_id": summary.document_id,
         "summary": summary.content, "title": summary.title,
-        "key_terms": summary.key_terms, "ai_provider": summary.ai_provider,
+        "key_terms": summary.key_terms, "ai_provider": summary.ai_provider, "model_used": summary.model_used,
         "created_at": summary.created_at.isoformat(),
     }
 
