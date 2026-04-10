@@ -49,7 +49,8 @@ export interface Summary {
   title: string | null
   summary: string            // Der Zusammenfassungstext
   key_terms: string[]        // Liste der Schlüsselbegriffe
-  ai_provider: string        // "claude" oder "ollama"
+  ai_provider: string        // "claude", "ollama" oder "groq"
+  model_used?: string        // z.B. "groq:llama-3.3-70b-versatile"
   created_at: string
 }
 
