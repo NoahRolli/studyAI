@@ -62,7 +62,6 @@ export function GlowNode({ position, color, size, label, onClick, showLabel,
   useFrame(({ clock }) => {
     const t = clock.elapsedTime * 1.5 + size * 10
     if (glowRef.current) glowRef.current.scale.setScalar(1 + Math.sin(t) * 0.2)
-    }
   })
 
   const scaledColor = color.clone().multiplyScalar(colorMul)

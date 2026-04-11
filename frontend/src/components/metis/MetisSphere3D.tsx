@@ -99,8 +99,6 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
   settings: import('../../hooks/useSphereSettings').SphereSettings
 }) {
   const groupRef = useRef<THREE.Group>(null)
-  const idleTime = useRef(0)
-  const [clickedId, setClickedId] = useState<number | null>(null)
   const [activeHub, setActiveHub] = useState<string | null>(null)
   const [activeFolder, setActiveFolder] = useState<number | null>(null)
   const handleInteract = useCallback(() => { idleTime.current = 0 }, [])
@@ -194,9 +192,6 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
         new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), delta * 0.06),
       )
     }
-    // Atmen: gesamte Sphäre pulsiert sanft
-    const breath = 1 + Math.sin(_.clock.elapsedTime * 0.6) * 0.02
-    groupRef.current.scale.setScalar(breath)
   })
 
   return (
