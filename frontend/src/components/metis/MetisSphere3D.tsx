@@ -79,7 +79,7 @@ function TrackballControls({ groupRef, onInteract, isDraggingRef }: {
     const tm = (e: TouchEvent) => { if (e.touches.length === 1) onMove(e.touches[0].clientX, e.touches[0].clientY) }
     const wh = (e: WheelEvent) => {
       e.preventDefault(); onInteract()
-      camera.position.z = Math.max(15, Math.min(80, camera.position.z + e.deltaY * 0.03))
+      camera.position.z = Math.max(15, Math.min(200, camera.position.z + e.deltaY * 0.03))
     }
     el.addEventListener('pointerdown', pd); el.addEventListener('pointermove', pm)
     el.addEventListener('pointerup', onUp); el.addEventListener('pointerleave', onUp)
@@ -113,13 +113,39 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
 
   const hubData = useMemo(() => {
     if (!graph.clusters || graph.clusters.length === 0) return []
-    return graph.clusters.map((cluster, i) => ({
-      id: `hub-${cluster.id}`, label: cluster.label || `Cluster ${i + 1}`,
-      color: new THREE.Color(cluster.color || HUB_FALLBACK[i % HUB_FALLBACK.length]),
-      memberNodeIds: cluster.node_ids || [],
-      memberCount: (cluster.node_ids || []).length,
-    }))
-  }, [graph.clusters])
+    const folders = graph.folders || []
+    // Cluster -> dominanter Ordner bestimmen
+    return graph.clusters.map((cluster, i) => {
+      const memberNodes = (cluster.node_ids || []).map(nid => graph.nodes.find(n => n.id === nid))
+      const folderCounts = new Map<number, number>()
+      memberNodes.forEach(n => {
+        if (n?.folder_id) folderCounts.set(n.folder_id, (folderCounts.get(n.folder_id) || 0) + 1)
+      })
+      let bestFid: number | null = null, bestCnt = 0
+      folderCounts.forEach((cnt, fid) => { if (cnt > bestCnt) { bestFid = fid; bestCnt = cnt } })
+      // Farbe: Folder-Farbe + Hue-Shift pro Cluster-Index
+      let color: THREE.Color
+      if (bestFid !== null) {
+        const fIdx = folders.findIndex(f => f.id === bestFid)
+        const baseColor = new THREE.Color(FOLDER_COLORS[fIdx >= 0 ? fIdx % FOLDER_COLORS.length : 0])
+        const hsl = { h: 0, s: 0, l: 0 }
+        baseColor.getHSL(hsl)
+        // Leichte Hue-Variation + Sättigung/Helligkeit variieren
+        const clusterIdx = [...folderCounts.keys()].indexOf(bestFid)
+        hsl.h = (hsl.h + (i * 0.04) % 0.15) % 1
+        hsl.s = Math.max(0.3, Math.min(1, hsl.s + (i % 3 - 1) * 0.1))
+        hsl.l = Math.max(0.3, Math.min(0.8, hsl.l + (i % 4 - 2) * 0.05))
+        color = new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l)
+      } else {
+        color = new THREE.Color(HUB_FALLBACK[i % HUB_FALLBACK.length])
+      }
+      return {
+        id: `hub-${cluster.id}`, label: cluster.label || `Cluster ${i + 1}`,
+        color, memberNodeIds: cluster.node_ids || [],
+        memberCount: (cluster.node_ids || []).length,
+      }
+    })
+  }, [graph.clusters, graph.nodes, graph.folders])
 
   // Folder-Daten fuer Sphäre
   const folderData = useMemo(() => {
@@ -187,8 +213,8 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
   useEffect(() => {
     if (maxRadius > 0) {
       const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180)
-      const dist = (maxRadius * 1.15) / Math.sin(fov / 2)
-      camera.position.set(0, 0, Math.max(20, Math.min(80, dist)))
+      const dist = (maxRadius * 1.4) / Math.sin(fov / 2)
+      camera.position.set(0, 0, Math.max(20, Math.min(200, dist)))
     }
   }, [maxRadius, camera])
   // Idle-Rotation
