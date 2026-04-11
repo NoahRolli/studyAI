@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from backend.models.database import get_db
 from backend.models.concept import (
     Concept, ConceptSource, ConceptEdge,
-    ConceptCluster, ConceptClusterMember,
+
 )
 from backend.models.relation import RelationType
 from backend.models.note import Note
@@ -101,63 +101,6 @@ def list_concepts(db: Session = Depends(get_db)):
     return [_concept_to_dict(c, sc) for c, sc in results]
 
 
-@router.get("/graph")
-def get_concept_graph(db: Session = Depends(get_db)):
-    """Graph gefiltert nach metis_enabled Ordnern."""
-    from backend.models.folder import Folder
-    from backend.models.document import Document
-    from backend.models.module import Module
-    from backend.models.summary import Summary as SummaryModel
-
-    # Sichtbare Concept-IDs: Notes immer, Summaries nur aus aktiven Ordnern
-    folder_ids = {r[0] for r in db.query(Folder.id).filter(
-        Folder.metis_enabled == True).all()}
-    # Dokument-IDs aus aktivierten Ordnern
-    doc_direct = {r[0] for r in db.query(Document.id).filter(
-        Document.folder_id.in_(folder_ids)).all()} if folder_ids else set()
-    doc_via_mod = {r[0] for r in db.query(Document.id).join(
-        Module, Document.module_id == Module.id).filter(
-        Module.folder_id.in_(folder_ids)).all()} if folder_ids else set()
-    enabled_doc_ids = doc_direct | doc_via_mod
-    enabled_sum_ids = {r[0] for r in db.query(SummaryModel.id).filter(
-        SummaryModel.document_id.in_(enabled_doc_ids)).all()
-    } if enabled_doc_ids else set()
-    # Konzepte mit Note-Source oder Summary-Source in aktivem Ordner
-    note_cids = {r[0] for r in db.query(ConceptSource.concept_id).filter(
-        ConceptSource.source_type == "note").all()}
-    sum_cids = {r[0] for r in db.query(ConceptSource.concept_id).filter(
-        ConceptSource.source_type == "summary",
-        ConceptSource.source_id.in_(enabled_sum_ids)).all()
-    } if enabled_sum_ids else set()
-    visible_ids = note_cids | sum_cids
-
-    concepts = db.query(
-        Concept, func.count(ConceptSource.id).label("source_count")
-    ).outerjoin(ConceptSource).filter(
-        Concept.id.in_(visible_ids)
-    ).group_by(Concept.id).all() if visible_ids else []
-    nodes = [_concept_to_dict(c, sc) for c, sc in concepts]
-    node_ids = {c.id for c, _ in concepts}
-
-    # Edges: nur zwischen sichtbaren Nodes
-    edges = db.query(ConceptEdge).filter(
-        ConceptEdge.status != "rejected",
-        ConceptEdge.source_concept_id.in_(node_ids),
-        ConceptEdge.target_concept_id.in_(node_ids),
-    ).all() if node_ids else []
-    type_map = {t.id: t for t in db.query(RelationType).all()}
-    edge_list = [_edge_to_dict(e, type_map) for e in edges]
-
-    # Cluster: nur node_ids filtern
-    clusters = db.query(ConceptCluster).all()
-    cluster_list = []
-    for cl in clusters:
-        cids = [m.concept_id for m in cl.members if m.concept_id in node_ids]
-        if cids:
-            cluster_list.append({"id": cl.id, "label": cl.label,
-                "description": cl.description, "node_ids": cids})
-
-    return {"nodes": nodes, "edges": edge_list, "clusters": cluster_list}
 
 
 @router.get("/{concept_id}")
