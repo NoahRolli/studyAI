@@ -2,6 +2,7 @@
 // Hover-Icons: Bearbeiten + Löschen (Ontology + Metis)
 // Inferred Relationen sind nicht editierbar (berechnet)
 
+import ManualEdgeForm from "./ManualEdgeForm"
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { get, del, put } from '../../hooks/useAPI'
@@ -177,6 +178,10 @@ export default function OntologyOverview({ showMarkers, onNodeFocus }: Props) {
           ))}
         </select>
       </div>
+
+
+      {/* Manuelle Edge erstellen */}
+      <ManualEdgeForm onCreated={() => { loadRelations(); loadMetisGraph() }} />
 
       <style>{`.onto-row:hover .row-actions { opacity: 1 !important; }`}</style>
 
