@@ -45,13 +45,13 @@ export function computeHierarchicalLayout(graph: MetisGraph): LayoutResult {
   const n = graph.nodes.length
   const folders = graph.folders || []
   const clusters = graph.clusters || []
-  const radius = 6 + Math.sqrt(n) * 0.7
+  const radius = 8 + Math.sqrt(n) * 1.2
 
   // --- Schritt 1: Ordner auf der Sphäre verteilen ---
   const folderCount = folders.length
   folders.forEach((f, i) => {
     // Ordner bekommen die aeusserste Schicht
-    const pos = fibPoint(i, Math.max(folderCount, 2), radius * 0.55)
+    const pos = fibPoint(i, Math.max(folderCount, 2), radius * 0.7)
     folderPositions.set(f.id, pos)
   })
 
@@ -92,7 +92,7 @@ export function computeHierarchicalLayout(graph: MetisGraph): LayoutResult {
   // Cluster mit Ordner: Ring um Ordner-Position
   folderClusters.forEach((cls, fid) => {
     const fPos = folderPositions.get(fid)!
-    const clSpread = 2.5 + Math.sqrt(cls.length) * 0.8
+    const clSpread = 4.0 + Math.sqrt(cls.length) * 1.2
     cls.forEach((cl, i) => {
       const pos = spreadPoint(i, cls.length, fPos, clSpread)
       hubPositions.set(`hub-${cl.id}`, pos)
@@ -101,7 +101,7 @@ export function computeHierarchicalLayout(graph: MetisGraph): LayoutResult {
 
   // Orphan-Cluster: eigene Zone (gegenueber der Ordner)
   orphanClusters.forEach((cl, i) => {
-    const pos = fibPoint(i + folderCount, Math.max(orphanClusters.length + folderCount, 2), radius * 0.5)
+    const pos = fibPoint(i + folderCount, Math.max(orphanClusters.length + folderCount, 2), radius * 0.65)
     hubPositions.set(`hub-${cl.id}`, pos)
   })
 
@@ -129,7 +129,7 @@ export function computeHierarchicalLayout(graph: MetisGraph): LayoutResult {
         const idx = clusterNodeIndices.get(clId) || 0
         clusterNodeIndices.set(clId, idx + 1)
         const count = clusterNodeCounts.get(clId) || 1
-        const spread = 1.8 + Math.sqrt(count) * 0.4
+        const spread = 2.5 + Math.sqrt(count) * 0.6
         nodePositions.set(node.id, spreadPoint(idx, count, hubPos, spread))
         continue
       }
@@ -140,7 +140,7 @@ export function computeHierarchicalLayout(graph: MetisGraph): LayoutResult {
       const fPos = folderPositions.get(node.folder_id)!
       // Zaehle lose Nodes pro Ordner fuer Verteilung
       const looseIdx = nodePositions.size // grob, reicht fuer Spread
-      nodePositions.set(node.id, spreadPoint(looseIdx, n, fPos, 3.0))
+      nodePositions.set(node.id, spreadPoint(looseIdx, n, fPos, 4.0))
       continue
     }
 
@@ -166,7 +166,6 @@ export function computeHierarchicalLayout(graph: MetisGraph): LayoutResult {
       map.forEach((p, k) => map.set(k, [p[0] - cx, p[1] - cy, p[2] - cz]))
     }
     shift(nodePositions); shift(hubPositions); shift(folderPositions)
-  }
   }
 
   // Maximalen Radius berechnen (fuer Kamera-Auto-Fit)

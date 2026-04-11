@@ -29,7 +29,13 @@ const COLORS: Record<string, THREE.Color> = {
   example_of: new THREE.Color('#67e8f9'),
   related_to: new THREE.Color('#a78bfa'),
 }
-const HUB_FALLBACK = ['#7dd4a3', '#d4a574', '#d4cc7d', '#7dd8e8', '#888888']
+const HUB_FALLBACK = [
+  "#7dd4a3", "#d4a574", "#d4cc7d", "#7dd8e8", "#e88a8a",
+  "#c084fc", "#fb923c", "#67e8f9", "#a78bfa", "#f472b6",
+  "#34d399", "#fbbf24", "#f87171", "#60a5fa", "#818cf8",
+  "#2dd4bf", "#e879f9", "#a3e635", "#f59e0b", "#ec4899",
+  "#14b8a6", "#8b5cf6", "#84cc16", "#ef4444", "#06b6d4",
+]
 const FOLDER_COLORS = ['#00d4ff', '#ff6b9d', '#4ade80', '#fb923c', '#c084fc', '#67e8f9']
 const CLICK_THRESHOLD = 5
 
@@ -99,6 +105,8 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
   settings: import('../../hooks/useSphereSettings').SphereSettings
 }) {
   const groupRef = useRef<THREE.Group>(null)
+  const idleTime = useRef(0)
+  const [clickedId, setClickedId] = useState<number | null>(null)
   const [activeHub, setActiveHub] = useState<string | null>(null)
   const [activeFolder, setActiveFolder] = useState<number | null>(null)
   const handleInteract = useCallback(() => { idleTime.current = 0 }, [])
