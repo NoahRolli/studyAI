@@ -154,11 +154,11 @@ app.include_router(relation_types_router)
 app.include_router(relations_ai_router)
 app.include_router(relations_inference_router)
 app.include_router(git_tracker_router)
+app.include_router(concepts_graph_router)
 app.include_router(concepts_router)
 app.include_router(concepts_cluster_router)
 app.include_router(concepts_ai_router)
 app.include_router(concepts_link_router)
-app.include_router(concepts_graph_router)
 
 # Static Files — gebautes Frontend servieren (nur in Production)
 if _HAS_FRONTEND:
