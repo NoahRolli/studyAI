@@ -65,8 +65,7 @@ def list_sport(
     if month and year:
         query = query.filter(
             SportEntry.date >= date(year, month, 1),
-            SportEntry.date < date(
-                year + 1, 1, 1) if month == 12 else date(year, month + 1, 1),
+            SportEntry.date < (date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)),
         )
     return query.order_by(SportEntry.date.desc()).all()
 
