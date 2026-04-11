@@ -12,6 +12,7 @@ interface LayoutResult {
   nodePositions: Map<number, [number, number, number]>
   hubPositions: Map<string, [number, number, number]>
   folderPositions: Map<number, [number, number, number]>
+  maxRadius: number
 }
 
 // Punkt auf Fibonacci-Sphäre berechnen
@@ -162,7 +163,15 @@ export function computeHierarchicalLayout(graph: MetisGraph): LayoutResult {
     shift(nodePositions); shift(hubPositions); shift(folderPositions)
   }
 
-  return { nodePositions, hubPositions, folderPositions }
-}
-  return { nodePositions, hubPositions, folderPositions }
+  // Maximalen Radius berechnen (fuer Kamera-Auto-Fit)
+  let maxR = 0
+  const measureMax = (map: Map<any, [number, number, number]>) => {
+    map.forEach(p => {
+      const d = Math.sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2])
+      if (d > maxR) maxR = d
+    })
+  }
+  measureMax(nodePositions); measureMax(hubPositions); measureMax(folderPositions)
+
+  return { nodePositions, hubPositions, folderPositions, maxRadius: maxR }
 }

@@ -171,10 +171,20 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
   }, [highlightSet])
 
   // Hierarchisches Layout berechnen
-  const { nodePositions, hubPositions, folderPositions } = useMemo(
+  const { nodePositions, hubPositions, folderPositions, maxRadius } = useMemo(
     () => computeHierarchicalLayout(graph), [graph],
   )
 
+
+  // Kamera automatisch an Sphäre-Groesse anpassen
+  const { camera } = useThree()
+  useEffect(() => {
+    if (maxRadius > 0) {
+      const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180)
+      const dist = (maxRadius * 1.15) / Math.sin(fov / 2)
+      camera.position.set(0, 0, Math.max(20, Math.min(80, dist)))
+    }
+  }, [maxRadius, camera])
   // Idle-Rotation
   useFrame((_, delta) => {
     if (!groupRef.current) return
