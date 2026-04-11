@@ -244,7 +244,6 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
         {folderData.map(fd => {
           const pos = folderPositions.get(fd.id)
           if (!pos) return null
-          const folderNodeIds = graph.nodes.filter(nd => nd.folder_id === fd.id).map(nd => nd.id)
           return <ClusterHub key={`folder-${fd.id}`} position={pos}
             color={fd.color} size={1.2} label={fd.label} showLabel={showLabels}
             onClick={() => handleFolderClick(fd.id)}
