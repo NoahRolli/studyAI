@@ -194,6 +194,9 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
         new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), delta * 0.06),
       )
     }
+    // Atmen: gesamte Sphäre pulsiert sanft
+    const breath = 1 + Math.sin(_.clock.elapsedTime * 0.6) * 0.02
+    groupRef.current.scale.setScalar(breath)
   })
 
   return (

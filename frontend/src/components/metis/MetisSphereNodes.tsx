@@ -62,9 +62,6 @@ export function GlowNode({ position, color, size, label, onClick, showLabel,
   useFrame(({ clock }) => {
     const t = clock.elapsedTime * 1.5 + size * 10
     if (glowRef.current) glowRef.current.scale.setScalar(1 + Math.sin(t) * 0.2)
-    if (groupRef.current) {
-      const pulse = 1 + Math.sin(clock.elapsedTime * 0.6 + size * 5) * 0.15
-      groupRef.current.scale.setScalar(pulse)
     }
   })
 
@@ -172,11 +169,6 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick,
       mat.opacity = ((0.7 + Math.random() * 0.05) + Math.sin(t * p.speed + i) * 0.12) * intensityMul
       mat.color.copy(color).multiplyScalar(colorMul)
     })
-    // Sanftes Pochen der gesamten Nebel-Gruppe
-    if (groupRef.current) {
-      const pulse = 1 + Math.sin(t * 0.4 + size * 3) * 0.1
-      groupRef.current.scale.setScalar(pulse)
-    }
   })
 
   const hex = `#${color.getHexString()}`
