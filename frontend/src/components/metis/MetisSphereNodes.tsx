@@ -62,14 +62,18 @@ export function GlowNode({ position, color, size, label, onClick, showLabel,
   useFrame(({ clock }) => {
     const t = clock.elapsedTime * 1.5 + size * 10
     if (glowRef.current) glowRef.current.scale.setScalar(1 + Math.sin(t) * 0.2)
-    if (groupRef.current) groupRef.current.position.y = position[1] + Math.sin(clock.elapsedTime * 0.6 + size * 5) * 0.08
+    if (groupRef.current) {
+      groupRef.current.position.x = position[0]
+      groupRef.current.position.y = position[1] + Math.sin(clock.elapsedTime * 0.6 + size * 5) * 0.08
+      groupRef.current.position.z = position[2]
+    }
   })
 
   const scaledColor = color.clone().multiplyScalar(colorMul)
   const hex = `#${scaledColor.getHexString()}`
 
   return (
-    <group ref={groupRef} position={position}>
+    <group ref={groupRef}>
       {/* Innerer Glow */}
       <mesh ref={glowRef}>
         <sphereGeometry args={[size * 2, 8, 8]} />
@@ -170,13 +174,17 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick,
       mat.color.copy(color).multiplyScalar(colorMul)
     })
     // Sanftes Pochen der gesamten Nebel-Gruppe
-    if (groupRef.current) groupRef.current.position.y = position[1] + Math.sin(t * 0.4 + size * 3) * 0.12
+    if (groupRef.current) {
+      groupRef.current.position.x = position[0]
+      groupRef.current.position.y = position[1] + Math.sin(t * 0.4 + size * 3) * 0.12
+      groupRef.current.position.z = position[2]
+    }
   })
 
   const hex = `#${color.getHexString()}`
 
   return (
-    <group position={position} ref={groupRef}>
+    <group ref={groupRef}>
       {/* Nebel-Partikel */}
       {particles.map((p, i) => (
         <primitive key={i} object={p.sprite} />
