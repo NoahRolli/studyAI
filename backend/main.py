@@ -50,10 +50,7 @@ from backend.models.folder import Folder  # noqa: F401
 from backend.models.calendar_event import CalendarEvent  # noqa: F401
 from backend.models.sport_entry import SportEntry  # noqa: F401
 from backend.models.note import Note  # noqa: F401
-from backend.models.metis_node import MetisNode  # noqa: F401
 from backend.models.relation import RelationType  # noqa: F401
-from backend.models.metis_cluster import MetisCluster  # noqa: F401
-from backend.models.metis_cluster import MetisClusterMember  # noqa: F401
 from backend.models.git_commit import GitCommit  # noqa: F401
 from backend.models.concept import Concept  # noqa: F401
 from backend.models.concept import ConceptSource  # noqa: F401
