@@ -170,7 +170,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick,
     })
     // Sanftes Pulsieren der Nebel-Gruppe
     if (groupRef.current) {
-      const pulse = 1 + Math.sin(t * 0.4 + size * 3) * 0.08
+      const pulse = 1 + Math.sin(t * 0.4 + size * 3) * 0.3
       groupRef.current.scale.setScalar(pulse)
     }
   })

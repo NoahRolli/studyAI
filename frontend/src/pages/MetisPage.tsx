@@ -218,7 +218,7 @@ export default function MetisPage() {
                 onClick={() => setFullscreen(!fullscreen)}
                 className="hud-btn text-xs px-2 py-1"
                 title={fullscreen ? 'Escape' : 'Fullscreen'}
-              >{fullscreen ? 'u2715' : 'u26F6'}</button>
+              >{fullscreen ? '✕' : '⛶'}</button>
             </div>
           </>
         )}
