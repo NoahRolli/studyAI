@@ -67,7 +67,6 @@ export function GlowNode({ position, color, size, label, onClick, showLabel,
       groupRef.current.scale.setScalar(pulse)
     }
   })
-  })
 
   const scaledColor = color.clone().multiplyScalar(colorMul)
   const hex = `#${scaledColor.getHexString()}`
