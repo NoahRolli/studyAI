@@ -1,8 +1,9 @@
-// MetisToolbar — Steuerleiste für den Knowledge-Graph
-// View-Toggle (3D/Liste), Action-Buttons.
+// MetisToolbar — Steuerleiste fuer den Knowledge-Graph
+// View-Toggle (3D/Liste), Action-Buttons, Provider-Badge
 
 import { useLanguage } from '../../hooks/useLanguage'
 import type { MetisViewMode } from '../../types/metis'
+import PageProviderBadge from '../PageProviderBadge'
 
 interface Props {
   view: MetisViewMode
@@ -84,6 +85,9 @@ export default function MetisToolbar({
           {clustering ? t.metis.autoClustering : t.metis.autoCluster}
         </button>
       </div>
+
+      {/* Provider Override Badge */}
+      <PageProviderBadge page="metis" />
     </div>
   )
 }

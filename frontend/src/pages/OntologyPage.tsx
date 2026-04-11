@@ -1,5 +1,5 @@
 // OntologyPage — Wissensgraph aller typisierten Relationen
-// Tabs: Übersicht, Vorschläge, Metis Links, Graph (Ego-View)
+import PageProviderBadge from "../components/PageProviderBadge"// Tabs: Übersicht, Vorschläge, Metis Links, Graph (Ego-View)
 // Ontologie-Symbole togglebar via localStorage
 
 import { useState, useCallback } from 'react'
@@ -36,7 +36,7 @@ export default function OntologyPage() {
     <div className="animate-fade-in">
       {/* Header + Toggle */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="hud-title text-glow text-2xl">ONTOLOGY</h1>
+        <div className="flex items-center gap-3"><h1 className="hud-title text-glow text-2xl">ONTOLOGY</h1><PageProviderBadge page="ontology" /></div>
         <button onClick={toggleMarkers}
           className="px-2 py-0.5 rounded"
           style={{

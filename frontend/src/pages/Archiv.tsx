@@ -1,5 +1,5 @@
 // Archiv — Ordner-Hierarchie mit DnD, Pin, Inline-Edit
-// Nutzt useArchiv Hook für State und Logik
+import PageProviderBadge from "../components/PageProviderBadge"// Nutzt useArchiv Hook für State und Logik
 
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -105,7 +105,7 @@ function Archiv() {
     <div className="animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="hud-title text-glow text-2xl">{t.archiv.title}</h1>
+        <div className="flex items-center gap-3"><h1 className="hud-title text-glow text-2xl">{t.archiv.title}</h1><PageProviderBadge page="archiv" /></div>
         <div className="flex items-center gap-3">
           <button onClick={() => { setShowFolderForm(!showFolderForm); setShowModuleForm(false) }} className="hud-btn">
             {showFolderForm ? t.common.cancel : t.archiv.newFolder}
