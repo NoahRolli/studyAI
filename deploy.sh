@@ -28,7 +28,7 @@ rsync -az --delete --exclude='__pycache__' --exclude='*.pyc' \
   -e "ssh -p 2222" backend/ prometheus@192.168.0.10:~/pallas/backend/
 
 # Docker-Dateien
-rsync -az -e "ssh -p 2222" Dockerfile docker-compose.yml docker-compose.override.yml \
+rsync -az -e "ssh -p 2222" Dockerfile docker-compose.yml \
   prometheus@192.168.0.10:~/pallas/
 
 # 3. Container auf dem Server bauen und starten
