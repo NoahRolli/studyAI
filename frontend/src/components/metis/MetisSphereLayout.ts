@@ -148,5 +148,21 @@ export function computeHierarchicalLayout(graph: MetisGraph): LayoutResult {
     nodePositions.set(node.id, fibPoint(looseIdx, n, radius))
   }
 
+  // Schwerpunkt berechnen und alle Positionen zentrieren
+  const allPos: [number, number, number][] = [
+    ...nodePositions.values(), ...hubPositions.values(), ...folderPositions.values(),
+  ]
+  if (allPos.length > 0) {
+    const cx = allPos.reduce((s, p) => s + p[0], 0) / allPos.length
+    const cy = allPos.reduce((s, p) => s + p[1], 0) / allPos.length
+    const cz = allPos.reduce((s, p) => s + p[2], 0) / allPos.length
+    const shift = (map: Map<any, [number, number, number]>) => {
+      map.forEach((p, k) => map.set(k, [p[0] - cx, p[1] - cy, p[2] - cz]))
+    }
+    shift(nodePositions); shift(hubPositions); shift(folderPositions)
+  }
+
+  return { nodePositions, hubPositions, folderPositions }
+}
   return { nodePositions, hubPositions, folderPositions }
 }
