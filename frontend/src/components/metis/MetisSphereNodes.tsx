@@ -17,15 +17,15 @@ function SpriteLabel({ position, text, color, fontSize, bold }: {
   const sprite = useMemo(() => {
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')!
-    const size = fontSize || 48
+    const size = fontSize || 32
     const weight = bold ? 'bold' : 'normal'
-    ctx.font = `${weight} ${size}px Orbitron, monospace`
+    ctx.font = `${weight} ${size}px Inter, -apple-system, sans-serif`
     const metrics = ctx.measureText(text)
     const w = Math.ceil(metrics.width) + 16
     const h = size + 16
     canvas.width = w
     canvas.height = h
-    ctx.font = `${weight} ${size}px Orbitron, monospace`
+    ctx.font = `${weight} ${size}px Inter, -apple-system, sans-serif`
     ctx.fillStyle = color
     ctx.shadowColor = color
     ctx.shadowBlur = 8
@@ -186,7 +186,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick,
       {showLabel && (
         <SpriteLabel
           position={[size * 4, size * 2, 0]}
-          text={label} color={hex} fontSize={56} bold />
+          text={label} color={hex} fontSize={40} bold />
       )}
     </group>
   )
