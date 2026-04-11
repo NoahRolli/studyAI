@@ -14,6 +14,7 @@ export interface SphereSettings {
   showOntologyMarkers: boolean
   showEdgeLabels: boolean
   showNodeColors: boolean
+  clusterPulse: boolean
   ontologyThickness: number
 }
 
@@ -29,6 +30,7 @@ const DEFAULTS: SphereSettings = {
   showOntologyMarkers: true,
   showEdgeLabels: true,
   showNodeColors: true,
+  clusterPulse: true,
   ontologyThickness: 2.0,
 }
 

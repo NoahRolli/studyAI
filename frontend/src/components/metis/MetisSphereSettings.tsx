@@ -125,6 +125,9 @@ export default function MetisSphereSettings({ settings, onUpdate, onSave, onRese
         <ToggleButton label={de ? 'Node-Farben' : 'Node Colors'}
           value={settings.showNodeColors}
           onChange={v => onUpdate('showNodeColors', v)} />
+        <ToggleButton label={de ? "Cluster-Puls" : "Cluster Pulse"}
+          value={settings.clusterPulse}
+          onChange={v => onUpdate("clusterPulse", v)} />
       </div>
 
       {/* Aktionen */}

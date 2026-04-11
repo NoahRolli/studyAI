@@ -110,7 +110,7 @@ function createNebulaTexture(color: string): THREE.CanvasTexture {
 
 // --- ClusterHub — Weltraum-Nebel aus Sprite-Partikeln ---
 export function ClusterHub({ position, color, size, label, showLabel, onClick,
-  intensityMul = 1, sizeMul = 1, colorMul = 1 }: {
+  intensityMul = 1, sizeMul = 1, colorMul = 1, pulse = true }: {
   position: [number, number, number]
   color: THREE.Color
   size: number
@@ -120,6 +120,7 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick,
   intensityMul?: number
   sizeMul?: number
   colorMul?: number
+  pulse?: boolean
 }) {
   const groupRef = useRef<THREE.Group>(null)
 
@@ -169,9 +170,12 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick,
       mat.color.copy(color).multiplyScalar(colorMul)
     })
     // Sanftes Pulsieren der Nebel-Gruppe
-    if (groupRef.current) {
-      const pulse = 1 + Math.sin(t * 0.4 + size * 3) * 0.3
-      groupRef.current.scale.setScalar(pulse)
+    if (groupRef.current && pulse) {
+      const sc = 1 + Math.sin(t * 0.4 + size * 3) * 0.3
+      groupRef.current.scale.setScalar(sc)
+    } else if (groupRef.current) {
+      groupRef.current.scale.setScalar(1)
+    }
     }
   })
 

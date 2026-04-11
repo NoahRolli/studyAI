@@ -290,7 +290,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
             onClick={() => handleFolderClick(fd.id)}
             intensityMul={settings.nebulaIntensity * 1.3}
             sizeMul={settings.nebulaSize * 1.2}
-            colorMul={settings.colorIntensity} />
+            colorMul={settings.colorIntensity} pulse={settings.clusterPulse} />
         })}
         {/* Cluster-Hubs (mittlere Nebel) */}
         {hubData.map(hub => {
@@ -303,7 +303,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
             onClick={() => handleHubClick(hub.id, hub.memberNodeIds)}
             intensityMul={settings.nebulaIntensity}
             sizeMul={settings.nebulaSize}
-            colorMul={settings.colorIntensity} />
+            colorMul={settings.colorIntensity} pulse={settings.clusterPulse} />
         })}
         {/* Konzept-Nodes */}
         {graph.nodes.map(node => {
