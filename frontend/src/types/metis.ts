@@ -12,7 +12,10 @@ export interface MetisNode {
   pos_y: number | null
   embedding_stale: boolean
   cluster_ids: number[]
-  source_count?: number}
+  source_count?: number
+  folder_id?: number | null
+  folder_name?: string | null
+}
 
 // Eine Kante zwischen zwei Nodes
 export interface MetisEdge {
@@ -39,6 +42,7 @@ export interface MetisGraph {
   nodes: MetisNode[]
   edges: MetisEdge[]
   clusters: MetisCluster[]
+  folders?: { id: number; name: string }[]
 }
 
 // Ansichts-Modi
@@ -52,6 +56,8 @@ export interface ConceptNode {
   name: string
   description: string | null
   source_count: number
+  folder_id: number | null
+  folder_name: string | null
   created_at: string | null
 }
 
@@ -90,6 +96,7 @@ export interface ConceptGraph {
   nodes: ConceptNode[]
   edges: ConceptEdge[]
   clusters: { id: number; label: string; description: string | null; node_ids: number[] }[]
+  folders?: { id: number; name: string }[]
 }
 // --- Journal Metis (verschlüsselt, merged view) ---
 

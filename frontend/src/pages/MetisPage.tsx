@@ -50,6 +50,7 @@ export default function MetisPage() {
       id: c.id, type: 'note' as const, source_id: c.id,
       title: c.name, pos_x: null, pos_y: null,
       embedding_stale: false, cluster_ids: [], source_count: c.source_count,
+      folder_id: c.folder_id, folder_name: c.folder_name,
     })),
     edges: conceptGraph.edges.map(e => ({
       id: e.id, source_node_id: e.source,
@@ -64,6 +65,7 @@ export default function MetisPage() {
       description: cl.description,
       color: null, node_ids: cl.node_ids,
     })),
+    folders: (conceptGraph.folders || []).map(f => ({ id: f.id, name: f.name })),
   }), [conceptGraph])
 
   // Konzept-Graph laden
