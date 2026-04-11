@@ -168,6 +168,11 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick,
       mat.opacity = ((0.7 + Math.random() * 0.05) + Math.sin(t * p.speed + i) * 0.12) * intensityMul
       mat.color.copy(color).multiplyScalar(colorMul)
     })
+    // Sanftes Pulsieren der Nebel-Gruppe
+    if (groupRef.current) {
+      const pulse = 1 + Math.sin(t * 0.4 + size * 3) * 0.08
+      groupRef.current.scale.setScalar(pulse)
+    }
   })
 
   const hex = `#${color.getHexString()}`

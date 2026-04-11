@@ -131,9 +131,8 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
         const hsl = { h: 0, s: 0, l: 0 }
         baseColor.getHSL(hsl)
         // Leichte Hue-Variation + Sättigung/Helligkeit variieren
-        const clusterIdx = [...folderCounts.keys()].indexOf(bestFid)
         hsl.h = (hsl.h + (i * 0.04) % 0.15) % 1
-        hsl.s = Math.max(0.3, Math.min(1, hsl.s + (i % 3 - 1) * 0.1))
+        hsl.s = Math.max(0.2, Math.min(0.5, hsl.s * 0.5 + (i % 3 - 1) * 0.05))
         hsl.l = Math.max(0.3, Math.min(0.8, hsl.l + (i % 4 - 2) * 0.05))
         color = new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l)
       } else {
