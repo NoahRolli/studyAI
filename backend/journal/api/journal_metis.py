@@ -1,10 +1,11 @@
-# Journal Metis API — Verschlüsselter Knowledge-Graph im Journal
-# Graph: Merged View aus Journal-Nodes + öffentlichen Metis-Nodes
-# Sync: Journal-Einträge → Nodes (verschlüsselt, mit Cleanup)
+# Journal Metis API — Verschluesselter Knowledge-Graph im Journal
+# Graph: Merged View aus Journal-Nodes + oeffentlichen Konzept-Nodes (v1)
+# Sync: Journal-Eintraege -> Nodes (verschluesselt, mit Cleanup)
 # Position, Edge-Review (Confirm/Reject)
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone
@@ -18,10 +19,14 @@ from backend.journal.models.journal_entry import JournalEntry
 from backend.journal.services.crypto_service import encrypt_text, decrypt_text
 from backend.journal.services.session_service import session_manager
 from backend.models.database import get_db
-from backend.models.metis_node import MetisNode
-from backend.models.metis_edge import MetisEdge
-from backend.models.metis_cluster import MetisCluster, MetisClusterMember
-from backend.models.note import Note
+from backend.models.concept import (
+    Concept, ConceptSource, ConceptEdge,
+    ConceptCluster, ConceptClusterMember,
+)
+from backend.models.relation import RelationType
+from backend.models.folder import Folder
+from backend.models.document import Document
+from backend.models.module import Module
 from backend.models.summary import Summary
 
 router = APIRouter(
@@ -31,19 +36,19 @@ router = APIRouter(
 
 
 class EdgeReview(BaseModel):
-    """Schema für Edge-Bestätigung/Ablehnung."""
+    """Schema fuer Edge-Bestaetigung/Ablehnung."""
     reason: Optional[str] = None
 
 
 def require_journal_key():
-    """Prüft ob Journal entsperrt ist, gibt AES-Key zurück."""
+    """Prueft ob Journal entsperrt ist, gibt AES-Key zurueck."""
     key = session_manager.get_key()
     if not key:
         raise HTTPException(status_code=403, detail="Journal gesperrt")
     return key
 
 
-# --- GET /graph — Merged View ---
+# --- GET /graph — Merged View (Journal + Konzept-Graph v1) ---
 
 @router.get("/graph")
 def get_merged_graph(
@@ -52,30 +57,23 @@ def get_merged_graph(
 ):
     key = require_journal_key()
 
-    # 1. Journal-Nodes entschlüsseln
+    # 1. Journal-Nodes entschluesseln
     j_nodes = journal_db.query(JournalMetisNode).all()
     journal_nodes = []
     for n in j_nodes:
         label = ""
         if n.encrypted_label and n.label_iv:
             try:
-                label = decrypt_text(
-                    n.label_iv + n.encrypted_label, key
-                )
+                label = decrypt_text(n.label_iv + n.encrypted_label, key)
             except Exception:
                 label = "???"
-        memberships = journal_db.query(
-            JournalMetisClusterMember
-        ).filter(
+        memberships = journal_db.query(JournalMetisClusterMember).filter(
             JournalMetisClusterMember.node_id == n.id
         ).all()
         journal_nodes.append({
-            "id": f"j-{n.id}",
-            "type": n.type,
-            "source_id": n.source_id,
-            "label": label,
-            "pos_x": n.pos_x,
-            "pos_y": n.pos_y,
+            "id": f"j-{n.id}", "type": n.type,
+            "source_id": n.source_id, "label": label,
+            "pos_x": n.pos_x, "pos_y": n.pos_y,
             "cluster_ids": [m.cluster_id for m in memberships],
             "realm": "journal",
         })
@@ -90,8 +88,7 @@ def get_merged_graph(
         "target": f"j-{e.target_node_id}",
         "relation_type": e.relation_type,
         "strength": e.strength,
-        "status": e.status,
-        "realm": "journal",
+        "status": e.status, "realm": "journal",
     } for e in j_edges]
 
     # 3. Journal-Clusters
@@ -101,82 +98,83 @@ def get_merged_graph(
         label = ""
         if c.encrypted_label and c.label_iv:
             try:
-                label = decrypt_text(
-                    c.label_iv + c.encrypted_label, key
-                )
+                label = decrypt_text(c.label_iv + c.encrypted_label, key)
             except Exception:
                 label = "???"
-        members = journal_db.query(
-            JournalMetisClusterMember
-        ).filter(
+        members = journal_db.query(JournalMetisClusterMember).filter(
             JournalMetisClusterMember.cluster_id == c.id
         ).all()
         journal_clusters.append({
-            "id": f"j-{c.id}",
-            "label": label,
-            "color": c.color,
+            "id": f"j-{c.id}", "label": label, "color": c.color,
             "node_ids": [f"j-{m.node_id}" for m in members],
             "realm": "journal",
         })
 
-    # 4. Öffentliche Metis-Nodes
-    pub_nodes_raw = main_db.query(MetisNode).all()
-    pub_nodes = []
-    for n in pub_nodes_raw:
-        label = ""
-        if n.type == "note":
-            note = main_db.query(Note).filter(
-                Note.id == n.source_id
-            ).first()
-            label = note.title if note else f"Note #{n.source_id}"
-        elif n.type == "summary":
-            summary = main_db.query(Summary).filter(
-                Summary.id == n.source_id
-            ).first()
-            label = (summary.content[:50] if summary
-                     else f"Summary #{n.source_id}")
-        memberships = main_db.query(MetisClusterMember).filter(
-            MetisClusterMember.node_id == n.id
-        ).all()
-        pub_nodes.append({
-            "id": f"p-{n.id}",
-            "type": n.type,
-            "source_id": n.source_id,
-            "label": label,
-            "pos_x": n.pos_x,
-            "pos_y": n.pos_y,
-            "cluster_ids": [f"p-{m.cluster_id}" for m in memberships],
-            "realm": "public",
+    # 4. Oeffentliche Konzept-Nodes (v1 — aus concept_graph)
+    folder_ids = {r[0] for r in main_db.query(Folder.id).filter(
+        Folder.metis_enabled == True).all()}
+    doc_direct = {r[0] for r in main_db.query(Document.id).filter(
+        Document.folder_id.in_(folder_ids)).all()} if folder_ids else set()
+    doc_via_mod = {r[0] for r in main_db.query(Document.id).join(
+        Module, Document.module_id == Module.id).filter(
+        Module.folder_id.in_(folder_ids)).all()} if folder_ids else set()
+    enabled_doc_ids = doc_direct | doc_via_mod
+    enabled_sum_ids = {r[0] for r in main_db.query(Summary.id).filter(
+        Summary.document_id.in_(enabled_doc_ids)).all()
+    } if enabled_doc_ids else set()
+    note_cids = {r[0] for r in main_db.query(ConceptSource.concept_id).filter(
+        ConceptSource.source_type == "note").all()}
+    sum_cids = {r[0] for r in main_db.query(ConceptSource.concept_id).filter(
+        ConceptSource.source_type == "summary",
+        ConceptSource.source_id.in_(enabled_sum_ids)).all()
+    } if enabled_sum_ids else set()
+    visible_ids = note_cids | sum_cids
+
+    concepts = main_db.query(
+        Concept, func.count(ConceptSource.id).label("sc")
+    ).outerjoin(ConceptSource).filter(
+        Concept.id.in_(visible_ids)
+    ).group_by(Concept.id).all() if visible_ids else []
+
+    pub_nodes = [{
+        "id": f"p-{c.id}", "type": "note",
+        "source_id": c.id, "label": c.name,
+        "pos_x": None, "pos_y": None,
+        "cluster_ids": [], "realm": "public",
+    } for c, _ in concepts]
+    pub_node_ids = {c.id for c, _ in concepts}
+
+    # 5. Oeffentliche Edges (concept_edges)
+    edges = main_db.query(ConceptEdge).filter(
+        ConceptEdge.status != "rejected",
+        ConceptEdge.source_concept_id.in_(pub_node_ids),
+        ConceptEdge.target_concept_id.in_(pub_node_ids),
+    ).all() if pub_node_ids else []
+    type_map = {t.id: t for t in main_db.query(RelationType).all()}
+    pub_edges = []
+    for e in edges:
+        rt = type_map.get(e.relation_type_id)
+        pub_edges.append({
+            "id": f"p-{e.id}",
+            "source": f"p-{e.source_concept_id}",
+            "target": f"p-{e.target_concept_id}",
+            "relation_type": rt.name if rt else "related_to",
+            "strength": e.strength,
+            "status": e.status, "realm": "public",
         })
 
-    # 5. Öffentliche Edges (rejected rausfiltern)
-    pub_edges_raw = main_db.query(MetisEdge).filter(
-        MetisEdge.status != "rejected"
-    ).all()
-    pub_edges = [{
-        "id": f"p-{e.id}",
-        "source": f"p-{e.source_node_id}",
-        "target": f"p-{e.target_node_id}",
-        "relation_type": e.relation_type,
-        "strength": e.strength,
-        "status": e.status,
-        "realm": "public",
-    } for e in pub_edges_raw]
-
-    # 6. Öffentliche Clusters
-    pub_clusters_raw = main_db.query(MetisCluster).all()
+    # 6. Oeffentliche Clusters (concept_clusters)
+    clusters = main_db.query(ConceptCluster).all()
     pub_clusters = []
-    for c in pub_clusters_raw:
-        members = main_db.query(MetisClusterMember).filter(
-            MetisClusterMember.cluster_id == c.id
-        ).all()
-        pub_clusters.append({
-            "id": f"p-{c.id}",
-            "label": c.label,
-            "color": c.color,
-            "node_ids": [f"p-{m.node_id}" for m in members],
-            "realm": "public",
-        })
+    for cl in clusters:
+        cids = [m.concept_id for m in cl.members if m.concept_id in pub_node_ids]
+        if cids:
+            pub_clusters.append({
+                "id": f"p-{cl.id}", "label": cl.label,
+                "color": None,
+                "node_ids": [f"p-{cid}" for cid in cids],
+                "realm": "public",
+            })
 
     return {
         "nodes": journal_nodes + pub_nodes,
@@ -185,7 +183,7 @@ def get_merged_graph(
     }
 
 
-# --- POST /sync — mit Cleanup für gelöschte Entries ---
+# --- POST /sync — mit Cleanup fuer geloeschte Entries ---
 
 @router.post("/sync")
 def sync_journal_nodes(
@@ -199,7 +197,7 @@ def sync_journal_nodes(
     created = 0
     removed = 0
 
-    # Verwaiste Nodes entfernen (Entry gelöscht)
+    # Verwaiste Nodes entfernen (Entry geloescht)
     existing_nodes = journal_db.query(JournalMetisNode).filter(
         JournalMetisNode.type == "entry"
     ).all()
@@ -225,19 +223,15 @@ def sync_journal_nodes(
         if entry.id in existing_source_ids:
             continue
         try:
-            title = decrypt_text(
-                entry.iv + entry.encrypted_title, key
-            )
+            title = decrypt_text(entry.iv + entry.encrypted_title, key)
         except Exception:
             title = f"Entry #{entry.id}"
         encrypted = encrypt_text(title, key)
         iv = encrypted[:12]
         cipher = encrypted[12:]
         node = JournalMetisNode(
-            type="entry",
-            source_id=entry.id,
-            encrypted_label=cipher,
-            label_iv=iv,
+            type="entry", source_id=entry.id,
+            encrypted_label=cipher, label_iv=iv,
             embedding_stale=True,
         )
         journal_db.add(node)
@@ -251,8 +245,7 @@ def sync_journal_nodes(
 
 @router.put("/nodes/{node_id}/position")
 def update_node_position(
-    node_id: int,
-    data: dict,
+    node_id: int, data: dict,
     journal_db: Session = Depends(get_journal_db),
 ):
     require_journal_key()
@@ -275,7 +268,7 @@ def confirm_journal_edge(
     data: EdgeReview = EdgeReview(),
     journal_db: Session = Depends(get_journal_db),
 ):
-    """Journal-Edge bestätigen."""
+    """Journal-Edge bestaetigen."""
     require_journal_key()
     edge = journal_db.query(JournalMetisEdge).filter(
         JournalMetisEdge.id == edge_id
