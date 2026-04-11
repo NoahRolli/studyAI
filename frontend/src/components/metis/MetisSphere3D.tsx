@@ -102,6 +102,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
   const idleTime = useRef(0)
   const [clickedId, setClickedId] = useState<number | null>(null)
   const [activeHub, setActiveHub] = useState<string | null>(null)
+  const [activeFolder, setActiveFolder] = useState<number | null>(null)
   const handleInteract = useCallback(() => { idleTime.current = 0 }, [])
 
   const hubData = useMemo(() => {
@@ -122,21 +123,52 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
     }))
   }, [graph.folders])
 
+  // Alle Node-IDs die zu einem Ordner gehoeren
+  const folderNodeIds = useMemo(() => {
+    const map = new Map<number, Set<number>>()
+    for (const node of graph.nodes) {
+      if (node.folder_id) {
+        if (!map.has(node.folder_id)) map.set(node.folder_id, new Set())
+        map.get(node.folder_id)!.add(node.id)
+      }
+    }
+    return map
+  }, [graph.nodes])
+
+  // Aktive Highlight-Node-IDs (Folder oder Hub oder Einzel-Node)
+  const highlightSet = useMemo(() => {
+    if (activeFolder) return folderNodeIds.get(activeFolder) || new Set<number>()
+    if (activeHub) {
+      const hub = hubData.find(h => h.id === activeHub)
+      return new Set(hub?.memberNodeIds || [])
+    }
+    if (clickedId) return new Set([clickedId])
+    return new Set<number>()
+  }, [activeFolder, activeHub, clickedId, folderNodeIds, hubData])
+
   const handleHubClick = useCallback((hubId: string, memberIds: number[]) => {
     if (isDraggingRef.current) return
+    setActiveFolder(null)
     if (activeHub === hubId) { setActiveHub(null); setClickedId(null) }
     else { setActiveHub(hubId); setClickedId(null); if (memberIds.length > 0) onNodeClick?.(memberIds[0]) }
   }, [activeHub, onNodeClick, isDraggingRef])
 
+  const handleFolderClick = useCallback((folderId: number) => {
+    if (isDraggingRef.current) return
+    setActiveHub(null); setClickedId(null)
+    setActiveFolder(prev => prev === folderId ? null : folderId)
+  }, [isDraggingRef])
+
   const handleNodeClick = useCallback((nodeId: number) => {
     if (isDraggingRef.current) return
     setClickedId(prev => prev === nodeId ? null : nodeId)
-    setActiveHub(null); onNodeClick?.(nodeId)
+    setActiveHub(null); setActiveFolder(null); onNodeClick?.(nodeId)
   }, [onNodeClick, isDraggingRef])
 
   const isEdgeHighlighted = useCallback((srcId: number, tgtId: number) => {
-    return clickedId !== null && (srcId === clickedId || tgtId === clickedId)
-  }, [clickedId])
+    if (highlightSet.size === 0) return false
+    return highlightSet.has(srcId) || highlightSet.has(tgtId)
+  }, [highlightSet])
 
   // Hierarchisches Layout berechnen
   const { nodePositions, hubPositions, folderPositions } = useMemo(
@@ -180,7 +212,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
         {hubData.map(hub => hub.memberNodeIds.map(nid => {
           const hp = hubPositions.get(hub.id); const np = nodePositions.get(nid)
           if (!hp || !np) return null
-          const hl = activeHub === hub.id
+          const hl = activeHub === hub.id || highlightSet.has(nid)
           return <GlowEdge key={`${hub.id}-${nid}`} start={hp} end={np}
             color={hub.color} strength={hl ? 5.0 : 0.1} dashed={!hl} />
         }))}
@@ -205,7 +237,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
             const hp = hubPositions.get(hub.id)
             if (!hp) return null
             return <GlowEdge key={`folder-${fd.id}-${hub.id}`} start={fPos} end={hp}
-              color={fd.color} strength={0.15} dashed />
+              color={fd.color} strength={activeFolder === fd.id ? 3.0 : 0.15} dashed={activeFolder !== fd.id} />
           })
         })}
         {/* Folder-Hubs (grosse leuchtende Anker) */}
@@ -215,7 +247,7 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
           const folderNodeIds = graph.nodes.filter(nd => nd.folder_id === fd.id).map(nd => nd.id)
           return <ClusterHub key={`folder-${fd.id}`} position={pos}
             color={fd.color} size={1.2} label={fd.label} showLabel={showLabels}
-            onClick={() => handleHubClick(`folder-${fd.id}`, folderNodeIds)}
+            onClick={() => handleFolderClick(fd.id)}
             intensityMul={settings.nebulaIntensity * 1.3}
             sizeMul={settings.nebulaSize * 1.2}
             colorMul={settings.colorIntensity} />
@@ -240,10 +272,12 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
           const hub = hubData.find(h => h.memberNodeIds.includes(node.id))
           const clusterColor = hub ? hub.color.clone() : new THREE.Color('#ffffff')
           const baseColor = settings.showNodeColors ? clusterColor : new THREE.Color('#ffffff')
+          const hl = highlightSet.has(node.id)
           return <GlowNode key={node.id} position={pos} color={baseColor}
-            glowMul={settings.nodeGlow} colorMul={settings.colorIntensity}
-            size={0.12} label={node.title}
-            onClick={() => handleNodeClick(node.id)} showLabel={false} />
+            glowMul={hl ? settings.nodeGlow * 2.5 : settings.nodeGlow}
+            colorMul={hl ? settings.colorIntensity * 1.5 : settings.colorIntensity}
+            size={hl ? 0.18 : 0.12} label={node.title}
+            onClick={() => handleNodeClick(node.id)} showLabel={hl} />
         })}
       </group>
     </>
