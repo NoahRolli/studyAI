@@ -1,9 +1,10 @@
 // MetisToolbar — Steuerleiste fuer den Knowledge-Graph
-// View-Toggle (3D/Liste), Action-Buttons, Provider-Badge
+// View-Toggle (3D/Liste), Action-Buttons mit Loading, Provider-Badge
 
 import { useLanguage } from '../../hooks/useLanguage'
 import type { MetisViewMode } from '../../types/metis'
 import PageProviderBadge from '../PageProviderBadge'
+import LoadingDot from '../LoadingDot'
 
 interface Props {
   view: MetisViewMode
@@ -30,6 +31,8 @@ export default function MetisToolbar({
     { key: '3d', label: t.metis.view3D },
     { key: 'list', label: t.metis.viewList },
   ]
+
+  const anyLoading = syncing || linking || clustering
 
   return (
     <div className="flex items-center gap-4">
@@ -67,22 +70,26 @@ export default function MetisToolbar({
 
       {/* Action-Buttons */}
       <div className="flex gap-2">
-        <button onClick={onSync} disabled={syncing} className="hud-btn">
+        <button onClick={onSync}
+          disabled={syncing || anyLoading}
+          className="hud-btn"
+          style={{ opacity: syncing ? 1 : anyLoading ? 0.4 : 1 }}>
           {syncing ? t.metis.syncing : t.metis.sync}
+          <LoadingDot active={syncing} />
         </button>
-        <button
-          onClick={onAutoLink}
-          disabled={linking || nodeCount < 2}
+        <button onClick={onAutoLink}
+          disabled={linking || anyLoading || nodeCount < 2}
           className="hud-btn"
-        >
+          style={{ opacity: linking ? 1 : anyLoading ? 0.4 : 1 }}>
           {linking ? t.metis.autoLinking : t.metis.autoLink}
+          <LoadingDot active={linking} />
         </button>
-        <button
-          onClick={onAutoCluster}
-          disabled={clustering || nodeCount < 3}
+        <button onClick={onAutoCluster}
+          disabled={clustering || anyLoading || nodeCount < 3}
           className="hud-btn"
-        >
+          style={{ opacity: clustering ? 1 : anyLoading ? 0.4 : 1 }}>
           {clustering ? t.metis.autoClustering : t.metis.autoCluster}
+          <LoadingDot active={clustering} />
         </button>
       </div>
 
