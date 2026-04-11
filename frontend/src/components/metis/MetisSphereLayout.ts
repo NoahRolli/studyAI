@@ -154,13 +154,19 @@ export function computeHierarchicalLayout(graph: MetisGraph): LayoutResult {
     ...nodePositions.values(), ...hubPositions.values(), ...folderPositions.values(),
   ]
   if (allPos.length > 0) {
-    const cx = allPos.reduce((s, p) => s + p[0], 0) / allPos.length
-    const cy = allPos.reduce((s, p) => s + p[1], 0) / allPos.length
-    const cz = allPos.reduce((s, p) => s + p[2], 0) / allPos.length
+    let minX = Infinity, minY = Infinity, minZ = Infinity
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
+    allPos.forEach(p => {
+      if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0]
+      if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1]
+      if (p[2] < minZ) minZ = p[2]; if (p[2] > maxZ) maxZ = p[2]
+    })
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, cz = (minZ + maxZ) / 2
     const shift = (map: Map<any, [number, number, number]>) => {
       map.forEach((p, k) => map.set(k, [p[0] - cx, p[1] - cy, p[2] - cz]))
     }
     shift(nodePositions); shift(hubPositions); shift(folderPositions)
+  }
   }
 
   // Maximalen Radius berechnen (fuer Kamera-Auto-Fit)
