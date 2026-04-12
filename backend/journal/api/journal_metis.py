@@ -28,6 +28,7 @@ from backend.models.folder import Folder
 from backend.models.document import Document
 from backend.models.module import Module
 from backend.models.summary import Summary
+from backend.api.concepts_graph import _build_concept_folder_map
 
 router = APIRouter(
     prefix="/api/journal/metis",
@@ -110,7 +111,7 @@ def get_merged_graph(
             "realm": "journal",
         })
 
-    # 4. Oeffentliche Konzept-Nodes (v1 — aus concept_graph)
+    # 4. Oeffentliche Konzept-Nodes mit Folder-Mapping
     folder_ids = {r[0] for r in main_db.query(Folder.id).filter(
         Folder.metis_enabled == True).all()}
     doc_direct = {r[0] for r in main_db.query(Document.id).filter(
@@ -130,18 +131,31 @@ def get_merged_graph(
     } if enabled_sum_ids else set()
     visible_ids = note_cids | sum_cids
 
+    # Folder-Mapping aus V1 importieren
+    concept_folders = _build_concept_folder_map(main_db)
+
     concepts = main_db.query(
         Concept, func.count(ConceptSource.id).label("sc")
     ).outerjoin(ConceptSource).filter(
         Concept.id.in_(visible_ids)
     ).group_by(Concept.id).all() if visible_ids else []
 
-    pub_nodes = [{
-        "id": f"p-{c.id}", "type": "note",
-        "source_id": c.id, "label": c.name,
-        "pos_x": None, "pos_y": None,
-        "cluster_ids": [], "realm": "public",
-    } for c, _ in concepts]
+    # Unique Folders sammeln fuer Response
+    seen_folders: dict[int, str] = {}
+    pub_nodes = []
+    for c, _ in concepts:
+        finfo = concept_folders.get(c.id)
+        fid = finfo[0] if finfo else None
+        fname = finfo[1] if finfo else None
+        if fid and fid not in seen_folders:
+            seen_folders[fid] = fname or ""
+        pub_nodes.append({
+            "id": f"p-{c.id}", "type": "note",
+            "source_id": c.id, "label": c.name,
+            "pos_x": None, "pos_y": None,
+            "cluster_ids": [], "realm": "public",
+            "folder_id": fid, "folder_name": fname,
+        })
     pub_node_ids = {c.id for c, _ in concepts}
 
     # 5. Oeffentliche Edges (concept_edges)
@@ -176,10 +190,15 @@ def get_merged_graph(
                 "realm": "public",
             })
 
+    # Folders-Array fuer Frontend (echte Ordner)
+    folders_list = [{"id": fid, "name": fname}
+                    for fid, fname in seen_folders.items()]
+
     return {
         "nodes": journal_nodes + pub_nodes,
         "edges": journal_edges + pub_edges,
         "clusters": journal_clusters + pub_clusters,
+        "folders": folders_list,
     }
 
 
