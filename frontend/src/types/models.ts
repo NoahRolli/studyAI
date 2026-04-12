@@ -150,6 +150,7 @@ export interface MedicationUpdate {
   start_date?: string
   end_date?: string | null
   notes?: string | null
+  dose_change_reason?: string | null
 }
 
 // Ein entschlüsselter Einnahme-Log Eintrag
@@ -158,6 +159,7 @@ export interface IntakeLog {
   medication_id: number
   date: string                 // ISO-Datum
   status: 'taken' | 'skipped'  // Genommen oder übersprungen
+  notes?: string | null         // Optionale Notiz zur Einnahme
   created_at: string
 }
 
@@ -166,6 +168,7 @@ export interface IntakeLogCreate {
   medication_id: number
   date: string
   status: 'taken' | 'skipped'
+  notes?: string | null
 }
 
 // Tracker-Settings (aktiviert/deaktiviert)
