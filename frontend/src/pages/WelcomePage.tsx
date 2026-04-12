@@ -1,7 +1,7 @@
 // WelcomePage — Begrüssungsseite mit Intro-Animation
 // PALLAS Titel erscheint zentriert, schwebt nach oben,
 // dann tauchen Karten gestaffelt auf.
-// Animation spielt bei jedem Besuch der Seite.
+// Alles vertikal zentriert ohne Scroll.
 
 import { useState, useEffect } from 'react'
 import { useLanguage } from '../hooks/useLanguage'
@@ -21,21 +21,9 @@ function WelcomePage() {
   const [cardsVisible, setCardsVisible] = useState(false)
 
   useEffect(() => {
-    // Phase 1: Titel zentriert halten
-    const moveTimer = setTimeout(() => {
-      setPhase('moving')
-    }, TITLE_MOVE_START)
-
-    // Phase 2: Titel ist oben angekommen
-    const doneTimer = setTimeout(() => {
-      setPhase('done')
-    }, TITLE_MOVE_START + TITLE_MOVE_DURATION)
-
-    // Phase 3: Karten erscheinen
-    const cardsTimer = setTimeout(() => {
-      setCardsVisible(true)
-    }, CARDS_START)
-
+    const moveTimer = setTimeout(() => setPhase('moving'), TITLE_MOVE_START)
+    const doneTimer = setTimeout(() => setPhase('done'), TITLE_MOVE_START + TITLE_MOVE_DURATION)
+    const cardsTimer = setTimeout(() => setCardsVisible(true), CARDS_START)
     return () => {
       clearTimeout(moveTimer)
       clearTimeout(doneTimer)
@@ -43,51 +31,39 @@ function WelcomePage() {
     }
   }, [])
 
-  // Titel-Position: zentriert → oben
+  // Titel-Position: zentriert → oben im Container
   const titleStyle = (): React.CSSProperties => {
     if (phase === 'center') {
       return {
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
+        position: 'fixed', top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)',
-        opacity: 1,
-        transition: 'opacity 0.5s ease',
-        zIndex: 10,
+        opacity: 1, transition: 'opacity 0.5s ease', zIndex: 10,
       }
     }
     return {
-      position: 'fixed',
-      top: '0',
-      left: '50%',
-      transform: 'translate(-50%, 0)',
-      paddingTop: '4rem',
-      opacity: 1,
-      transition: `top ${TITLE_MOVE_DURATION}ms ease-in-out, transform ${TITLE_MOVE_DURATION}ms ease-in-out, padding ${TITLE_MOVE_DURATION}ms ease-in-out`,
-      zIndex: 10,
+      position: 'relative', opacity: 1, zIndex: 10,
+      transition: `all ${TITLE_MOVE_DURATION}ms ease-in-out`,
     }
   }
 
-  // Karten-Container: unsichtbar bis Animation fertig
   const contentStyle = (): React.CSSProperties => ({
     opacity: phase === 'done' ? 1 : 0,
     transition: 'opacity 0.4s ease',
   })
 
   return (
-    <div className="flex-1 flex flex-col items-center px-8 pt-16 min-h-screen">
+    <div className="flex-1 flex flex-col items-center justify-center px-8 h-screen overflow-hidden">
 
-      {/* Animierter Titel-Block */}
+      {/* Animierter Titel */}
       <div
-        className="flex flex-col items-center text-center pointer-events-none"
+        className="flex flex-col items-center text-center pointer-events-none mb-8"
         style={titleStyle()}
       >
         <h1
           className="hud-title text-glow text-5xl font-bold mb-3 tracking-widest animate-fade-in"
           style={{
             color: "#00d4ff", fontFamily: "'Orbitron', monospace",
-            animationDuration: '0.6s',
-            animationDelay: `${TITLE_FADE_IN}ms`,
+            animationDuration: '0.6s', animationDelay: `${TITLE_FADE_IN}ms`,
           }}
         >
           PALLAS
@@ -96,34 +72,27 @@ function WelcomePage() {
           className="text-sm tracking-wide animate-fade-in"
           style={{
             color: 'var(--color-text-muted)',
-            animationDuration: '0.6s',
-            animationDelay: '250ms',
+            animationDuration: '0.6s', animationDelay: '250ms',
           }}
         >
           {t.welcome.subtitle}
         </p>
       </div>
 
-      {/* Platzhalter für Titel */}
-      <div className="mb-12" style={{ height: '80px' }} />
-
-      {/* Karten + Agenda */}
+      {/* Karten + Delphi */}
       <div
-        className="flex flex-col items-center w-full"
+        className="flex flex-col items-center"
         style={contentStyle()}
       >
         <WelcomeCards visible={cardsVisible} delayBase={0} />
 
         {/* Footer */}
-        <div className="mt-auto pb-6 pt-8 flex flex-col items-center gap-4">
+        <div className="pt-6 pb-4 flex flex-col items-center gap-3">
           <div className="flex items-center gap-4">
             <ThemeSelector />
             <LanguageToggle />
           </div>
-          <p
-            className="text-xs"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
+          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
             {t.welcome.hint}
           </p>
         </div>
