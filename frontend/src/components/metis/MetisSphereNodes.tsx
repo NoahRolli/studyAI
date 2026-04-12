@@ -176,7 +176,6 @@ export function ClusterHub({ position, color, size, label, showLabel, onClick,
     } else if (groupRef.current) {
       groupRef.current.scale.setScalar(1)
     }
-    }
   })
 
   const hex = `#${color.getHexString()}`

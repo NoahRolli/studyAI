@@ -30,8 +30,6 @@ export interface RelationData {
   created_by: string
   confidence?: number | null
   created_at?: string | null
-  created_by: 'user' | 'ollama'
-  created_at: string | null
 }
 
 export interface RelationCreate {
