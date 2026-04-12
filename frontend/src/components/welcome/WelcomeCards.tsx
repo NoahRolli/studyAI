@@ -33,6 +33,8 @@ const CARDS = [
   { to: '/calendar', titleKey: 'calendarTitle', descKey: 'calendarDesc' },
   { to: '/notes', titleKey: 'notesTitle', descKey: 'notesDesc' },
   { to: '/metis', titleKey: 'metisTitle', descKey: 'metisDesc' },
+  { to: '/ontology', titleKey: 'ontologyTitle', descKey: 'ontologyDesc' },
+  { to: '/delphi', titleKey: 'delphiTitle', descKey: 'delphiDesc' },
 ]
 
 interface Props {
@@ -107,8 +109,8 @@ export default function WelcomeCards({ visible, delayBase }: Props) {
       </div>
 
       {/* Zweite Reihe: 2 Karten */}
-      <div className="flex justify-center gap-6 w-full max-w-2xl mt-6">
-        {CARDS.slice(3).map((card, i) => (
+      <div className="flex flex-wrap justify-center gap-6 w-full max-w-3xl mt-6">
+        {CARDS.slice(3, 6).map((card, i) => (
           <Link
             key={card.to}
             to={card.to}
