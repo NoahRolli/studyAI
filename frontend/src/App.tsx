@@ -13,6 +13,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { LanguageProvider } from './hooks/useLanguage'
 import { ThemeProvider } from './hooks/useTheme'
+import { TaskProvider } from './context/TaskContext'
 import Layout from './components/Layout'
 import WelcomePage from './pages/WelcomePage'
 import Archiv from './pages/Archiv'
@@ -30,6 +31,7 @@ function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
+        <TaskProvider>
         <BrowserRouter>
           <Routes>
             {/* Login-Route — ausserhalb von Layout, kein Sidebar */}
@@ -49,6 +51,7 @@ function App() {
             <Route path="journal/mindmap" element={<JournalMindmapPage />} />
           </Routes>
         </BrowserRouter>
+        </TaskProvider>
       </LanguageProvider>
     </ThemeProvider>
   )

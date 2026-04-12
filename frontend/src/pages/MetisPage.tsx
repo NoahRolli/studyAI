@@ -3,6 +3,7 @@
 // Toolbar, Detail-Panel, MiniMap, Fullscreen, Label-Toggle.
 
 import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react'
+import { useTasks } from '../context/TaskContext'
 import { get, post } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import MetisToolbar from '../components/metis/MetisToolbar'
@@ -22,8 +23,10 @@ export default function MetisPage() {
   })
   const [view, setView] = useState<MetisViewMode>('3d')
   const [loading, setLoading] = useState(true)
-  const [syncing, setSyncing] = useState(false)
-  const [linking, setLinking] = useState(false)
+  const { tasks, runTask } = useTasks()
+  const syncing = tasks.some(t => t.id === 'metis-sync' && t.status === 'running')
+  const linking = tasks.some(t => t.id === 'metis-link' && t.status === 'running')
+  const clustering = tasks.some(t => t.id === 'metis-cluster' && t.status === 'running')
   const [selectedConceptId, setSelectedConceptId] = useState<number | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const [showLabels, setShowLabels] = useState(false)
@@ -83,46 +86,28 @@ export default function MetisPage() {
   useEffect(() => { loadGraph() }, [loadGraph])
 
   // Sync — Konzepte aus Notes + Summaries extrahieren
-  const handleSync = useCallback(async () => {
-    setSyncing(true)
-    try {
-      await post('/api/concepts/sync')
+  const handleSync = useCallback(() => {
+    runTask("metis-sync", "Sync Concepts", async () => {
+      await post("/api/concepts/sync")
       await loadGraph()
-    } catch (err) {
-      console.error('Concept sync failed:', err)
-    } finally {
-      setSyncing(false)
-    }
-  }, [loadGraph])
+    })
+  }, [runTask, loadGraph])
 
-  // Auto-Link — Ollama schlägt Relationen vor
-  const handleAutoLink = useCallback(async () => {
-    setLinking(true)
-    try {
-      await post('/api/concepts/auto-link')
+  // Auto-Link — AI schlaegt Relationen vor
+  const handleAutoLink = useCallback(() => {
+    runTask("metis-link", "Detect Connections", async () => {
+      await post("/api/concepts/auto-link")
       await loadGraph()
-    } catch (err) {
-      console.error('Concept auto-link failed:', err)
-    } finally {
-      setLinking(false)
-    }
-  }, [loadGraph])
+    })
+  }, [runTask, loadGraph])
 
-  // Auto-Cluster — Ollama gruppiert Konzepte thematisch
-  const [clustering, setClustering] = useState(false)
-  const handleAutoCluster = useCallback(async () => {
-    setClustering(true)
-    try {
+  // Auto-Cluster — AI gruppiert Konzepte thematisch
+  const handleAutoCluster = useCallback(() => {
+    runTask("metis-cluster", "Group Topics", async () => {
       await post("/api/concepts/auto-cluster")
       await loadGraph()
-    } catch (err) {
-      console.error("Concept auto-cluster failed:", err)
-    } finally {
-      setClustering(false)
-    }
-  }, [loadGraph])
-
-  // Node-Klick in der Sphäre
+    })
+  }, [runTask, loadGraph])
   const handleNodeClick = useCallback((nodeId: number) => {
     setSelectedConceptId(nodeId)
   }, [])

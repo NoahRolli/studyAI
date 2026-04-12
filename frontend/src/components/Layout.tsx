@@ -5,6 +5,7 @@
 
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
+import GlobalTaskBar from './GlobalTaskBar'
 
 function Layout() {
   const location = useLocation()
@@ -24,6 +25,7 @@ function Layout() {
       <main className="flex-1 p-8 overflow-auto">
         <Outlet />
       </main>
+      <GlobalTaskBar />
     </div>
   )
 }
