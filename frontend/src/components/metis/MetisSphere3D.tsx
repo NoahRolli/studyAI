@@ -36,6 +36,7 @@ const HUB_FALLBACK = [
   "#2dd4bf", "#e879f9", "#a3e635", "#f59e0b", "#ec4899",
   "#14b8a6", "#8b5cf6", "#84cc16", "#ef4444", "#06b6d4",
 ]
+const EDGE_DEFAULT = new THREE.Color('#00d4ff')
 const FOLDER_COLORS = ['#00d4ff', '#ff6b9d', '#4ade80', '#fb923c', '#c084fc', '#67e8f9']
 const CLICK_THRESHOLD = 5
 
@@ -254,7 +255,7 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
             showMarker={isOnt && settings.showOntologyMarkers}
             showLabel={isOnt && settings.showEdgeLabels}
             thickness={isOnt ? settings.ontologyThickness : 1}
-            color={c} strength={hl ? 5.0 : (isOnt ? settings.edgeOntology : edge.strength * settings.edgeSimilarity)} />
+            color={settings.showEdgeColors ? c : EDGE_DEFAULT} strength={hl ? 5.0 : (isOnt ? settings.edgeOntology : edge.strength * settings.edgeSimilarity)} />
         })}
         {/* Cluster-Hub zu Node Verbindungen */}
         {hubData.map(hub => hub.memberNodeIds.map(nid => {
@@ -262,7 +263,7 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
           if (!hp || !np) return null
           const hl = activeHub === hub.id || highlightSet.has(nid)
           return <GlowEdge key={`${hub.id}-${nid}`} start={hp} end={np}
-            color={hub.color} strength={hl ? 5.0 : 0.1} dashed={!hl} />
+            color={settings.showEdgeColors ? hub.color : EDGE_DEFAULT} strength={hl ? 5.0 : 0.1} dashed={!hl} />
         }))}
         {/* Folder-Hub zu Cluster-Hub Verbindungen */}
         {folderData.map(fd => {
@@ -285,7 +286,7 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
             const hp = hubPositions.get(hub.id)
             if (!hp) return null
             return <GlowEdge key={`folder-${fd.id}-${hub.id}`} start={fPos} end={hp}
-              color={fd.color} strength={activeFolder === fd.id ? 3.0 : 0.15} dashed={activeFolder !== fd.id} />
+              color={settings.showEdgeColors ? fd.color : EDGE_DEFAULT} strength={activeFolder === fd.id ? 3.0 : 0.15} dashed={activeFolder !== fd.id} />
           })
         })}
         {/* Folder-Hubs (grosse leuchtende Anker) */}
