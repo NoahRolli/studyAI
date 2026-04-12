@@ -20,11 +20,14 @@ export function adaptGraph(
   const idMap = new Map<string, number>()
   nodes.forEach((n, i) => idMap.set(n.id, i + 1))
 
-  // Journal-Cluster als pseudo-Folders (negative IDs um Konflikte zu vermeiden)
+  // Journal-Cluster als pseudo-Folders (negative IDs)
   const jClusters = (jGraph.clusters || []).filter(c => c.realm === 'journal')
   const clusterFolderMap = new Map<string, number>()
   const pseudoFolders: { id: number; name: string }[] = []
   jClusters.forEach((c, i) => {
+    // Nur Cluster mit sichtbaren Nodes als pseudo-Folder
+    const hasVisible = (c.node_ids || []).some(nid => nodeIds.has(nid))
+    if (!hasVisible) return
     const pseudoId = -(i + 1)
     clusterFolderMap.set(c.id, pseudoId)
     pseudoFolders.push({ id: pseudoId, name: c.label || `Cluster ${i + 1}` })
@@ -46,9 +49,6 @@ export function adaptGraph(
   const backendFolders: { id: number; name: string }[] =
     (jGraph as any).folders || []
 
-  // Alle Folders merged: echte + pseudo
-  const allFolders = [...backendFolders, ...pseudoFolders]
-
   // Cluster filtern + mappen
   const clusters = (jGraph.clusters || [])
     .filter(c => showPublic || c.realm === 'journal')
@@ -66,38 +66,46 @@ export function adaptGraph(
     })
     .filter(c => c.node_ids.length > 0)
 
+  // Nodes mit folder_id mappen
+  const mappedNodes = nodes.map(n => {
+    let folderId: number | null = null
+    let folderName: string | null = null
+
+    if (n.realm === 'journal') {
+      const pf = nodeClusterFolder.get(n.id)
+      if (pf !== undefined) {
+        folderId = pf
+        folderName = pseudoFolders.find(f => f.id === pf)?.name || null
+      }
+    } else {
+      folderId = (n as any).folder_id || null
+      folderName = (n as any).folder_name || null
+    }
+
+    return {
+      id: idMap.get(n.id) || 0,
+      type: n.realm === 'journal' ? 'entry' as any : n.type as any,
+      source_id: n.source_id,
+      title: n.label,
+      pos_x: n.pos_x,
+      pos_y: n.pos_y,
+      embedding_stale: false,
+      cluster_ids: [],
+      folder_id: folderId,
+      folder_name: folderName,
+    }
+  })
+
+  // Nur Folders behalten die tatsaechlich Nodes haben
+  const usedFolderIds = new Set(
+    mappedNodes.map(n => n.folder_id).filter(Boolean) as number[]
+  )
+  const activeFolders = showPublic
+    ? [...backendFolders.filter(f => usedFolderIds.has(f.id)), ...pseudoFolders]
+    : pseudoFolders.filter(f => usedFolderIds.has(f.id))
+
   return {
-    nodes: nodes.map(n => {
-      // Folder-ID bestimmen: Journal-Nodes via Cluster, Public via Backend
-      let folderId: number | null = null
-      let folderName: string | null = null
-
-      if (n.realm === 'journal') {
-        // Journal-Node: Cluster als pseudo-Folder
-        const pf = nodeClusterFolder.get(n.id)
-        if (pf !== undefined) {
-          folderId = pf
-          folderName = pseudoFolders.find(f => f.id === pf)?.name || null
-        }
-      } else {
-        // Public Node: echte Folder-Info vom Backend
-        folderId = (n as any).folder_id || null
-        folderName = (n as any).folder_name || null
-      }
-
-      return {
-        id: idMap.get(n.id) || 0,
-        type: n.realm === 'journal' ? 'entry' as any : n.type as any,
-        source_id: n.source_id,
-        title: n.label,
-        pos_x: n.pos_x,
-        pos_y: n.pos_y,
-        embedding_stale: false,
-        cluster_ids: [],
-        folder_id: folderId,
-        folder_name: folderName,
-      }
-    }),
+    nodes: mappedNodes,
     edges: edges.map(e => ({
       id: idMap.get(e.id) || 0,
       source_node_id: idMap.get(e.source) || 0,
@@ -107,6 +115,6 @@ export function adaptGraph(
       status: e.status || 'suggested',
     })),
     clusters,
-    folders: allFolders,
+    folders: activeFolders,
   }
 }
