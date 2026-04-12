@@ -184,7 +184,7 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
     return new Set<number>()
   }, [activeFolder, activeHub, clickedId, folderNodeIds, hubData])
 
-  const handleHubClick = useCallback((hubId: string, memberIds: number[]) => {
+  const handleHubClick = useCallback((hubId: string, _memberIds: number[]) => {
     if (isDraggingRef.current) return
     setActiveFolder(null)
     if (activeHub === hubId) { setActiveHub(null); setClickedId(null) }
