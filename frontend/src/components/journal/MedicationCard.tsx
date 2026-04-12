@@ -1,9 +1,16 @@
 // MedicationCard — Einzelne Medikamenten-Karte mit Checkbox + Notiz
-// Wird von MedicationTracker für jedes Medikament gerendert
+// Dosis-Historie anzeigbar, nachträgliche Dosis-Änderung möglich
 
+import { useState, useEffect } from 'react'
+import { get } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { Medication, MedicationCreate } from '../../types/models'
 import MedicationForm from './MedicationForm'
+
+interface DoseChangeEntry {
+  id: number; old_dosage: string; new_dosage: string
+  reason: string | null; date: string
+}
 
 interface Props {
   med: Medication
@@ -32,6 +39,16 @@ export default function MedicationCard({
 }: Props) {
   const { t } = useLanguage()
   const today = new Date().toISOString().split('T')[0]
+  const [showHistory, setShowHistory] = useState(false)
+  const [history, setHistory] = useState<DoseChangeEntry[]>([])
+
+  // Dosis-Historie laden wenn aufgeklappt
+  useEffect(() => {
+    if (showHistory && history.length === 0) {
+      get<DoseChangeEntry[]>(`/api/journal/medications/dose-history/${med.id}`)
+        .then(setHistory).catch(() => {})
+    }
+  }, [showHistory, med.id])
 
   if (isEditing) {
     return (
@@ -72,6 +89,10 @@ export default function MedicationCard({
           <button onClick={onToggleBackfill} className="text-xs transition-colors"
             style={{ color: isBackfilling ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
             {t.medication.backfill}</button>
+          <button onClick={() => setShowHistory(!showHistory)}
+            className="text-xs transition-colors"
+            style={{ color: showHistory ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
+            Historie</button>
           <button onClick={onEdit} className="text-xs"
             style={{ color: 'var(--color-text-muted)' }}>{t.common.edit}</button>
           <button onClick={onDelete} className="text-xs"
@@ -107,6 +128,34 @@ export default function MedicationCard({
           onBlur={onNoteSave}
           placeholder={t.medication.notesPlaceholder || 'Notiz zur Einnahme...'}
           className="hud-input text-xs mt-2 w-full" />
+      )}
+
+      {/* Dosis-Historie */}
+      {showHistory && (
+        <div className="mt-4 pt-4 animate-fade-in"
+          style={{ borderTop: '1px solid var(--color-border)' }}>
+          <p className="text-[10px] uppercase tracking-wider mb-2"
+            style={{ color: 'var(--color-text-muted)' }}>Dosis-Historie</p>
+          {history.length === 0 ? (
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              Keine Aenderungen</p>
+          ) : (
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {history.map(dc => (
+                <div key={dc.id} className="flex items-center gap-2 text-xs">
+                  <span style={{ color: 'var(--color-text-muted)' }}>{dc.date}</span>
+                  <span style={{ color: 'var(--color-danger)' }}>{dc.old_dosage}</span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>&#8594;</span>
+                  <span style={{ color: 'var(--color-success)' }}>{dc.new_dosage}</span>
+                  {dc.reason && (
+                    <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                      ({dc.reason})</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Nachtragen */}
