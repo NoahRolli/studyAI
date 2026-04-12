@@ -4,7 +4,7 @@
 
 import ManualEdgeForm from "./ManualEdgeForm"
 import { useState, useEffect, useCallback } from 'react'
-import { get, del, put } from '../../hooks/useAPI'
+import { get, del } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import { getOntologyMarker } from '../../utils/ontologyMarkers'
 import OntologyEditModal from './OntologyEditModal'
