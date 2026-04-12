@@ -52,7 +52,6 @@ export default function MedicationCard({
     }
   }, [showHistory, med.id])
 
-  if (isEditing) {
 
   async function submitDoseChange() {
     if (!doseForm.date || !doseForm.newDosage) return
@@ -70,6 +69,8 @@ export default function MedicationCard({
       setShowHistory(true)
     } catch { /* Fehler ignorieren */ }
   }
+  if (isEditing) {
+
     return (
       <div className="hud-card p-5 animate-fade-in">
         <MedicationForm
