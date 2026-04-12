@@ -19,6 +19,8 @@ from backend.journal.api.auth import router as journal_auth_router
 from backend.journal.api.entries import router as journal_entries_router
 from backend.journal.api.analytics import router as journal_analytics_router
 from backend.journal.api.medications import router as journal_medications_router
+from backend.journal.api.medication_dose import router as journal_dose_router
+from backend.journal.api.medication_calendar import router as journal_med_calendar_router
 from backend.journal.models.journal_database import engine as journal_engine
 from backend.journal.models.journal_database import JournalBase
 from backend.journal.api.calendar import router as journal_calendar_router
@@ -61,6 +63,7 @@ from backend.journal.models.journal_entry import JournalEntry  # noqa: F401
 from backend.journal.models.medication import Medication  # noqa: F401
 from backend.journal.models.medication import IntakeLog  # noqa: F401
 from backend.journal.models.medication import MedicationSettings  # noqa: F401
+from backend.journal.models.medication import DoseChange  # noqa: F401
 from backend.journal.models.mood_cache import MoodCache  # noqa: F401
 from backend.journal.models.storyline import StorylineCache  # noqa: F401
 from backend.journal.models.journal_metis_node import JournalMetisNode  # noqa: F401
@@ -140,7 +143,9 @@ app.include_router(journal_auth_router)
 app.include_router(journal_entries_router)
 app.include_router(journal_analytics_router)
 app.include_router(journal_medications_router)
+app.include_router(journal_dose_router)
 app.include_router(journal_calendar_router)
+app.include_router(journal_med_calendar_router)
 app.include_router(journal_insights_router)
 app.include_router(journal_metis_router)
 app.include_router(journal_metis_ai_router)
