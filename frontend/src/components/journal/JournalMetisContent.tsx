@@ -1,10 +1,11 @@
 // JournalMetisContent — Verschlüsselter Knowledge-Graph als Journal-Tab
 // Merged View: Journal-Einträge (Cyan) + öffentliche Nodes (transparent)
-// Keine State-Updates für Kamera — MiniMap liest direkt aus Ref
+// Nutzt GlobalTaskBar via TaskContext für persistente Loading-Anzeige
 
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { get, post } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
+import { useTasks } from '../../context/TaskContext'
 import MetisToolbar from '../metis/MetisToolbar'
 import MetisListView from '../metis/MetisListView'
 import MetisNodeDetail from '../metis/MetisNodeDetail'
@@ -17,23 +18,25 @@ const MetisSphere3D = lazy(() => import('../metis/MetisSphere3D'))
 
 export default function JournalMetisContent() {
   const { t } = useLanguage()
+  const { tasks, runTask } = useTasks()
   const [rawGraph, setRawGraph] = useState<JournalMetisGraph>({
     nodes: [], edges: [], clusters: [],
   })
   const [view, setView] = useState<MetisViewMode>('3d')
   const [loading, setLoading] = useState(true)
-  const [syncing, setSyncing] = useState(false)
-  const [linking, setLinking] = useState(false)
-  const [clustering, setClustering] = useState(false)
   const [selectedNode, setSelectedNode] = useState<MetisNode | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const [showPublic, setShowPublic] = useState(true)
   const [showLabels, setShowLabels] = useState(false)
 
+  // Task-Status aus TaskContext ableiten
+  const syncing = tasks.some(t => t.id === 'j-metis-sync' && t.status === 'running')
+  const linking = tasks.some(t => t.id === 'j-metis-link' && t.status === 'running')
+  const clustering = tasks.some(t => t.id === 'j-metis-cluster' && t.status === 'running')
+
   // Kamera-Ref — kein State, kein Re-Render
   const cameraRef = useRef({ azimuth: 0, elevation: 0, distance: 50 })
 
-  // Kamera-Update ohne State — nur Ref aktualisieren
   const handleCameraMove = useCallback((
     az: number, el: number, dist: number,
   ) => {
@@ -52,31 +55,25 @@ export default function JournalMetisContent() {
   useEffect(() => { loadGraph() }, [loadGraph])
 
   const handleSync = useCallback(async () => {
-    setSyncing(true)
-    try {
+    runTask('j-metis-sync', 'Journal Sync', async () => {
       await post('/api/journal/metis/sync')
       await loadGraph()
-    } catch (err) { console.error('Sync failed:', err) }
-    finally { setSyncing(false) }
-  }, [loadGraph])
+    })
+  }, [runTask, loadGraph])
 
   const handleAutoLink = useCallback(async () => {
-    setLinking(true)
-    try {
+    runTask('j-metis-link', 'Journal Auto-Link', async () => {
       await post('/api/journal/metis/auto-link')
       await loadGraph()
-    } catch (err) { console.error('Auto-link failed:', err) }
-    finally { setLinking(false) }
-  }, [loadGraph])
+    })
+  }, [runTask, loadGraph])
 
   const handleAutoCluster = useCallback(async () => {
-    setClustering(true)
-    try {
+    runTask('j-metis-cluster', 'Journal Auto-Cluster', async () => {
       await post('/api/journal/metis/auto-cluster')
       await loadGraph()
-    } catch (err) { console.error('Auto-cluster failed:', err) }
-    finally { setClustering(false) }
-  }, [loadGraph])
+    })
+  }, [runTask, loadGraph])
 
   const graph = adaptGraph(rawGraph, showPublic)
 
