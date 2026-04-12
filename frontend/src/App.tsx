@@ -22,6 +22,7 @@ import CalendarPage from './pages/CalendarPage'
 import NotesPage from './pages/NotesPage'
 import MetisPage from './pages/MetisPage'
 import OntologyPage from './pages/OntologyPage'
+import DelphiPage from './pages/DelphiPage'
 import MindmapPage from './pages/MindmapPage'
 import JournalMindmapPage from './pages/JournalMindmapPage'
 import Journal from './pages/Journal'
@@ -44,6 +45,7 @@ function App() {
               <Route path="notes" element={<NotesPage />} />
               <Route path="metis" element={<MetisPage />} />
               <Route path="ontology" element={<OntologyPage />} />
+              <Route path="delphi" element={<DelphiPage />} />
               <Route path="journal" element={<Journal />} />
             </Route>
             {/* Mindmaps ausserhalb von Layout — Fullscreen ohne Sidebar */}
