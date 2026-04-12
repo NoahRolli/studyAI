@@ -82,7 +82,7 @@ export default function WelcomeCards({ visible, delayBase }: Props) {
 
       {/* Delphi — Wissens-Chat Eingabe */}
       <div
-        className="w-full max-w-3xl mt-6"
+        className="flex justify-center mt-6 w-full max-w-3xl"
         style={{
           opacity: visible ? 1 : 0,
           transform: visible ? 'translateY(0)' : 'translateY(20px)',
@@ -90,12 +90,12 @@ export default function WelcomeCards({ visible, delayBase }: Props) {
         }}
       >
         <div
-          className="hud-card rounded-lg border transition-all duration-300 h-36 flex flex-col
+          className="hud-card rounded-lg border transition-all duration-300 h-24 flex flex-col w-full
             focus-within:border-[var(--color-primary)] focus-within:shadow-[0_0_20px_rgba(0,212,255,0.15)]"
           style={{ borderColor: 'var(--color-border)' }}
         >
           {/* Header */}
-          <div className="flex items-center gap-2 px-5 pt-4 pb-2">
+          <div className="flex items-center gap-2 px-5 pt-3 pb-1">
             <h2
               className="hud-title text-sm text-glow tracking-wide"
               style={{ color: 'var(--color-primary)', fontFamily: "'Orbitron', monospace" }}
@@ -110,7 +110,7 @@ export default function WelcomeCards({ visible, delayBase }: Props) {
             </span>
           </div>
           {/* Eingabefeld */}
-          <div className="flex-1 px-5 pb-4">
+          <div className="flex-1 px-5 pb-3">
             <input
               type="text"
               value={query}
