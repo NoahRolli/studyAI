@@ -2,7 +2,7 @@
 // Dosis-Historie anzeigbar, nachträgliche Dosis-Änderung möglich
 
 import { useState, useEffect } from 'react'
-import { get } from '../../hooks/useAPI'
+import { get, post } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { Medication, MedicationCreate } from '../../types/models'
 import MedicationForm from './MedicationForm'
@@ -41,6 +41,8 @@ export default function MedicationCard({
   const today = new Date().toISOString().split('T')[0]
   const [showHistory, setShowHistory] = useState(false)
   const [history, setHistory] = useState<DoseChangeEntry[]>([])
+  const [showDoseForm, setShowDoseForm] = useState(false)
+  const [doseForm, setDoseForm] = useState({ date: "", newDosage: "", reason: "" })
 
   // Dosis-Historie laden wenn aufgeklappt
   useEffect(() => {
@@ -51,6 +53,23 @@ export default function MedicationCard({
   }, [showHistory, med.id])
 
   if (isEditing) {
+
+  async function submitDoseChange() {
+    if (!doseForm.date || !doseForm.newDosage) return
+    try {
+      await post("/api/journal/medications/dose-change", {
+        medication_id: med.id,
+        old_dosage: med.dosage,
+        new_dosage: doseForm.newDosage,
+        reason: doseForm.reason || null,
+        date: doseForm.date,
+      })
+      setShowDoseForm(false)
+      setDoseForm({ date: "", newDosage: "", reason: "" })
+      setHistory([])
+      setShowHistory(true)
+    } catch { /* Fehler ignorieren */ }
+  }
     return (
       <div className="hud-card p-5 animate-fade-in">
         <MedicationForm
@@ -153,6 +172,31 @@ export default function MedicationCard({
                   )}
                 </div>
               ))}
+            </div>
+          )}
+          <button onClick={() => setShowDoseForm(!showDoseForm)}
+            className="hud-btn text-xs mt-3 w-full"
+            style={{ borderColor: showDoseForm ? "var(--color-primary)" : "var(--color-border)" }}>
+            {showDoseForm ? "Abbrechen" : "Dosis nachtraeglich aendern"}
+          </button>
+          {showDoseForm && (
+            <div className="mt-3 space-y-2 animate-fade-in">
+              <div className="flex gap-2">
+                <input type="date" value={doseForm.date}
+                  max={new Date().toISOString().split("T")[0]}
+                  onChange={e => setDoseForm(p => ({ ...p, date: e.target.value }))}
+                  className="hud-input text-xs" style={{ width: "140px" }} />
+                <input type="text" value={doseForm.newDosage}
+                  onChange={e => setDoseForm(p => ({ ...p, newDosage: e.target.value }))}
+                  placeholder="Neue Dosis" className="hud-input text-xs flex-1" />
+              </div>
+              <input type="text" value={doseForm.reason}
+                onChange={e => setDoseForm(p => ({ ...p, reason: e.target.value }))}
+                placeholder="Grund (optional)" className="hud-input text-xs w-full" />
+              <button onClick={submitDoseChange}
+                disabled={!doseForm.date || !doseForm.newDosage}
+                className="hud-btn hud-btn-primary text-xs w-full">
+                Speichern</button>
             </div>
           )}
         </div>
