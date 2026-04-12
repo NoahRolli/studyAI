@@ -143,16 +143,23 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
         color, memberNodeIds: cluster.node_ids || [],
         memberCount: (cluster.node_ids || []).length,
       }
-    })
+    }).filter(h => h.memberCount > 0)
   }, [graph.clusters, graph.nodes, graph.folders])
 
   // Folder-Daten fuer Sphäre
   const folderData = useMemo(() => {
-    return (graph.folders || []).map((f, i) => ({
+    const nodesByFolder = new Map<number, number>()
+    graph.nodes.forEach(n => {
+      if (n.folder_id) nodesByFolder.set(n.folder_id, (nodesByFolder.get(n.folder_id) || 0) + 1)
+    })
+    return (graph.folders || []).filter(f => nodesByFolder.has(f.id)).map((f, i) => ({
       id: f.id, label: f.name,
       color: new THREE.Color(FOLDER_COLORS[i % FOLDER_COLORS.length]),
     }))
-  }, [graph.folders])
+  }, [graph.folders, graph.nodes])
+
+
+
 
   // Alle Node-IDs die zu einem Ordner gehoeren
   const folderNodeIds = useMemo(() => {
