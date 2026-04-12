@@ -26,6 +26,7 @@ from backend.journal.models.medication import (
     Medication,
     IntakeLog,
     MedicationSettings,
+    DoseChange,
 )
 
 # Router — wird in main.py registriert
@@ -79,11 +80,40 @@ def _get_all_intake_logs(db: Session, key: bytes) -> list[dict]:
                 "med_name": med_names.get(log.medication_id, "?"),
                 "date": decrypt_text(log.encrypted_date, key),
                 "status": decrypt_text(log.encrypted_status, key),
+                "notes": (decrypt_text(log.encrypted_notes, key)
+                          if log.encrypted_notes else None),
             })
         except Exception:
             continue
     return result
 
+
+
+def _get_all_dose_changes(db: Session, key: bytes) -> list[dict]:
+    """Alle Dosis-Aenderungen entschluesseln."""
+    meds = db.query(Medication).filter(Medication.is_deleted == 0).all()
+    med_names = {}
+    for med in meds:
+        try:
+            med_names[med.id] = decrypt_text(med.encrypted_name, key)
+        except Exception:
+            continue
+    changes = db.query(DoseChange).order_by(DoseChange.created_at).all()
+    result = []
+    for dc in changes:
+        try:
+            result.append({
+                "medication_id": dc.medication_id,
+                "med_name": med_names.get(dc.medication_id, "?"),
+                "old_dosage": decrypt_text(dc.encrypted_old_dosage, key),
+                "new_dosage": decrypt_text(dc.encrypted_new_dosage, key),
+                "reason": (decrypt_text(dc.encrypted_reason, key)
+                           if dc.encrypted_reason else None),
+                "date": decrypt_text(dc.encrypted_date, key),
+            })
+        except Exception:
+            continue
+    return result
 
 # --- Einzelne Insight-Endpunkte ---
 
@@ -177,6 +207,7 @@ async def get_ai_summary(
     moods = await _get_moods_with_dates(decrypted, language, db)
     intake_logs = _get_all_intake_logs(db, key)
 
+    dose_changes = _get_all_dose_changes(db, key)
     # Alle Analysen sammeln
     med_mood = analyze_medication_mood(moods, intake_logs)
     weekday = analyze_weekday_mood(moods)
@@ -185,7 +216,7 @@ async def get_ai_summary(
 
     # Prompt für Ollama zusammenbauen
     prompt = _build_summary_prompt(
-        med_mood, weekday, writing, keywords, language
+        med_mood, weekday, writing, keywords, dose_changes, language
     )
     try:
         result = await journal_ai._chat(prompt=prompt, max_tokens=1500)
@@ -196,7 +227,7 @@ async def get_ai_summary(
 
 def _build_summary_prompt(
     med_mood: list, weekday: list, writing: dict,
-    keywords: list, language: str,
+    keywords: list, dose_changes: list, language: str,
 ) -> str:
     """Baut den AI-Summary Prompt aus allen Analyse-Ergebnissen."""
     if language == "de":
@@ -208,6 +239,7 @@ Medikament-Stimmung: {med_mood}
 Wochentag-Stimmung: {weekday}
 Schreib-Muster: {writing}
 Themen-Stimmung (Top 10): {keywords[:10]}
+Dosis-Aenderungen: {dose_changes}
 
 Antworte auf Deutsch in Fliesstext, keine Listen."""
 
@@ -219,5 +251,6 @@ Medication-Mood: {med_mood}
 Weekday-Mood: {weekday}
 Writing Patterns: {writing}
 Keyword-Mood (Top 10): {keywords[:10]}
+Dose Changes: {dose_changes}
 
 Respond in flowing text, no lists."""
