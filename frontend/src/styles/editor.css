@@ -25,7 +25,7 @@
 .tiptap ol { list-style: decimal; }
 .tiptap li { margin: 0.15rem 0; }
 
-/* Task-Listen */
+/* Task-Listen Basis */
 .tiptap ul[data-type="taskList"] {
   list-style: none;
   padding-left: 0;
@@ -38,6 +38,38 @@
 .tiptap ul[data-type="taskList"] li label input[type="checkbox"] {
   accent-color: var(--color-primary);
   margin-top: 0;
+}
+
+/* Erledigte TaskItems: durchgestrichen + gedimmt */
+.tiptap ul[data-type="taskList"] li[data-checked="true"] {
+  opacity: 0.45;
+  text-decoration: line-through;
+  text-decoration-color: var(--color-text-muted);
+  transition: opacity 0.3s ease, max-height 0.3s ease;
+}
+.tiptap ul[data-type="taskList"] li[data-checked="true"]:hover {
+  opacity: 0.7;
+}
+
+/* Trennlinie zwischen erledigten und offenen Items */
+.tiptap ul[data-type="taskList"] li[data-checked="true"] + li:not([data-checked="true"]) {
+  border-top: 1px dashed var(--color-border);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+/* Collapse: Erledigte Items verstecken */
+.task-checked-collapsed .tiptap ul[data-type="taskList"] li[data-checked="true"] {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+}
+.task-checked-collapsed .tiptap ul[data-type="taskList"] li[data-checked="true"] + li:not([data-checked="true"]) {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 /* Blockquote */
