@@ -40,7 +40,7 @@ export default function MetisLinksTab() {
   // Verfuegbare Relationstypen aus den Edges
   const relationTypes = useMemo(() => {
     const types = new Set(pendingEdges.map(e =>
-      e.relation_type || 'unknown'
+      typeof e.relation_type === 'object' ? e.relation_type?.name || 'unknown' : e.relation_type || 'unknown'
     ))
     return Array.from(types).sort()
   }, [pendingEdges])
@@ -49,7 +49,7 @@ export default function MetisLinksTab() {
   const filtered = useMemo(() => {
     let edges = pendingEdges
     if (filterRelation !== 'all') {
-      edges = edges.filter(e => (e.relation_type || 'unknown') === filterRelation)
+      edges = edges.filter(e => (typeof e.relation_type === 'object' ? e.relation_type?.name || 'unknown' : e.relation_type || 'unknown') === filterRelation)
     }
     if (sort === 'weakest') {
       edges = [...edges].sort((a, b) => (a.strength ?? 0) - (b.strength ?? 0))
@@ -134,7 +134,7 @@ export default function MetisLinksTab() {
             const src = nodeTitle(edge.source)
             const tgt = nodeTitle(edge.target)
             if (!src || !tgt) return null
-            const relName = edge.relation_type || 'unknown'
+            const relName = edgtypeof e.relation_type === 'object' ? e.relation_type?.name || 'unknown' : e.relation_type || 'unknown'
             return (
               <div key={edge.id} className="hud-card px-3 py-2">
                 <div className="flex items-center gap-2 text-sm">

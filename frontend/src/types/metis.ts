@@ -22,7 +22,7 @@ export interface MetisEdge {
   id: number
   source_node_id: number
   target_node_id: number
-  relation_type: string
+  relation_type: { id: number; name: string; label_de: string; label_en: string } | string | null
   strength: number
   status: 'suggested' | 'confirmed' | 'rejected'
   reason?: string | null
@@ -65,7 +65,7 @@ export interface ConceptEdge {
   id: number
   source: number
   target: number
-  relation_type: string
+  relation_type: { id: number; name: string; label_de: string; label_en: string } | string | null
   strength: number
   origin: string
   status: "suggested" | "confirmed" | "rejected"
@@ -118,7 +118,7 @@ export interface JournalMetisEdge {
   id: string
   source: string       // Node-ID ("j-5", "p-3")
   target: string
-  relation_type: string
+  relation_type: { id: number; name: string; label_de: string; label_en: string } | string | null
   strength: number
   status: 'suggested' | 'confirmed' | 'rejected'
   reason?: string | null
