@@ -151,7 +151,15 @@ async def get_commits(
 
     result = []
     for d in days.values():
-        hours = (d["last"] - d["first"]).total_seconds() / 3600
+        # 15min-Regel: Nur Zeitspannen < 15min zwischen Commits zaehlen
+        sorted_times = sorted([c.committed_at for c in commits
+                               if c.committed_at.strftime("%Y-%m-%d") == d["date"]])
+        active_seconds = 0
+        for i in range(1, len(sorted_times)):
+            gap = (sorted_times[i] - sorted_times[i - 1]).total_seconds()
+            if gap <= 900:  # 15 Minuten = 900 Sekunden
+                active_seconds += gap
+        hours = active_seconds / 3600
         result.append({
             "date": d["date"], "count": d["count"],
             "repos": sorted(d["repos"]),
