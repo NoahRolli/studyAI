@@ -134,7 +134,7 @@ export default function MetisLinksTab() {
             const src = nodeTitle(edge.source)
             const tgt = nodeTitle(edge.target)
             if (!src || !tgt) return null
-            const relName = edgtypeof e.relation_type === 'object' ? e.relation_type?.name || 'unknown' : e.relation_type || 'unknown'
+            const relName = typeof edge.relation_type === 'object' && edge.relation_type ? edge.relation_type.name : (edge.relation_type || 'unknown')
             return (
               <div key={edge.id} className="hud-card px-3 py-2">
                 <div className="flex items-center gap-2 text-sm">
