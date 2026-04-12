@@ -1,11 +1,12 @@
 # Models für den Medikamenten-Tracker
-# Zwei Tabellen: Medikamente und Einnahme-Log
-# Alle sensiblen Felder werden AES-256-GCM verschlüsselt (wie Journal-Entries)
+# Tabellen: Medikamente, Einnahme-Log, Dosis-Änderungen
+# Alle sensiblen Felder werden AES-256-GCM verschlüsselt
 # Ohne korrektes Passwort sind Name, Dosis, Notizen etc. unlesbar
 #
-# MedicationSettings: Speichert ob der Tracker aktiviert ist (nicht verschlüsselt)
+# MedicationSettings: Tracker aktiviert? (nicht verschlüsselt)
 # Medication: Ein Medikament mit verschlüsselten Details
 # IntakeLog: Tägliche Einnahme-Protokolle (verschlüsselt)
+# DoseChange: Historie von Dosis-Änderungen mit Grund
 
 from sqlalchemy import Column, Integer, LargeBinary, DateTime
 from datetime import datetime, timezone
@@ -13,76 +14,51 @@ from backend.journal.models.journal_database import JournalBase
 
 
 class MedicationSettings(JournalBase):
-    """
-    Globale Einstellung: Ist der Medikamenten-Tracker aktiviert?
-    Nicht verschlüsselt — enthält keine sensiblen Daten.
-    Es gibt immer nur eine Zeile (id=1).
-    """
+    """Globale Einstellung: Ist der Tracker aktiviert? (id=1)"""
     __tablename__ = "medication_settings"
 
     id = Column(Integer, primary_key=True, default=1)
-    # 0 = deaktiviert, 1 = aktiviert
     is_enabled = Column(Integer, default=0)
 
 
 class Medication(JournalBase):
-    """
-    Ein Medikament mit verschlüsselten Details.
-    Verschlüsselte Felder: Name, Dosis, Frequenz, Start-/End-Datum, Notizen
-    Jedes Feld enthält IV + Ciphertext + AuthTag als bytes.
-    """
+    """Ein Medikament mit verschlüsselten Details."""
     __tablename__ = "medications"
 
-    # Primärschlüssel
     id = Column(Integer, primary_key=True, index=True)
-
-    # Verschlüsselte Felder — z.B. "Ibuprofen 400mg"
     encrypted_name = Column(LargeBinary, nullable=False)
-
-    # Dosis — z.B. "400mg" oder "2 Tabletten"
     encrypted_dosage = Column(LargeBinary, nullable=False)
-
-    # Frequenz — z.B. "2x täglich", "bei Bedarf"
     encrypted_frequency = Column(LargeBinary, nullable=False)
-
-    # Start-Datum — wann begonnen (ISO-Format)
     encrypted_start_date = Column(LargeBinary, nullable=False)
-
-    # End-Datum — optional, null wenn noch aktiv
-    # nullable=True weil laufende Medikamente kein End-Datum haben
     encrypted_end_date = Column(LargeBinary, nullable=True)
-
-    # Notizen/Nebenwirkungen — optional, Freitext
     encrypted_notes = Column(LargeBinary, nullable=True)
-
-    # Nicht-sensitive Metadaten
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
                         onupdate=lambda: datetime.now(timezone.utc))
-
-    # Soft-Delete (wie bei Journal-Entries)
     is_deleted = Column(Integer, default=0)
 
 
 class IntakeLog(JournalBase):
-    """
-    Tägliches Einnahme-Protokoll für ein Medikament.
-    Verschlüsselte Felder: Datum und Status (genommen/nicht genommen)
-    medication_id ist NICHT verschlüsselt — nötig für DB-Queries.
-    """
+    """Tägliches Einnahme-Protokoll mit optionalen Notizen."""
     __tablename__ = "intake_logs"
 
-    # Primärschlüssel
     id = Column(Integer, primary_key=True, index=True)
-
-    # Fremdschlüssel — welches Medikament (nicht verschlüsselt für Queries)
     medication_id = Column(Integer, nullable=False, index=True)
-
-    # Verschlüsseltes Datum — wann die Einnahme war (ISO-Format)
     encrypted_date = Column(LargeBinary, nullable=False)
-
-    # Verschlüsselter Status — "taken" oder "skipped"
     encrypted_status = Column(LargeBinary, nullable=False)
+    # Optionale Notizen zur Einnahme (z.B. "halbe Dosis", "Kopfschmerzen")
+    encrypted_notes = Column(LargeBinary, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    # Nicht-sensitive Metadaten
+
+class DoseChange(JournalBase):
+    """Dosis-Änderung mit verschlüsseltem Grund und alter/neuer Dosis."""
+    __tablename__ = "dose_changes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    medication_id = Column(Integer, nullable=False, index=True)
+    encrypted_old_dosage = Column(LargeBinary, nullable=False)
+    encrypted_new_dosage = Column(LargeBinary, nullable=False)
+    encrypted_reason = Column(LargeBinary, nullable=True)
+    encrypted_date = Column(LargeBinary, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
