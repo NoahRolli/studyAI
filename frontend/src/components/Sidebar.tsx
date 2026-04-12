@@ -202,8 +202,11 @@ function Sidebar() {
           <NavLink to="/metis" className={linkStyle} title={t.sidebar.metis}>
             {collapsed ? 'M' : t.sidebar.metis}
           </NavLink>
-          <NavLink to="/ontology" className={linkStyle} title="Ontology">
-            {collapsed ? 'O' : 'Ontology'}
+          <NavLink to="/ontology" className={linkStyle} title={t.sidebar.ontology}>
+            {collapsed ? 'O' : t.sidebar.ontology}
+          </NavLink>
+          <NavLink to="/delphi" className={linkStyle} title={t.sidebar.delphi}>
+            {collapsed ? 'D' : t.sidebar.delphi}
           </NavLink>
         </nav>
 
