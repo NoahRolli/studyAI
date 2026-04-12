@@ -56,15 +56,6 @@ function NotesPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // --- ?open=ID Deep-Link von Metis ---
-  useEffect(() => {
-    const openId = searchParams.get("open")
-    if (openId) {
-      loadNote(Number(openId))
-      setSearchParams({}, { replace: true })
-    }
-  }, [searchParams])
-
   // --- API-Aufrufe ---
   async function loadNotes() {
     try {
@@ -105,15 +96,6 @@ function NotesPage() {
     } catch { /* Fehler ignorieren */ }
     setSaving(false)
   }, [])
-
-  // --- ?open=ID Deep-Link von Metis ---
-  useEffect(() => {
-    const openId = searchParams.get("open")
-    if (openId) {
-      loadNote(Number(openId))
-      setSearchParams({}, { replace: true })
-    }
-  }, [searchParams])
 
   async function deleteNote(id: number) {
     if (!confirm(t.notes.deleteConfirm)) return
@@ -167,7 +149,7 @@ function NotesPage() {
   // --- Lifecycle ---
   useEffect(() => { loadNotes() }, [])
 
-  // --- ?open=ID Deep-Link von Metis ---
+  // --- ?open=ID Deep-Link von Metis (einmalig) ---
   useEffect(() => {
     const openId = searchParams.get("open")
     if (openId) {
@@ -175,18 +157,11 @@ function NotesPage() {
       setSearchParams({}, { replace: true })
     }
   }, [searchParams])
+
+  // Cleanup Auto-Save Timer
   useEffect(() => {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
   }, [])
-
-  // --- ?open=ID Deep-Link von Metis ---
-  useEffect(() => {
-    const openId = searchParams.get("open")
-    if (openId) {
-      loadNote(Number(openId))
-      setSearchParams({}, { replace: true })
-    }
-  }, [searchParams])
 
   return (
     <div className="animate-fade-in flex gap-6 h-[calc(100vh-3rem)]">
