@@ -9,6 +9,7 @@ import { useTasks } from '../../context/TaskContext'
 import MetisToolbar from '../metis/MetisToolbar'
 import MetisListView from '../metis/MetisListView'
 import MetisNodeDetail from '../metis/MetisNodeDetail'
+import ClusterDetail from '../metis/ClusterDetail'
 import MetisMiniMap3D from '../metis/MetisMiniMap3D'
 import { adaptGraph } from '../metis/journalMetisAdapter'
 import type { MetisViewMode, MetisNode } from '../../types/metis'
@@ -28,6 +29,8 @@ export default function JournalMetisContent() {
   const [fullscreen, setFullscreen] = useState(false)
   const [showPublic, setShowPublic] = useState(true)
   const [showLabels, setShowLabels] = useState(false)
+  const [selectedCluster, setSelectedCluster] = useState<number | null>(null)
+  const [selectedFolder, setSelectedFolder] = useState<number | null>(null)
 
   // Task-Status aus TaskContext ableiten
   const syncing = tasks.some(t => t.id === 'j-metis-sync' && t.status === 'running')
@@ -78,9 +81,18 @@ export default function JournalMetisContent() {
   const graph = adaptGraph(rawGraph, showPublic)
 
   const handleNodeClick = useCallback((nodeId: number) => {
+    setSelectedCluster(null); setSelectedFolder(null);
     const found = graph.nodes.find(n => n.id === nodeId)
     setSelectedNode(found || null)
   }, [graph.nodes])
+
+  const handleClusterClick = useCallback((id: number) => {
+    setSelectedNode(null); setSelectedFolder(null); setSelectedCluster(id)
+  }, [])
+
+  const handleFolderClick = useCallback((id: number) => {
+    setSelectedNode(null); setSelectedCluster(null); setSelectedFolder(id)
+  }, [])
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -140,6 +152,7 @@ export default function JournalMetisContent() {
             </div>
           }>
             <MetisSphere3D graph={graph} onNodeClick={handleNodeClick}
+              onClusterClick={handleClusterClick} onFolderClick={handleFolderClick}
               onCameraMove={handleCameraMove} transparent={true}
               showLabels={showLabels} />
           </Suspense>
@@ -177,6 +190,18 @@ export default function JournalMetisContent() {
             cameraAzimuth={cameraRef.current.azimuth}
             cameraElevation={cameraRef.current.elevation}
             cameraDistance={cameraRef.current.distance} />
+        )}
+
+        {selectedCluster !== null && (
+          <ClusterDetail clusterId={selectedCluster} graph={graph}
+            onClose={() => setSelectedCluster(null)}
+            onNodeSelect={(nid) => { setSelectedCluster(null); handleNodeClick(nid) }} />
+        )}
+
+        {selectedFolder !== null && (
+          <ClusterDetail folderId={selectedFolder} graph={graph}
+            onClose={() => setSelectedFolder(null)}
+            onNodeSelect={(nid) => { setSelectedFolder(null); handleNodeClick(nid) }} />
         )}
 
         {selectedNode && (
