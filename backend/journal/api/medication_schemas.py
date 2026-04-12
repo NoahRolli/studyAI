@@ -1,9 +1,8 @@
 # Pydantic Schemas für den Medikamenten-Tracker
-# Definieren was rein und raus geht — zentral für alle Medication-Endpunkte
-#
-# Create/Update: Was der User eingibt (Klartext)
-# Response: Was das Backend zurückgibt (entschlüsselt)
-# IntakeLog: Tägliches Einnahme-Tracking
+# Create/Update: Klartext vom Frontend
+# Response: Entschlüsselte Daten zurück ans Frontend
+# DoseChange: Dosis-Änderung mit Grund
+# IntakeLog: Tägliches Tracking mit optionalen Notizen
 
 from pydantic import BaseModel
 from typing import Optional
@@ -12,13 +11,13 @@ from typing import Optional
 # --- Medikament ---
 
 class MedicationCreate(BaseModel):
-    """Neues Medikament anlegen — alle Pflichtfelder als Klartext."""
-    name: str                          # z.B. "Ibuprofen"
-    dosage: str                        # z.B. "400mg"
-    frequency: str                     # z.B. "2x täglich"
-    start_date: str                    # ISO-Format, z.B. "2026-03-24"
-    end_date: Optional[str] = None     # Optional — null wenn noch aktiv
-    notes: Optional[str] = None        # Notizen/Nebenwirkungen
+    """Neues Medikament anlegen."""
+    name: str
+    dosage: str
+    frequency: str
+    start_date: str
+    end_date: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class MedicationUpdate(BaseModel):
@@ -29,10 +28,11 @@ class MedicationUpdate(BaseModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     notes: Optional[str] = None
+    dose_change_reason: Optional[str] = None
 
 
 class MedicationResponse(BaseModel):
-    """Entschlüsseltes Medikament — so kommt es zum Frontend."""
+    """Entschlüsseltes Medikament."""
     id: int
     name: str
     dosage: str
@@ -47,10 +47,11 @@ class MedicationResponse(BaseModel):
 # --- Einnahme-Log ---
 
 class IntakeLogCreate(BaseModel):
-    """Einnahme protokollieren — ein Medikament an einem Tag."""
+    """Einnahme protokollieren — mit optionalen Notizen."""
     medication_id: int
-    date: str                          # ISO-Format, z.B. "2026-03-24"
-    status: str                        # "taken" oder "skipped"
+    date: str
+    status: str
+    notes: Optional[str] = None
 
 
 class IntakeLogResponse(BaseModel):
@@ -59,11 +60,25 @@ class IntakeLogResponse(BaseModel):
     medication_id: int
     date: str
     status: str
+    notes: Optional[str] = None
+    created_at: str
+
+
+# --- Dosis-Änderung ---
+
+class DoseChangeResponse(BaseModel):
+    """Entschlüsselte Dosis-Änderung."""
+    id: int
+    medication_id: int
+    old_dosage: str
+    new_dosage: str
+    reason: Optional[str] = None
+    date: str
     created_at: str
 
 
 # --- Settings ---
 
 class MedicationSettingsResponse(BaseModel):
-    """Tracker-Status: aktiviert oder deaktiviert."""
+    """Tracker-Status."""
     is_enabled: bool
