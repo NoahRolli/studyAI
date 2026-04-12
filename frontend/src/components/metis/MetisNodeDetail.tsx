@@ -78,7 +78,7 @@ export default function MetisNodeDetail({
     if (edgeId < 0) return
     setLoading(true)
     try {
-      await put(`/api/metis/edges/${edgeId}/${action}`, {
+      await put(`/api/relations/${edgeId}/${action}`, {
         reason: reason || null,
       })
       setReviewingId(null)

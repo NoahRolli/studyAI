@@ -71,7 +71,7 @@ export default function OntologyEditModal({ target, onClose, onSaved }: Props) {
       } else {
         // Metis-Edge: ID zu Name auflösen
         const typeName = types.find(t => t.id === typeId)?.name || _relType
-        await put(`/api/metis/edges/${target.id}`, {
+        await put(`/api/relations/${target.id}`, {
           relation_type: typeName,
           reason: reason.trim() || null,
         })

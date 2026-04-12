@@ -1,19 +1,17 @@
-// MetisLinksTab — Review aller AI-Edge-Vorschläge
+// MetisLinksTab — Review aller AI-Edge-Vorschlaege
 // Zeigt nur pending Edges, Filter nach Relationstyp
 // Confirmed Edges sind in OntologyOverview sichtbar
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { get, put } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
-import type { MetisGraph, MetisNode } from '../../types/metis'
+import type { ConceptGraph, ConceptNode, ConceptEdge } from '../../types/metis'
 
 type SortMode = 'weakest' | 'strongest'
 
 export default function MetisLinksTab() {
   const { t, language } = useLanguage()
-  const navigate = useNavigate()
-  const [graph, setGraph] = useState<MetisGraph | null>(null)
+  const [graph, setGraph] = useState<ConceptGraph | null>(null)
   const [loading, setLoading] = useState(true)
   const [reviewing, setReviewing] = useState<number | null>(null)
   const [reason, setReason] = useState('')
@@ -22,7 +20,7 @@ export default function MetisLinksTab() {
 
   const loadGraph = useCallback(async () => {
     try {
-      const data = await get<MetisGraph>('/api/metis/graph')
+      const data = await get<ConceptGraph>('/api/concepts/graph')
       setGraph(data)
     } catch (err) {
       console.error('Graph laden fehlgeschlagen:', err)
@@ -31,17 +29,19 @@ export default function MetisLinksTab() {
 
   useEffect(() => { loadGraph() }, [loadGraph])
 
-  // Nur pending Edges (kein WikiLink, positive IDs)
+  // Nur pending Edges (positive IDs)
   const pendingEdges = useMemo(() => {
     if (!graph) return []
     return graph.edges.filter(e =>
-      e.id > 0 && e.status === 'suggested' && e.relation_type !== 'wikilink'
+      e.id > 0 && e.status === 'suggested'
     )
   }, [graph])
 
-  // Verfügbare Relationstypen aus den Edges
+  // Verfuegbare Relationstypen aus den Edges
   const relationTypes = useMemo(() => {
-    const types = new Set(pendingEdges.map(e => e.relation_type))
+    const types = new Set(pendingEdges.map(e =>
+      e.relation_type?.name || 'unknown'
+    ))
     return Array.from(types).sort()
   }, [pendingEdges])
 
@@ -49,34 +49,26 @@ export default function MetisLinksTab() {
   const filtered = useMemo(() => {
     let edges = pendingEdges
     if (filterRelation !== 'all') {
-      edges = edges.filter(e => e.relation_type === filterRelation)
+      edges = edges.filter(e => (e.relation_type?.name || 'unknown') === filterRelation)
     }
     if (sort === 'weakest') {
-      edges = [...edges].sort((a, b) => a.strength - b.strength)
+      edges = [...edges].sort((a, b) => (a.strength ?? 0) - (b.strength ?? 0))
     } else {
-      edges = [...edges].sort((a, b) => b.strength - a.strength)
+      edges = [...edges].sort((a, b) => (b.strength ?? 0) - (a.strength ?? 0))
     }
     return edges
   }, [pendingEdges, filterRelation, sort])
 
   // Node-Titel finden
-  const nodeTitle = (nodeId: number): MetisNode | undefined =>
+  const nodeTitle = (nodeId: number): ConceptNode | undefined =>
     graph?.nodes.find(n => n.id === nodeId)
 
-  // Navigation
-  const navigateTo = (node: MetisNode) => {
-    if (node.type === 'note') navigate(`/notes?open=${node.source_id}`)
-    else if (node.type === 'summary' && node.module_id) {
-      navigate(`/modules/${node.module_id}`)
-    } else navigate('/archiv')
-  }
-
-  // Confirm/Reject
+  // Confirm/Reject — nutzt /api/relations Endpoints
   const handleReview = async (
     edgeId: number, action: 'confirm' | 'reject',
   ) => {
     try {
-      await put(`/api/metis/edges/${edgeId}/${action}`, {
+      await put(`/api/relations/${edgeId}/${action}`, {
         reason: reason || null,
       })
       setReviewing(null)
@@ -119,10 +111,10 @@ export default function MetisLinksTab() {
           onChange={e => setSort(e.target.value as SortMode)}
           className="hud-input text-xs">
           <option value="weakest">
-            {language === 'de' ? 'Schwächste zuerst' : 'Weakest first'}
+            {language === 'de' ? 'Schwaechste zuerst' : 'Weakest first'}
           </option>
           <option value="strongest">
-            {language === 'de' ? 'Stärkste zuerst' : 'Strongest first'}
+            {language === 'de' ? 'Staerkste zuerst' : 'Strongest first'}
           </option>
         </select>
       </div>
@@ -139,31 +131,28 @@ export default function MetisLinksTab() {
       ) : (
         <div className="space-y-1.5">
           {filtered.map(edge => {
-            const src = nodeTitle(edge.source_node_id)
-            const tgt = nodeTitle(edge.target_node_id)
+            const src = nodeTitle(edge.source)
+            const tgt = nodeTitle(edge.target)
             if (!src || !tgt) return null
+            const relName = edge.relation_type?.name || 'unknown'
             return (
               <div key={edge.id} className="hud-card px-3 py-2">
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="cursor-pointer hover:underline"
-                    style={{ color: 'var(--color-text-primary)' }}
-                    onClick={() => navigateTo(src)}>
-                    {src.title}
+                  <span style={{ color: 'var(--color-text-primary)' }}>
+                    {src.name}
                   </span>
                   <span className="text-xs"
                     style={{ color: 'var(--color-text-muted)' }}>
-                    ↔
+                    \u2194
                   </span>
-                  <span className="cursor-pointer hover:underline"
-                    style={{ color: 'var(--color-text-primary)' }}
-                    onClick={() => navigateTo(tgt)}>
-                    {tgt.title}
+                  <span style={{ color: 'var(--color-text-primary)' }}>
+                    {tgt.name}
                   </span>
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-[10px]"
                   style={{ color: 'var(--color-text-muted)' }}>
-                  <span>{edge.relation_type}</span>
-                  <span>{(edge.strength * 100).toFixed(0)}%</span>
+                  <span>{relName}</span>
+                  <span>{((edge.strength ?? 0) * 100).toFixed(0)}%</span>
                   {edge.reason && (
                     <span className="truncate max-w-48">
                       — {edge.reason}
@@ -174,20 +163,20 @@ export default function MetisLinksTab() {
                   <div className="mt-2 space-y-1">
                     <input type="text" value={reason}
                       onChange={e => setReason(e.target.value)}
-                      placeholder={t.metis.reasonPlaceholder}
+                      placeholder={t.metis?.reasonPlaceholder || 'Reason...'}
                       className="hud-input w-full text-[10px] px-2 py-1" />
                     <div className="flex gap-1">
                       <button onClick={() => handleReview(edge.id, 'confirm')}
                         className="flex-1 text-[10px] px-2 py-1 rounded"
                         style={{ backgroundColor: '#4ade8025',
                           color: '#4ade80' }}>
-                        {t.metis.confirm}
+                        {t.metis?.confirm || 'Confirm'}
                       </button>
                       <button onClick={() => handleReview(edge.id, 'reject')}
                         className="flex-1 text-[10px] px-2 py-1 rounded"
                         style={{ backgroundColor: '#ef444425',
                           color: '#ef4444' }}>
-                        {t.metis.reject}
+                        {t.metis?.reject || 'Reject'}
                       </button>
                     </div>
                   </div>
@@ -196,7 +185,7 @@ export default function MetisLinksTab() {
                     className="mt-2 text-[10px] px-2 py-0.5 rounded"
                     style={{ backgroundColor: 'var(--color-hover-bg)',
                       color: 'var(--color-text-secondary)' }}>
-                    {t.metis.confirm} / {t.metis.reject}
+                    {t.metis?.confirm || 'Confirm'} / {t.metis?.reject || 'Reject'}
                   </button>
                 )}
               </div>

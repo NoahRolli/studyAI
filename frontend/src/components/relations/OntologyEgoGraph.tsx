@@ -1,6 +1,7 @@
 // OntologyEgoGraph — Node-zentrierte Ansicht (Ego-Graph)
-// Zeigt gewählten Node zentral + alle verbundenen Nodes radial
+// Zeigt gewaehlten Node zentral + alle verbundenen Nodes radial
 // Klick auf verbundenen Node wechselt den Fokus
+// Alle Daten kommen aus /api/relations (concept_edges)
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import ReactFlow, { Background } from 'reactflow'
@@ -10,7 +11,6 @@ import { get } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import { getOntologyMarker } from '../../utils/ontologyMarkers'
 import type { RelationData } from '../../types/relations'
-import type { MetisGraph } from '../../types/metis'
 
 // Ontology-Farben
 const TYPE_COLORS: Record<string, string> = {
@@ -18,18 +18,15 @@ const TYPE_COLORS: Record<string, string> = {
   builds_on: '#4ade80', requires: '#f87171', contradicts: '#ef4444',
   example_of: '#67e8f9', related_to: '#a78bfa',
 }
-const NODE_COLORS: Record<string, string> = {
-  note: '#90edb8', summary: '#e8b882', module: '#d4a574', entry: '#00d4ff',
-}
 
 interface EgoNode {
-  key: string; label: string; type: string; id: number
+  key: string; label: string; id: number
 }
 
 interface EgoEdge {
   sourceKey: string; targetKey: string
-  relType: string; relLabel: string; strength?: number
-  source: 'ontology' | 'metis' | 'inferred'
+  relType: string; relLabel: string
+  origin: string
 }
 
 interface Props {
@@ -40,18 +37,14 @@ interface Props {
 export default function OntologyEgoGraph({ focusKey, onFocusChange }: Props) {
   const { language } = useLanguage()
   const [relations, setRelations] = useState<RelationData[]>([])
-  const [metisGraph, setMetisGraph] = useState<MetisGraph | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Daten laden
+  // Alle nicht-rejected Relations laden
   useEffect(() => {
-    Promise.all([
-      get<RelationData[]>('/api/relations'),
-      get<MetisGraph>('/api/metis/graph'),
-    ]).then(([rels, graph]) => {
-      setRelations(rels.filter(r => r.status !== 'rejected'))
-      setMetisGraph(graph)
-    }).catch(console.error).finally(() => setLoading(false))
+    get<RelationData[]>('/api/relations')
+      .then(rels => setRelations(rels.filter(r => r.status !== 'rejected')))
+      .catch(console.error)
+      .finally(() => setLoading(false))
   }, [])
 
   // Alle Nodes + Edges aufbauen
@@ -59,60 +52,35 @@ export default function OntologyEgoGraph({ focusKey, onFocusChange }: Props) {
     const nodeMap = new Map<string, EgoNode>()
     const edges: EgoEdge[] = []
 
-    // Aus Ontology-Relationen
     relations.forEach(r => {
-      const sKey = `${r.source_type}:${r.source_id}`
-      const tKey = `${r.target_type}:${r.target_id}`
+      const sKey = `concept:${r.source_id}`
+      const tKey = `concept:${r.target_id}`
       if (!nodeMap.has(sKey)) nodeMap.set(sKey, {
-        key: sKey, label: r.source_title || sKey, type: r.source_type, id: r.source_id,
+        key: sKey, label: r.source_title || `#${r.source_id}`, id: r.source_id,
       })
       if (!nodeMap.has(tKey)) nodeMap.set(tKey, {
-        key: tKey, label: r.target_title || tKey, type: r.target_type, id: r.target_id,
+        key: tKey, label: r.target_title || `#${r.target_id}`, id: r.target_id,
       })
       edges.push({
         sourceKey: sKey, targetKey: tKey,
         relType: r.relation_type?.name || 'related_to',
-        relLabel: language === 'de' ? (r.relation_type?.label_de || '?') : (r.relation_type?.label_en || '?'),
-        source: 'ontology',
+        relLabel: language === 'de'
+          ? (r.relation_type?.label_de || '?')
+          : (r.relation_type?.label_en || '?'),
+        origin: r.origin || 'manual',
       })
     })
 
-    // Aus Metis-Graph (confirmed, nicht wikilink)
-    if (metisGraph) {
-      const nMap = new Map(metisGraph.nodes.map(n => [n.id, n]))
-      metisGraph.edges
-        .filter(e => e.id > 0 && e.status === 'confirmed' && e.relation_type !== 'wikilink')
-        .forEach(e => {
-          const src = nMap.get(e.source_node_id)
-          const tgt = nMap.get(e.target_node_id)
-          if (!src || !tgt) return
-          const sKey = `${src.type}:${src.source_id}`
-          const tKey = `${tgt.type}:${tgt.source_id}`
-          if (!nodeMap.has(sKey)) nodeMap.set(sKey, {
-            key: sKey, label: src.title, type: src.type, id: src.source_id,
-          })
-          if (!nodeMap.has(tKey)) nodeMap.set(tKey, {
-            key: tKey, label: tgt.title, type: tgt.type, id: tgt.source_id,
-          })
-          edges.push({
-            sourceKey: sKey, targetKey: tKey,
-            relType: e.relation_type, relLabel: e.relation_type,
-            strength: e.strength, source: 'metis',
-          })
-        })
-    }
-
     return { egoNodes: nodeMap, egoEdges: edges, allNodes: Array.from(nodeMap.values()) }
-  }, [relations, metisGraph, language])
+  }, [relations, language])
 
-  // Fokus-Node bestimmen (erster Node falls keiner gewählt)
+  // Fokus-Node bestimmen
   const focus = focusKey || (allNodes.length > 0 ? allNodes[0].key : null)
 
-  // Nachbar-Nodes + Edges für Fokus filtern
+  // Nachbar-Nodes + Edges fuer Fokus filtern
   const { rfNodes, rfEdges } = useMemo(() => {
     if (!focus) return { rfNodes: [] as Node[], rfEdges: [] as Edge[] }
 
-    // Nachbarn finden
     const neighbors = new Set<string>()
     const relevantEdges: EgoEdge[] = []
     egoEdges.forEach(e => {
@@ -120,7 +88,6 @@ export default function OntologyEgoGraph({ focusKey, onFocusChange }: Props) {
       else if (e.targetKey === focus) { neighbors.add(e.sourceKey); relevantEdges.push(e) }
     })
 
-    // Fokus-Node in der Mitte
     const centerNode = egoNodes.get(focus)
     if (!centerNode) return { rfNodes: [] as Node[], rfEdges: [] as Edge[] }
 
@@ -129,11 +96,10 @@ export default function OntologyEgoGraph({ focusKey, onFocusChange }: Props) {
       position: { x: 300, y: 300 },
       data: { label: centerNode.label },
       style: {
-        background: NODE_COLORS[centerNode.type] || '#888',
-        color: '#0a0e17', fontWeight: 'bold', fontSize: '13px',
-        border: `2px solid ${NODE_COLORS[centerNode.type] || '#888'}`,
-        borderRadius: '8px', padding: '8px 14px',
-        boxShadow: `0 0 12px ${NODE_COLORS[centerNode.type] || '#888'}60`,
+        background: '#00d4ff', color: '#0a0e17',
+        fontWeight: 'bold', fontSize: '13px',
+        border: '2px solid #00d4ff', borderRadius: '8px',
+        padding: '8px 14px', boxShadow: '0 0 12px #00d4ff60',
       },
     }]
 
@@ -150,8 +116,8 @@ export default function OntologyEgoGraph({ focusKey, onFocusChange }: Props) {
         data: { label: n.label },
         style: {
           background: 'var(--color-bg-surface)',
-          color: NODE_COLORS[n.type] || '#ccc',
-          border: `1px solid ${NODE_COLORS[n.type] || '#555'}`,
+          color: 'var(--color-text-primary)',
+          border: '1px solid var(--color-border)',
           borderRadius: '6px', padding: '6px 10px',
           fontSize: '11px', cursor: 'pointer',
         },
@@ -167,8 +133,8 @@ export default function OntologyEgoGraph({ focusKey, onFocusChange }: Props) {
         source: e.sourceKey, target: e.targetKey,
         label: marker ? `${marker.symbol} ${e.relLabel}` : e.relLabel,
         labelStyle: { fill: color, fontSize: '10px' },
-        style: { stroke: color, strokeWidth: e.source === 'ontology' ? 2 : 1.5 },
-        animated: e.source === 'metis',
+        style: { stroke: color, strokeWidth: e.origin === 'manual' ? 2 : 1.5 },
+        animated: e.origin !== 'manual',
       }
     })
 
