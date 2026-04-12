@@ -184,7 +184,7 @@ export default function MetisNodeDetail({
                 </div>
                 {/* Meta-Zeile: Typ + Stärke + Status */}
                 <div className="flex items-center gap-2 mt-1 text-[9px] text-[var(--color-text-muted)]">
-                  <span>{edge.relation_type}</span>
+                  <span>{typeof edge.relation_type === "object" && edge.relation_type ? edge.relation_type.name : (edge.relation_type || "")}</span>
                   {!isOntology(edge) && (
                     <span>{(edge.strength * 100).toFixed(0)}%</span>
                   )}

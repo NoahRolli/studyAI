@@ -240,10 +240,10 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
           const e = nodePositions.get(edge.target_node_id)
           if (!s || !e) return null
           const hl = isEdgeHighlighted(edge.source_node_id, edge.target_node_id)
-          const c = COLORS[edge.relation_type] || COLORS.ai
+          const rt = typeof edge.relation_type === 'object' && edge.relation_type ? edge.relation_type.name : (edge.relation_type || ''); const c = COLORS[rt] || COLORS.ai
           const isOnt = edge.id < 0
           return <GlowEdge key={edge.id} start={s} end={e} status={edge.status}
-            relationType={edge.relation_type}
+            relationType={typeof edge.relation_type === "object" && edge.relation_type ? edge.relation_type.name : (edge.relation_type || undefined)}
             showMarker={isOnt && settings.showOntologyMarkers}
             showLabel={isOnt && settings.showEdgeLabels}
             thickness={isOnt ? settings.ontologyThickness : 1}
