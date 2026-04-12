@@ -9,6 +9,7 @@ import { useLanguage } from '../hooks/useLanguage'
 import MetisToolbar from '../components/metis/MetisToolbar'
 import ConceptListView from '../components/metis/ConceptListView'
 import ConceptDetailPanel from "../components/metis/ConceptDetailPanel"
+import ClusterDetail from "../components/metis/ClusterDetail"
 import MetisMiniMap3D from '../components/metis/MetisMiniMap3D'
 import type { MetisViewMode, ConceptGraph, MetisGraph } from '../types/metis'
 
@@ -28,6 +29,8 @@ export default function MetisPage() {
   const linking = tasks.some(t => t.id === 'metis-link' && t.status === 'running')
   const clustering = tasks.some(t => t.id === 'metis-cluster' && t.status === 'running')
   const [selectedConceptId, setSelectedConceptId] = useState<number | null>(null)
+  const [selectedCluster, setSelectedCluster] = useState<number | null>(null)
+  const [selectedFolder, setSelectedFolder] = useState<number | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const [showLabels, setShowLabels] = useState(false)
 
@@ -82,7 +85,6 @@ export default function MetisPage() {
       setLoading(false)
     }
   }, [])
-
   useEffect(() => { loadGraph() }, [loadGraph])
 
   // Sync — Konzepte aus Notes + Summaries extrahieren
@@ -109,7 +111,16 @@ export default function MetisPage() {
     })
   }, [runTask, loadGraph])
   const handleNodeClick = useCallback((nodeId: number) => {
+    setSelectedCluster(null); setSelectedFolder(null);
     setSelectedConceptId(nodeId)
+  }, [])
+
+  const handleClusterClick = useCallback((id: number) => {
+    setSelectedConceptId(null); setSelectedFolder(null); setSelectedCluster(id)
+  }, [])
+
+  const handleFolderClick = useCallback((id: number) => {
+    setSelectedConceptId(null); setSelectedCluster(null); setSelectedFolder(id)
   }, [])
 
   // Fullscreen toggle mit Escape-Listener
@@ -180,6 +191,8 @@ export default function MetisPage() {
             <MetisSphere3D
               graph={sphereGraph}
               onNodeClick={handleNodeClick}
+              onClusterClick={handleClusterClick}
+              onFolderClick={handleFolderClick}
               onCameraMove={handleCameraMove}
               transparent={true}
               showLabels={showLabels}
@@ -218,6 +231,17 @@ export default function MetisPage() {
           />
         )}
 
+        {/* Cluster/Folder Detail */}
+        {selectedCluster !== null && (
+          <ClusterDetail clusterId={selectedCluster} graph={sphereGraph}
+            onClose={() => setSelectedCluster(null)}
+            onNodeSelect={(nid) => { setSelectedCluster(null); setSelectedConceptId(nid) }} />
+        )}
+        {selectedFolder !== null && (
+          <ClusterDetail folderId={selectedFolder} graph={sphereGraph}
+            onClose={() => setSelectedFolder(null)}
+            onNodeSelect={(nid) => { setSelectedFolder(null); setSelectedConceptId(nid) }} />
+        )}
         {/* Konzept-Detail-Panel */}
         {selectedConceptId && (
           <ConceptDetailPanel
