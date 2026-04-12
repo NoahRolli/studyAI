@@ -96,9 +96,9 @@ function TrackballControls({ groupRef, onInteract, isDraggingRef }: {
   return null
 }
 
-function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
+function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCameraMove, transparent,
   showLabels, isDraggingRef, settings }: {
-  graph: MetisGraph; onNodeClick?: (id: number) => void
+  graph: MetisGraph; onNodeClick?: (id: number) => void; onClusterClick?: (id: number) => void; onFolderClick?: (id: number) => void
   onCameraMove: (a: number, e: number, d: number) => void
   transparent?: boolean; showLabels: boolean
   isDraggingRef: React.MutableRefObject<boolean>
@@ -188,13 +188,13 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
     if (isDraggingRef.current) return
     setActiveFolder(null)
     if (activeHub === hubId) { setActiveHub(null); setClickedId(null) }
-    else { setActiveHub(hubId); setClickedId(null); if (memberIds.length > 0) onNodeClick?.(memberIds[0]) }
+    else { setActiveHub(hubId); setClickedId(null); const clId = parseInt(hubId.replace("hub-", "")); onClusterClick?.(clId) }
   }, [activeHub, onNodeClick, isDraggingRef])
 
   const handleFolderClick = useCallback((folderId: number) => {
     if (isDraggingRef.current) return
     setActiveHub(null); setClickedId(null)
-    setActiveFolder(prev => prev === folderId ? null : folderId)
+    setActiveFolder(prev => { const next = prev === folderId ? null : folderId; if (next !== null) onFolderClick?.(next); return next })
   }, [isDraggingRef])
 
   const handleNodeClick = useCallback((nodeId: number) => {
@@ -332,12 +332,12 @@ function MetisScene({ graph, onNodeClick, onCameraMove, transparent,
 }
 
 interface Props {
-  graph: MetisGraph; onNodeClick?: (nodeId: number) => void
+  graph: MetisGraph; onNodeClick?: (nodeId: number) => void; onClusterClick?: (id: number) => void; onFolderClick?: (id: number) => void
   onCameraMove?: (a: number, e: number, d: number) => void
   transparent?: boolean; showLabels?: boolean
 }
 
-export default function MetisSphere3D({ graph, onNodeClick, onCameraMove, transparent, showLabels = false }: Props) {
+export default function MetisSphere3D({ graph, onNodeClick, onClusterClick, onFolderClick, onCameraMove, transparent, showLabels = false }: Props) {
   const isDraggingRef = useRef(false)
   const { settings, update, save, reset } = useSphereSettings()
   const handleCameraMove = useCallback((a: number, e: number, d: number) => { onCameraMove?.(a, e, d) }, [onCameraMove])
@@ -345,7 +345,7 @@ export default function MetisSphere3D({ graph, onNodeClick, onCameraMove, transp
     <div className="w-full h-full relative" style={{ background: 'transparent' }}>
       <Canvas camera={{ position: [0, 0, 50], fov: 36 }}
         style={{ background: 'transparent' }} gl={{ antialias: true, alpha: true }}>
-        <MetisScene graph={graph} onNodeClick={onNodeClick}
+        <MetisScene graph={graph} onNodeClick={onNodeClick} onClusterClick={onClusterClick} onFolderClick={onFolderClick}
           transparent={transparent} onCameraMove={handleCameraMove}
           showLabels={showLabels} isDraggingRef={isDraggingRef} settings={settings} />
       </Canvas>
