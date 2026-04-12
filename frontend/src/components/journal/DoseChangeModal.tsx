@@ -28,7 +28,7 @@ export default function DoseChangeModal({
 
         <h3 className="hud-title text-sm mb-4"
           style={{ color: 'var(--color-primary)' }}>
-          {t.medication?.doseChangeTitle || 'Dosis-Aenderung'}
+          {'Dosis-Aenderung'}
         </h3>
 
         <p className="text-xs mb-3"
@@ -53,13 +53,14 @@ export default function DoseChangeModal({
 
         <label className="block text-xs mb-1"
           style={{ color: 'var(--color-text-muted)' }}>
-          {t.medication?.doseChangeReason || 'Warum aenderst du die Dosis?'}
+          {'Warum aenderst du die Dosis?'}
         </label>
         <textarea
           value={reason}
           onChange={e => setReason(e.target.value)}
-          placeholder={t.medication?.doseChangePlaceholder ||
-            'z.B. Arzt empfohlen, Nebenwirkungen, bessere Wirkung...'}
+          placeholder="z.B. Arzt empfohlen, Nebenwirkungen, bessere Wirkung..."
+
+
           rows={3}
           className="hud-input resize-y w-full mb-4"
           autoFocus

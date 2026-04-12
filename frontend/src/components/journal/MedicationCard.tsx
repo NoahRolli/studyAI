@@ -2,7 +2,7 @@
 // Wird von MedicationTracker für jedes Medikament gerendert
 
 import { useLanguage } from '../../hooks/useLanguage'
-import type { Medication, MedicationCreate, IntakeLog } from '../../types/models'
+import type { Medication, MedicationCreate } from '../../types/models'
 import MedicationForm from './MedicationForm'
 
 interface Props {
@@ -105,7 +105,7 @@ export default function MedicationCard({
         <input type="text" value={intakeNote}
           onChange={e => onNoteChange(e.target.value)}
           onBlur={onNoteSave}
-          placeholder={t.medication?.intakeNotePlaceholder || 'Notiz zur Einnahme...'}
+          placeholder={t.medication.notesPlaceholder || 'Notiz zur Einnahme...'}
           className="hud-input text-xs mt-2 w-full" />
       )}
 

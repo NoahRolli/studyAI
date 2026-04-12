@@ -110,6 +110,15 @@ function MedicationTracker({ medications, onReload }: MedicationTrackerProps) {
     } catch { /* Stille Fehler */ }
   }
 
+
+  async function deleteMedication(id: number) {
+    try {
+      await del(`/api/journal/medications/${id}`)
+      onReload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.common.error)
+    }
+  }
   async function submitBackfill(medId: number, status: string) {
     if (!backfillDate) return
     try {
