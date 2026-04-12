@@ -126,6 +126,7 @@ def health():
 
 # API-Routen registrieren
 app.include_router(settings_router)
+app.include_router(settings_router)
 app.include_router(auth_router)
 app.include_router(modules_router)
 app.include_router(documents_router)

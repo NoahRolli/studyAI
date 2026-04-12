@@ -146,7 +146,7 @@ function Sidebar() {
   return (
     <aside
       ref={sidebarRef}
-      className="relative flex flex-col border-r flex-shrink-0 transition-[width] duration-200"
+      className="relative flex flex-col border-r flex-shrink-0 transition-[width] duration-200 h-screen sticky top-0 overflow-y-auto"
       style={{
         width: currentWidth,
         backgroundColor: 'var(--color-bg-base)',

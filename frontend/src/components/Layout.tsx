@@ -14,7 +14,7 @@ function Layout() {
 
   return (
     <div
-      className="min-h-screen flex hud-grid-bg"
+      className="h-screen flex hud-grid-bg overflow-hidden"
       style={{ backgroundColor: 'var(--color-bg-deep)' }}
     >
       {/* Sidebar nur auf Unterseiten anzeigen */}
