@@ -111,6 +111,8 @@ export interface JournalMetisNode {
   pos_y: number | null
   cluster_ids: string[]
   realm: 'journal' | 'public'
+  folder_id?: number | null
+  folder_name?: string | null
 }
 
 // Edge im merged Graph
@@ -123,6 +125,8 @@ export interface JournalMetisEdge {
   status: 'suggested' | 'confirmed' | 'rejected'
   reason?: string | null
   realm: 'journal' | 'public'
+  folder_id?: number | null
+  folder_name?: string | null
 }
 
 // Cluster im merged Graph
@@ -132,6 +136,8 @@ export interface JournalMetisCluster {
   color: string
   node_ids: string[]
   realm: 'journal' | 'public'
+  folder_id?: number | null
+  folder_name?: string | null
 }
 
 // Kompletter merged Graph
