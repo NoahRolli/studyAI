@@ -19,6 +19,7 @@ from backend.journal.services.insights_service import (
     analyze_weekday_mood,
     analyze_writing_patterns,
     analyze_keyword_mood,
+    build_fuzzy_prompt_context,
 )
 from backend.journal.models.journal_database import get_journal_db
 from backend.journal.models.journal_entry import JournalEntry
@@ -215,8 +216,9 @@ async def get_ai_summary(
     keywords = analyze_keyword_mood(moods)
 
     # Prompt für Ollama zusammenbauen
+    fuzzy_context = build_fuzzy_prompt_context(moods)
     prompt = _build_summary_prompt(
-        med_mood, weekday, writing, keywords, dose_changes, language
+        med_mood, weekday, writing, keywords, dose_changes, fuzzy_context, language
     )
     try:
         result = await journal_ai._chat(prompt=prompt, max_tokens=1500)
@@ -227,7 +229,7 @@ async def get_ai_summary(
 
 def _build_summary_prompt(
     med_mood: list, weekday: list, writing: dict,
-    keywords: list, dose_changes: list, language: str,
+    keywords: list, dose_changes: list, fuzzy_context: str, language: str,
 ) -> str:
     """Baut den AI-Summary Prompt aus allen Analyse-Ergebnissen."""
     if language == "de":
@@ -240,6 +242,7 @@ Wochentag-Stimmung: {weekday}
 Schreib-Muster: {writing}
 Themen-Stimmung (Top 10): {keywords[:10]}
 Dosis-Aenderungen: {dose_changes}
+{fuzzy_context}
 
 Antworte auf Deutsch in Fliesstext, keine Listen."""
 
@@ -252,5 +255,6 @@ Weekday-Mood: {weekday}
 Writing Patterns: {writing}
 Keyword-Mood (Top 10): {keywords[:10]}
 Dose Changes: {dose_changes}
+{fuzzy_context}
 
 Respond in flowing text, no lists."""
