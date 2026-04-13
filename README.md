@@ -1,8 +1,9 @@
 # Pallas
 
-AI-powered study companion and encrypted journal. Parses lecture notes (PDF, Word, PowerPoint, Excel, images via OCR, Markdown), generates smart summaries, explains key terms, and visualizes knowledge as interactive, zoomable mindmaps. Includes a fully encrypted, local-only AI journal with mood tracking, medication tracker, and analytics.
+AI-native personal knowledge management system — a Second Brain.
+Parses documents (PDF, Word, PowerPoint, Excel, images via OCR, Markdown), generates smart summaries, extracts concepts into a 3D knowledge graph (Metis), manages ontological relations, and includes a fully encrypted journal with mood tracking, fuzzy logic insights, and medication tracking. All AI features run locally via Ollama or optionally via Groq Cloud.
 
-**Work in Progress**
+**Work in Progress — Solo Project**
 
 ---
 
@@ -11,106 +12,81 @@ AI-powered study companion and encrypted journal. Parses lecture notes (PDF, Wor
 | Component | Technology |
 |---|---|
 | Backend | Python 3.14 · FastAPI · SQLAlchemy · SQLite |
-| Frontend | React · TypeScript · Vite · Tailwind CSS v4 |
-| Mindmap | React Flow (Tree + Neural layout) |
-| Drag & Drop | @dnd-kit |
-| AI (Study) | Claude API (Anthropic) · Ollama (local) — switchable |
+| Frontend | React · TypeScript · Vite 7 · Tailwind CSS v4 |
+| Knowledge Graph | Three.js · @react-three/fiber (3D Sphere) · ReactFlow (2D Ego-Graph) |
+| Rich Text | TipTap (WikiLinks, Tasks, Markdown) |
+| Charts | Recharts (Mood timeline) |
+| AI (Study) | Ollama (local) · Groq Cloud (llama-3.3-70b) · Claude API — switchable with auto-fallback |
 | AI (Journal) | Ollama only — local, private, no external API |
 | Parsing | PyMuPDF · python-docx · python-pptx · openpyxl · Tesseract OCR |
 | Encryption | AES-256-GCM · Argon2id |
+| Server | Docker · Ubuntu 24.04 · LUKS-encrypted storage · WireGuard |
 | Docs | Sphinx · Furo theme · GitHub Pages |
 
 ---
 
-## Project Structure
-```
-pallas/
-├── backend/
-│   ├── main.py                        # FastAPI entry point
-│   ├── requirements.txt
-│   ├── infra/
-│   │   └── config.py                  # Global settings (DB, AI, paths)
-│   ├── api/
-│   │   ├── modules.py                 # CRUD for study modules
-│   │   ├── documents.py               # File upload & parsing
-│   │   ├── summaries.py               # AI-generated summaries
-│   │   ├── mindmap.py                 # Mindmap generation + deep dive
-│   │   └── folders.py                 # Folder hierarchy + drag & drop
-│   ├── services/
-│   │   ├── parser_service.py          # File parsing (7 formats, PyMuPDF optional)
-│   │   ├── ai_service.py              # Provider pattern (Claude/Ollama)
-│   │   ├── claude_provider.py         # Claude API integration
-│   │   ├── ollama_provider.py         # Ollama with robust JSON parser
-│   │   └── mindmap_service.py         # Tree structure + deep dive
-│   ├── models/
-│   │   ├── database.py                # SQLAlchemy setup
-│   │   ├── module.py                  # Study module (with folder_id)
-│   │   ├── document.py                # Uploaded document
-│   │   ├── summary.py                 # AI summary
-│   │   ├── mindmap_node.py            # Mindmap node (hierarchical)
-│   │   └── folder.py                  # Folder (self-referencing hierarchy)
-│   └── journal/                       # Encrypted journal (isolated module)
-│       ├── infra/
-│       │   └── journal_config.py      # Journal-specific settings
-│       ├── api/
-│       │   ├── auth.py                # Password setup, unlock, lock
-│       │   ├── entries.py             # Encrypted CRUD + auto-title
-│       │   ├── schemas.py             # Pydantic schemas
-│       │   ├── dependencies.py        # require_unlocked()
-│       │   ├── analytics.py           # Mood, clusters, storylines
-│       │   ├── medications.py         # Medication tracker CRUD + intake log
-│       │   └── medication_schemas.py  # Medication Pydantic schemas
-│       ├── services/
-│       │   ├── password_service.py    # Argon2id hashing
-│       │   ├── crypto_service.py      # AES-256-GCM encrypt/decrypt
-│       │   ├── session_service.py     # Unlock/lock, key in RAM
-│       │   ├── journal_ai_service.py  # Ollama-only AI + title generation
-│       │   ├── embedding_service.py   # nomic-embed-text (local)
-│       │   ├── mood_service.py        # Sentiment analysis
-│       │   ├── clustering_service.py  # Topic clustering
-│       │   └── storyline_service.py   # Narrative arc detection
-│       └── models/
-│           ├── journal_database.py    # Separate encrypted SQLite DB
-│           ├── journal_entry.py       # Encrypted entry model
-│           └── medication.py          # Encrypted medication + intake log
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Layout.tsx             # App wrapper with HUD grid background
-│   │   │   ├── Sidebar.tsx            # Navigation with glow effects
-│   │   │   ├── DraggableCard.tsx      # Drag & drop wrapper (@dnd-kit)
-│   │   │   ├── DroppableFolder.tsx    # Drop zone with glow feedback
-│   │   │   └── journal/
-│   │   │       ├── MoodChart.tsx      # recharts mood timeline
-│   │   │       ├── ClusterView.tsx    # Topic cluster cards
-│   │   │       ├── StorylineView.tsx  # Narrative arc visualization
-│   │   │       ├── MedicationTracker.tsx  # Medication list + intake
-│   │   │       └── MedicationForm.tsx # Medication create/edit form
-│   │   ├── pages/
-│   │   │   ├── Dashboard.tsx          # Folder hierarchy + drag & drop
-│   │   │   ├── ModuleDetail.tsx       # Upload, summary, mindmap
-│   │   │   ├── MindmapPage.tsx        # React Flow (Tree/Neural switch)
-│   │   │   └── Journal.tsx            # Encrypted journal + analytics tabs
-│   │   ├── hooks/
-│   │   │   ├── useApi.ts             # API client (get, post, put, del)
-│   │   │   └── useJournalLock.ts     # Auto-lock on navigate/visibility
-│   │   ├── utils/
-│   │   │   └── mindmapLayouts.ts     # Tree + Neural layout algorithms
-│   │   ├── types/
-│   │   │   └── models.ts             # TypeScript type definitions
-│   │   ├── App.tsx                    # Router configuration
-│   │   └── index.css                  # HUD theme (CSS variables, glow, Orbitron)
-│   └── vite.config.ts
-│
-├── docs/                              # Sphinx documentation (auto-deploy)
-├── .github/
-│   ├── workflows/
-│   │   ├── ci.yml                     # Ruff linting
-│   │   └── docs.yml                   # Sphinx → GitHub Pages
-│   └── dependabot.yml                 # Weekly security updates
-└── README.md
-```
+## Modules
+
+### Archiv
+File management with folders, document upload (7 formats), AI-generated summaries with key terms, PDF preview. Folders can be toggled for Metis visibility (eye icon). Summary editor with TipTap, WikiLinks, and auto-save.
+
+### Journal
+Fully encrypted diary (AES-256-GCM, separate SQLite DB). Auto-generated titles, inline editing, mood analysis via Ollama with fuzzy logic membership functions. Topic clustering, storyline detection, medication tracker with dose history and intake notes. Auto-lock on inactivity, tab switch, or navigation.
+
+### Calendar
+Event management with recurring events, color coding, agenda view. Sport tracker integration (duration, intensity, type). GitHub commit tracking with purple dots. Planned: work-hours tracking, weather/moon phases.
+
+### Notes
+Flat structure (no folders — Metis handles organization). TipTap rich text with WikiLinks (`[[Title]]` — auto-creates notes), backlinks panel, quick-switcher (Cmd+K), pinned notes. AI panel: summarize, related notes, link suggestions via Ollama. Checkbox auto-sort with collapse.
+
+### Metis (Second Brain)
+3D knowledge sphere — concepts as nodes, not files. Hybrid keyword extraction (summary key terms + Ollama). Auto-linking, auto-clustering. Two instances: public (top-level) and encrypted (inside Journal). Three.js sphere with quaternion trackball rotation, hierarchical folder layout, cluster nebula particles, ontology edge markers. Visual settings panel (9 controls). Edge colors toggle.
+
+### Ontology
+Knowledge structure management. Four tabs: Overview (confirmed relations), Suggestions (AI-generated, confirm/reject), Metis Links (pending), Graph (ReactFlow ego-view). Unified edge system. Learning loop (rejected relations as negative examples). Transitive inference.
+
+### Delphi (Planned)
+Knowledge chat — ask questions, get answers from all collected knowledge across modules.
+
+---
+
+## AI Architecture
+
+Three-tier provider system with automatic fallback:
+
+1. **Ollama Local** (MacBook, gemma4:e2b) — always available
+2. **Ollama Server** (Olymp, gemma4:e4b) — switchable
+3. **Groq Cloud** (llama-3.3-70b-versatile) — default for non-journal tasks
+
+Auto-fallback: Groq 429 rate limit → Ollama Server → Ollama Local. Global provider switch + per-page overrides. Model badges on all AI-generated content.
+
+**Journal AI is strictly Ollama-only** — never routed to cloud providers, enforced at code level.
+
+---
+
+## Fuzzy Logic
+
+Mood scores (-1.0 to 1.0) are translated into fuzzy membership sets:
+
+- sehr_schlecht / schlecht / neutral / gut / sehr_gut
+- Overlapping trapezoid functions (no hard boundaries)
+- Used in Journal Insights for natural correlations
+- AI summary prompts receive fuzzy distributions instead of raw numbers
+
+---
+
+## Infrastructure
+
+| Component | Detail |
+|---|---|
+| Server | Olymp (Lenovo M920q, Ubuntu 24.04, 15GB RAM) |
+| Container | Docker, port 8001, network_mode: host |
+| Storage | LUKS-encrypted Samsung T7 (Tresor) |
+| VPN | WireGuard (Aigis gateway) |
+| Auth | /etc/olymp/auth.json |
+| Backup | Automated every 3h via cron |
+| Docs | Auto-deploy via GitHub Actions |
+| CI | Ruff linting |
 
 ---
 
@@ -120,100 +96,29 @@ pallas/
 
 - Python 3.12+
 - Node.js 20+
-- Git
-- [Tesseract](https://github.com/tesseract-ocr/tesseract) (for OCR)
-- [Ollama](https://ollama.ai) (required for journal features)
+- [Ollama](https://ollama.ai) (required for AI features)
+- Optional: [Tesseract](https://github.com/tesseract-ocr/tesseract) (for OCR)
 
-### Backend Setup
+### Backend
 ```bash
 git clone https://github.com/NoahRolli/pallas.git
 cd pallas
 python3 -m venv .venv
 source .venv/bin/activate
-pip3 install -r backend/requirements.txt --break-system-packages
+pip3 install -r backend/requirements.txt
 uvicorn backend.main:app --reload
 ```
 
-API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-
-### Frontend Setup
+### Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Frontend: [http://localhost:5173](http://localhost:5173)
-
----
-
-## Features
-
-### Study Companion
-- [x] Folder hierarchy with drag & drop (nested folders + modules)
-- [x] File upload with automatic text extraction
-- [x] Supported formats: PDF, Word, PowerPoint, Excel, Images (OCR), Markdown, TXT
-- [x] AI-powered summaries (Claude & Ollama, switchable)
-- [x] Interactive mindmaps with two layouts (Tree + Neural)
-- [x] Deep dive: click leaf nodes to expand via AI
-- [x] Breadcrumb navigation
-
-### Encrypted Journal
-- [x] AES-256-GCM encryption with Argon2id key derivation
-- [x] Separate encrypted database (isolated from main app)
-- [x] Auto-lock on navigate away, laptop close, tab switch
-- [x] Auto-generated titles via Ollama
-- [x] Inline editing of entries
-- [x] Mood tracking via sentiment analysis (Ollama-only)
-- [x] Topic clustering via local embeddings (nomic-embed-text)
-- [x] Storyline detection across entries
-- [x] Medication tracker (toggleable, encrypted, daily intake log)
-
-### Design
-- [x] Futuristic HUD theme with cyan glow effects
-- [x] Orbitron font for headings
-- [x] Glassmorphism cards with backdrop blur
-- [x] Animated transitions and glow pulses
-- [x] Custom scrollbar and selection styling
-
-### Infrastructure
-- [x] CI pipeline with GitHub Actions (ruff linting)
-- [x] Sphinx documentation on GitHub Pages
-- [x] Dependabot for weekly security updates
-- [x] Automated backup script (3h interval via cron)
-
----
-
-## Content Pipeline
-```mermaid
-graph LR
-    A[File Upload] --> B[Parser Service]
-    B --> C[Raw Text]
-    C --> D{AI Provider}
-    D -->|Claude API| E[Summary]
-    D -->|Ollama local| E
-    E --> F[Key Terms]
-    E --> G[Mindmap]
-    G --> H[Level 0: Overview]
-    H --> I[Level 1: Chapters]
-    I --> J[Level 2+: Deep Dive]
-```
-
-## Journal Security Architecture
-```mermaid
-graph TD
-    A[Password Input] --> B[Argon2id Hash]
-    B --> C[Verify against stored hash]
-    C -->|Match| D[Derive AES-256 Key]
-    C -->|No match| E[Access Denied]
-    D --> F[Key stored in RAM only]
-    F --> G[Encrypt/Decrypt entries]
-    G --> H[Separate SQLite DB]
-    F --> I[Auto-lock triggers]
-    I -->|Timeout| J[Key wiped from RAM]
-    I -->|Screen lock| J
-    I -->|Navigate away| J
-    I -->|Tab switch| J
+### Deploy to Server
+```bash
+bash deploy.sh
 ```
 
 ---
