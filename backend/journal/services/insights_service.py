@@ -1,12 +1,13 @@
 # Insights Service — Erkennt Muster in Journal-Daten
 # Kombiniert Mood-Scores, Medikamenten-Einnahmen, Wochentage, Themen
-# Reine Mathematik — kein AI nötig für Korrelationen
-#
-# Jede Analyse-Funktion bekommt entschlüsselte Daten und gibt
-# strukturierte Ergebnisse zurück. Ollama-only für AI-Summary.
+# Fuzzy Logic: Scores werden in unscharfe Kategorien übersetzt
+# Reine Mathematik + Fuzzy — kein AI nötig für Korrelationen
 
 from datetime import datetime
 from collections import defaultdict
+from backend.journal.services.fuzzy_mood import (
+    fuzzify_series, fuzzy_for_prompt, dominant_mood, MOOD_COLORS,
+)
 
 
 def analyze_medication_mood(
@@ -14,19 +15,18 @@ def analyze_medication_mood(
     intake_logs: list[dict],
 ) -> list[dict]:
     """
-    Korrelation Medikament ↔ Stimmung.
-    Vergleicht Ø-Mood an Tagen mit vs. ohne Einnahme pro Medikament.
+    Korrelation Medikament <> Stimmung.
+    Vergleicht Mood an Tagen mit vs. ohne Einnahme pro Medikament.
+    Inkl. Fuzzy-Verteilung für natürlichere Darstellung.
     """
     if not moods or not intake_logs:
         return []
 
-    # Mood nach Datum indexieren
     mood_by_date: dict[str, float] = {}
     for m in moods:
         if m.get("date") and m.get("score") is not None:
             mood_by_date[m["date"]] = m["score"]
 
-    # Einnahme-Tage pro Medikament sammeln
     taken_dates: dict[str, set[str]] = defaultdict(set)
     med_names: dict[str, str] = {}
     for log in intake_logs:
@@ -39,9 +39,7 @@ def analyze_medication_mood(
     results = []
 
     for med_id, dates_taken in taken_dates.items():
-        # Tage MIT Einnahme die auch einen Mood-Score haben
         with_med = [mood_by_date[d] for d in dates_taken if d in mood_by_date]
-        # Tage OHNE Einnahme
         without_dates = all_dates - dates_taken
         without_med = [mood_by_date[d] for d in without_dates if d in mood_by_date]
 
@@ -60,20 +58,20 @@ def analyze_medication_mood(
             "days_with": len(with_med),
             "days_without": len(without_med),
             "trend": "positive" if diff > 0.1 else "negative" if diff < -0.1 else "neutral",
+            "fuzzy_with": fuzzify_series(with_med),
+            "fuzzy_without": fuzzify_series(without_med),
         })
 
     return sorted(results, key=lambda x: abs(x["difference"]), reverse=True)
 
 
 def analyze_weekday_mood(moods: list[dict]) -> list[dict]:
-    """
-    Stimmung nach Wochentag — erkennt wann es dir gut/schlecht geht.
-    """
+    """Stimmung nach Wochentag — mit Fuzzy-Verteilung pro Tag."""
     if not moods:
         return []
 
-    # Wochentag-Namen (Montag=0)
-    day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    day_names = ["monday", "tuesday", "wednesday", "thursday",
+                 "friday", "saturday", "sunday"]
     by_day: dict[int, list[float]] = defaultdict(list)
 
     for m in moods:
@@ -95,15 +93,15 @@ def analyze_weekday_mood(moods: list[dict]) -> list[dict]:
             "weekday_index": day_idx,
             "avg_mood": avg,
             "entry_count": len(scores),
+            "fuzzy": fuzzify_series(scores),
+            "dominant": dominant_mood(avg),
         })
 
     return sorted(results, key=lambda x: x["weekday_index"])
 
 
 def analyze_writing_patterns(entries: list[dict], moods: list[dict]) -> dict:
-    """
-    Schreib-Muster — Korrelation zwischen Schreibhäufigkeit und Stimmung.
-    """
+    """Schreib-Muster — Korrelation Schreibhäufigkeit <> Stimmung."""
     if not entries or not moods:
         return {}
 
@@ -112,19 +110,16 @@ def analyze_writing_patterns(entries: list[dict], moods: list[dict]) -> dict:
         if m.get("date") and m.get("score") is not None:
             mood_by_date[m["date"]] = m["score"]
 
-    # Einträge pro Tag zählen
     entries_per_day: dict[str, int] = defaultdict(int)
     for e in entries:
         if e.get("date"):
             entries_per_day[e["date"]] += 1
 
-    # Tage mit vs. ohne Einträge vergleichen
     dates_with = [mood_by_date[d] for d in entries_per_day if d in mood_by_date]
     all_mood_dates = set(mood_by_date.keys())
     entry_dates = set(entries_per_day.keys())
     dates_without = [mood_by_date[d] for d in (all_mood_dates - entry_dates)]
 
-    # Durchschnittliche Textlänge
     lengths = [len(e.get("content", "")) for e in entries]
     avg_length = round(sum(lengths) / len(lengths)) if lengths else 0
 
@@ -134,14 +129,13 @@ def analyze_writing_patterns(entries: list[dict], moods: list[dict]) -> dict:
         "avg_mood_writing_days": round(sum(dates_with) / len(dates_with), 2) if dates_with else None,
         "avg_mood_silent_days": round(sum(dates_without) / len(dates_without), 2) if dates_without else None,
         "writing_days": len(entry_dates),
+        "fuzzy_writing_days": fuzzify_series(dates_with) if dates_with else {},
+        "fuzzy_silent_days": fuzzify_series(dates_without) if dates_without else {},
     }
 
 
 def analyze_keyword_mood(moods: list[dict]) -> list[dict]:
-    """
-    Themen ↔ Stimmung — welche Keywords korrelieren mit guter/schlechter Stimmung.
-    Nutzt die Keywords aus dem Mood-Cache.
-    """
+    """Themen <> Stimmung — Keywords mit Fuzzy-Verteilung."""
     if not moods:
         return []
 
@@ -166,6 +160,18 @@ def analyze_keyword_mood(moods: list[dict]) -> list[dict]:
             "keyword": kw,
             "avg_mood": avg,
             "count": len(scores),
+            "fuzzy": fuzzify_series(scores),
+            "dominant": dominant_mood(avg),
         })
 
-    return sorted(results, key=lambda x: x["avg_mood"])
+    return sorted(results, key=lambda x: abs(x["avg_mood"]), reverse=True)
+
+
+def build_fuzzy_prompt_context(moods: list[dict]) -> str:
+    """
+    Erzeugt Fuzzy-Kontext für den AI-Summary-Prompt in Insights.
+    Statt "Ø Score 0.42" → "Stimmungsverteilung: Gut (0.65), Neutral (0.25)"
+    """
+    scores = [m["score"] for m in moods
+              if m.get("score") is not None]
+    return fuzzy_for_prompt(scores)
