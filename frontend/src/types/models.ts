@@ -94,12 +94,18 @@ export interface JournalStatus {
 // --- Journal Analytics ---
 
 // Stimmungsanalyse eines Eintrags (von POST /api/journal/analytics/mood)
+export interface FuzzyMembership {
+  [key: string]: number  // z.B. { gut: 0.7, neutral: 0.3 }
+}
+
 export interface MoodResult {
   entry_id: number
   score: number             // -1.0 (negativ) bis 1.0 (positiv)
   label: string             // z.B. "freudig", "nachdenklich"
   keywords: string[]
   error?: string            // Falls Ollama nicht verfügbar
+  fuzzy?: FuzzyMembership
+  fuzzy_label?: string
 }
 
 // Themen-Cluster (von POST /api/journal/analytics/clusters)
@@ -219,6 +225,8 @@ export interface MedMoodResult {
   days_with: number
   days_without: number
   trend: string
+  fuzzy_with?: FuzzyMembership
+  fuzzy_without?: FuzzyMembership
 }
 
 // Stimmung nach Wochentag
@@ -227,6 +235,8 @@ export interface WeekdayMoodResult {
   weekday_index: number
   avg_mood: number
   entry_count: number
+  fuzzy?: FuzzyMembership
+  dominant?: string
 }
 
 // Schreibmuster-Analyse
@@ -236,6 +246,8 @@ export interface WritingResult {
   avg_mood_writing_days: number | null
   avg_mood_silent_days: number | null
   writing_days: number
+  fuzzy_writing_days?: FuzzyMembership
+  fuzzy_silent_days?: FuzzyMembership
 }
 
 // Keyword ↔ Stimmung Korrelation
@@ -243,4 +255,6 @@ export interface KeywordMoodResult {
   keyword: string
   avg_mood: number
   count: number
+  fuzzy?: FuzzyMembership
+  dominant?: string
 }
