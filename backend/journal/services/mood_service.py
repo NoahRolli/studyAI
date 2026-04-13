@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from backend.journal.services.journal_ai_service import journal_ai
 from backend.journal.models.mood_cache import MoodCache
 
-
+from backend.journal.services.fuzzy_mood import fuzzify, dominant_mood
 def _compute_hash(title: str, content: str) -> str:
     """SHA-256 Hash über Titel + Inhalt — für Cache-Invalidierung."""
     combined = f"{title}|||{content}"
@@ -24,6 +24,8 @@ def _cache_to_dict(cache: MoodCache) -> dict:
         "score": cache.score,
         "label": cache.label,
         "keywords": cache.keywords.split(",") if cache.keywords else [],
+        "fuzzy": fuzzify(cache.score),
+        "fuzzy_label": dominant_mood(cache.score),
     }
 
 
@@ -100,6 +102,8 @@ async def analyze_entry_mood(
         "score": score,
         "label": label,
         "keywords": keywords,
+        "fuzzy": fuzzify(score),
+        "fuzzy_label": dominant_mood(score),
     }
 
 
