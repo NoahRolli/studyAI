@@ -1,4 +1,5 @@
 # Konzept-Graph AI Service — Sync + Keyword-Extraction
+import logging
 # Sync: Extrahiert Keywords aus Notes und Summaries (key_terms)
 # Nur Dokumente aus Ordnern mit metis_enabled=True werden gescannt
 # Nutzt den aktiven Provider (Groq/Ollama) via model_router
@@ -18,7 +19,7 @@ from backend.models.folder import Folder
 from backend.infra.config import OLLAMA_MODEL, OLLAMA_MODEL_SERVER
 from backend.infra.ollama_connector import get_ollama_url
 from backend.infra.model_router import get_active_provider, get_model_used
-from backend.services.groq_provider import GroqProvider
+from backend.services.groq_provider import GroqProvider, GroqRateLimitError
 
 router = APIRouter(prefix="/api/concepts", tags=["concepts-ai"])
 
@@ -52,11 +53,16 @@ def parse_json_response(text_val: str) -> list | dict | None:
 
 
 async def ai_chat(prompt: str, page: str = "metis") -> str:
-    """Zentraler AI-Chat — routet zum aktiven Provider."""
+    """Zentraler AI-Chat — routet zum aktiven Provider. Groq 429 → Ollama Fallback."""
     provider = get_active_provider(page)
     if provider == "groq":
-        return await _groq.chat(prompt)
-    # Ollama (local oder server)
+        try:
+            return await _groq.chat(prompt)
+        except GroqRateLimitError:
+
+            logging.getLogger(__name__).warning("Groq 429 in concepts_ai — Fallback auf Ollama")
+            # Fallthrough zu Ollama
+    # Ollama (local oder server, oder Fallback nach Groq 429)
     base_url = await get_ollama_url()
     model = OLLAMA_MODEL if provider == "ollama_local" else OLLAMA_MODEL_SERVER
     async with httpx.AsyncClient(timeout=120.0) as client:
@@ -67,7 +73,6 @@ async def ai_chat(prompt: str, page: str = "metis") -> str:
         })
         resp.raise_for_status()
         return resp.json().get("message", {}).get("content", "")
-
 
 # Alias für Abwärtskompatibilität (concepts_cluster.py importiert diesen Namen)
 async def ollama_chat(prompt: str) -> str:
