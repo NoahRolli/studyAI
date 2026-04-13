@@ -2,6 +2,7 @@
 # OpenAI-kompatible API, extrem schnelle Inferenz (LPU Hardware)
 # Wird für Non-Journal Features genutzt (Summarize, Concepts, Auto-Link)
 # Journal-Daten gehen NIEMALS über diesen Provider
+# Bei 429 Rate Limit → GroqRateLimitError für Auto-Fallback
 
 import json
 import re
@@ -10,6 +11,11 @@ import logging
 from backend.infra.config import GROQ_API_KEY, GROQ_MODEL, GROQ_BASE_URL
 
 logger = logging.getLogger(__name__)
+
+
+class GroqRateLimitError(Exception):
+    """Wird bei 429 Rate Limit geworfen — Caller kann auf Ollama fallbacken."""
+    pass
 
 
 class GroqProvider:
@@ -48,8 +54,9 @@ class GroqProvider:
                 },
             )
             if response.status_code == 429:
-                raise ConnectionError(
-                    "Groq Rate Limit erreicht. Warte oder wechsle auf Ollama."
+                logger.warning("Groq 429 Rate Limit — Fallback wird ausgeloest")
+                raise GroqRateLimitError(
+                    "Groq Rate Limit erreicht (429)"
                 )
             if response.status_code != 200:
                 logger.error(
@@ -85,14 +92,12 @@ class GroqProvider:
         3. Nicht-greedy Regex als Fallback
         4. Rohtext direkt
         """
-        # Strategie 1: JSON aus Markdown-Codeblock
         match = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
         if match:
             try:
                 return json.loads(match.group(1).strip())
             except json.JSONDecodeError:
                 pass
-        # Strategie 2: Greedy — erstes { bis letztes }
         for opener, closer in [('{', '}'), ('[', ']')]:
             start = text.find(opener)
             end = text.rfind(closer)
@@ -101,14 +106,12 @@ class GroqProvider:
                     return json.loads(text[start:end + 1])
                 except json.JSONDecodeError:
                     pass
-        # Strategie 3: Nicht-greedy Regex
         match = re.search(r'(\{[\s\S]*?\}|\[[\s\S]*?\])', text)
         if match:
             try:
                 return json.loads(match.group(1))
             except json.JSONDecodeError:
                 pass
-        # Strategie 4: Rohtext direkt
         try:
             return json.loads(text.strip())
         except json.JSONDecodeError:
