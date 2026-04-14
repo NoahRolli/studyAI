@@ -186,7 +186,7 @@ async def detect_relations(
     existing = _get_existing_pairs(db)
     rejected_pairs = _get_rejected_pairs(db)
     total_created = 0
-    batch_size = 40
+    batch_size = 25
 
     for i in range(rounds):
         # Konzepte shufflen — jede Runde anderer Ausschnitt
