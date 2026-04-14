@@ -2,6 +2,7 @@
 # Endpunkte für Graph-View, Liste, Detail, Edge-Management
 # Edges nutzen relation_type_id (FK auf relation_types) + origin + status
 
+import logging
 from sqlalchemy import or_
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -271,3 +272,29 @@ def update_edge(edge_id: int, data: EdgeUpdate,
         edge.reviewed_at = datetime.now(timezone.utc)
     db.commit()
     return {"ok": True}
+
+
+@router.delete("/orphaned")
+def delete_orphaned_concepts(db: Session = Depends(get_db)):
+    """Verwaiste Konzepte löschen — ohne Quellen UND ohne Edges."""
+    concepts = db.query(Concept).all()
+    deleted = 0
+    for c in concepts:
+        has_sources = db.query(ConceptSource).filter(
+            ConceptSource.concept_id == c.id
+        ).first()
+        if has_sources:
+            continue
+        has_edges = db.query(ConceptEdge).filter(
+            or_(
+                ConceptEdge.source_concept_id == c.id,
+                ConceptEdge.target_concept_id == c.id,
+            )
+        ).first()
+        if has_edges:
+            continue
+        db.delete(c)
+        deleted += 1
+    db.commit()
+    logger.info(f"{deleted} verwaiste Konzepte gelöscht")
+    return {"deleted": deleted}
