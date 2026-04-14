@@ -75,12 +75,10 @@ async def update_embeddings_stream(
             Concept.embedding.isnot(None)
         ).all()
 
-        # Bestehende Similarity-Edges laden (zum Ueberspringen)
+        # ALLE bestehenden Edges laden (nicht nur similarity)
         existing_sim = set()
-        sim_edges = db.query(ConceptEdge).filter(
-            ConceptEdge.origin == "embedding_similarity"
-        ).all()
-        for e in sim_edges:
+        all_edges = db.query(ConceptEdge).all()
+        for e in all_edges:
             existing_sim.add((e.source_concept_id, e.target_concept_id))
             existing_sim.add((e.target_concept_id, e.source_concept_id))
 
