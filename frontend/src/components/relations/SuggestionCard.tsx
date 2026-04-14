@@ -45,17 +45,17 @@ export default function SuggestionCard({
       )}
       <div className="flex gap-2 mt-2">
         <button onClick={() => onEdit(s)}
-          className="hud-btn text-xs px-2 py-0.5"
+          className="hud-btn-sm"
           style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}>
           {language === 'de' ? 'Bearbeiten' : 'Edit'}
         </button>
         <button onClick={() => onConfirm(s.id)}
-          className="hud-btn text-xs px-2 py-0.5"
+          className="hud-btn-sm"
           style={{ borderColor: 'var(--color-success)', color: 'var(--color-success)' }}>
           {language === 'de' ? 'Bestätigen' : 'Confirm'}
         </button>
         <button onClick={() => onReject(s.id)}
-          className="hud-btn text-xs px-2 py-0.5"
+          className="hud-btn-sm"
           style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}>
           {language === 'de' ? 'Ablehnen' : 'Reject'}
         </button>
