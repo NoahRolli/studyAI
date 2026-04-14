@@ -52,7 +52,7 @@ async def _call_with_fallback(method: str, *args, **kwargs):
     try:
         result = await getattr(provider, method)(*args, **kwargs)
         return result, get_active_provider()
-    except GroqRateLimitError:
+    except (GroqRateLimitError, ConnectionError):
         logger.warning(f"Groq 429 bei {method} — starte Fallback-Kette")
         for name, fallback in _fallback_chain:
             try:
