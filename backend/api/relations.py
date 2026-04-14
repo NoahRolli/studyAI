@@ -2,6 +2,7 @@
 # Ontologie-Frontend ruft /api/relations/* auf, Backend liest/schreibt concept_edges
 # relation_types bleiben unverändert als eigener Router
 
+import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -17,6 +18,7 @@ from backend.models.document import Document
 from backend.models.module import Module
 
 router = APIRouter(prefix="/api/relations", tags=["relations"])
+logger = logging.getLogger(__name__)
 type_router = APIRouter(prefix="/api/relation-types", tags=["relations"])
 
 # Built-in Typen (automatisch angelegt)
@@ -105,6 +107,17 @@ def _edge_to_relation(e: ConceptEdge, type_map: dict,
 
 # --- Relation CRUD (auf concept_edges) ---
 
+
+
+@router.delete("/suggestions")
+def clear_suggestions(db: Session = Depends(get_db)):
+    """Alle vorgeschlagenen Edges löschen (confirmed + rejected bleiben)."""
+    count = db.query(ConceptEdge).filter(
+        ConceptEdge.status == "suggested"
+    ).delete()
+    db.commit()
+    logger.info(f"{count} Suggestions gelöscht")
+    return {"deleted": count}
 @router.get("")
 def get_relations(
     status: Optional[str] = None,
