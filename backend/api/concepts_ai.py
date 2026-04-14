@@ -17,7 +17,7 @@ from backend.models.document import Document
 from backend.models.module import Module
 from backend.models.folder import Folder
 from backend.infra.config import OLLAMA_MODEL, OLLAMA_MODEL_SERVER
-from backend.infra.ollama_connector import get_ollama_url
+from backend.infra.ollama_connector import get_ollama_url, invalidate_cache
 from backend.infra.model_router import get_active_provider, get_model_used
 from backend.services.groq_provider import GroqProvider, GroqRateLimitError
 
@@ -63,16 +63,25 @@ async def ai_chat(prompt: str, page: str = "metis") -> str:
             logging.getLogger(__name__).warning("Groq 429 in concepts_ai — Fallback auf Ollama")
             # Fallthrough zu Ollama
     # Ollama (local oder server, oder Fallback nach Groq 429)
-    base_url = await get_ollama_url()
+    # Retry mit Cache-Invalidierung bei Fehler (z.B. falsches Modell auf MacBook)
     model = OLLAMA_MODEL if provider == "ollama_local" else OLLAMA_MODEL_SERVER
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        resp = await client.post(f"{base_url}/api/chat", json={
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": False, "think": False,
-        })
-        resp.raise_for_status()
-        return resp.json().get("message", {}).get("content", "")
+    for attempt in range(2):
+        base_url = await get_ollama_url()
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                resp = await client.post(f"{base_url}/api/chat", json={
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "stream": False, "think": False,
+                })
+                resp.raise_for_status()
+                return resp.json().get("message", {}).get("content", "")
+        except Exception as e:
+            if attempt == 0:
+                logging.getLogger(__name__).warning(f"Ollama Fehler auf {base_url}: {e} — Cache invalidieren + Retry")
+                invalidate_cache()
+                continue
+            raise
 
 # Alias für Abwärtskompatibilität (concepts_cluster.py importiert diesen Namen)
 async def ollama_chat(prompt: str) -> str:
