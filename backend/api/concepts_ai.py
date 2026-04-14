@@ -53,21 +53,29 @@ def parse_json_response(text_val: str) -> list | dict | None:
 
 
 async def ai_chat(prompt: str, page: str = "metis") -> str:
-    """Zentraler AI-Chat — routet zum aktiven Provider. Groq 429 → Ollama Fallback."""
+    """Zentraler AI-Chat — Wrapper um ai_chat_with_provider."""
+    text, _ = await ai_chat_with_provider(prompt, page)
+    return text
+
+
+
+async def ai_chat_with_provider(prompt: str, page: str = "metis") -> tuple[str, str]:
+    """Wie ai_chat, gibt aber (text, provider_name) Tuple zurueck."""
     provider = get_active_provider(page)
+    used = provider
     if provider == "groq":
         try:
-            return await _groq.chat(prompt)
+            result = await _groq.chat(prompt)
+            return result, "groq"
         except GroqRateLimitError:
-
-            logging.getLogger(__name__).warning("Groq 429 in concepts_ai — Fallback auf Ollama")
-            # Fallthrough zu Ollama
-    # Ollama — Connector gibt MacBook (Primary) oder Server (Fallback)
-    # Bei Groq-Fallback: lokales Modell (MacBook GPU schneller als Server CPU)
+            logging.getLogger(__name__).warning("Groq 429 — Fallback auf Ollama")
+    # Ollama Fallback
     if provider == "groq":
         model = OLLAMA_MODEL
+        used = "ollama_local"
     else:
         model = OLLAMA_MODEL if provider == "ollama_local" else OLLAMA_MODEL_SERVER
+        used = provider
     for attempt in range(2):
         base_url = await get_ollama_url()
         try:
@@ -78,13 +86,15 @@ async def ai_chat(prompt: str, page: str = "metis") -> str:
                     "stream": False, "think": False,
                 })
                 resp.raise_for_status()
-                return resp.json().get("message", {}).get("content", "")
+                text = resp.json().get("message", {}).get("content", "")
+                return text, f"{used}:{model}"
         except Exception as e:
             if attempt == 0:
-                logging.getLogger(__name__).warning(f"Ollama Fehler auf {base_url}: {e} — Cache invalidieren + Retry")
+                logging.getLogger(__name__).warning(f"Ollama Fehler auf {base_url}: {e} — Retry")
                 invalidate_cache()
                 continue
             raise
+
 
 # Alias für Abwärtskompatibilität (concepts_cluster.py importiert diesen Namen)
 async def ollama_chat(prompt: str) -> str:
