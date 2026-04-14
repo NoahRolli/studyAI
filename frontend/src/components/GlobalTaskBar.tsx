@@ -72,11 +72,15 @@ function TaskItem({ task, onDismiss, onAbort }: {
           style={{ borderColor: `${color}40` }}>
           {task.status === 'running' && (
             <>
-              <p className="text-xs animate-pulse flex-1"
+              <p className="text-xs flex-1"
                 style={{ color: 'var(--color-text-muted)' }}>
-                {language === 'de'
-                  ? `Laeuft seit ${timeStr}...`
-                  : `Running for ${timeStr}...`}
+                {task.detail ? (
+                  <span style={{ color: 'var(--color-text-secondary)' }}>{task.detail}</span>
+                ) : (
+                  <span className="animate-pulse">
+                    {language === 'de' ? `Laeuft seit ${timeStr}...` : `Running for ${timeStr}...`}
+                  </span>
+                )}
               </p>
               <button onClick={(e) => { e.stopPropagation(); onAbort() }}
                 className="hud-btn-sm"
