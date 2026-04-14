@@ -194,17 +194,17 @@ export default function RelationSuggestions({ onChanged }: Props) {
               {/* Aktionen: Edit + Confirm + Reject */}
               <div className="flex gap-2 mt-2">
                 <button onClick={() => handleEdit(s)}
-                  className="hud-btn text-xs px-3 py-1"
+                  className="hud-btn text-xs px-2 py-0.5"
                   style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}>
                   {language === 'de' ? 'Bearbeiten' : 'Edit'}
                 </button>
                 <button onClick={() => handleConfirm(s.id)}
-                  className="hud-btn text-xs px-3 py-1"
+                  className="hud-btn text-xs px-2 py-0.5"
                   style={{ borderColor: 'var(--color-success)', color: 'var(--color-success)' }}>
                   {language === 'de' ? 'Bestätigen' : 'Confirm'}
                 </button>
                 <button onClick={() => handleReject(s.id)}
-                  className="hud-btn text-xs px-3 py-1"
+                  className="hud-btn text-xs px-2 py-0.5"
                   style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}>
                   {language === 'de' ? 'Ablehnen' : 'Reject'}
                 </button>
