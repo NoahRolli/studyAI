@@ -21,6 +21,7 @@ interface Progress {
 
 export default function EmbeddingSimilarity({ onChanged }: Props) {
   const { language } = useLanguage()
+  const [threshold, setThreshold] = useState(0.75)
   const [running, setRunning] = useState(false)
   const [progress, setProgress] = useState<Progress | null>(null)
   const [result, setResult] = useState<string | null>(null)
@@ -33,7 +34,7 @@ export default function EmbeddingSimilarity({ onChanged }: Props) {
     setResult(null)
     setProgress({ phase: 'start', message: 'Starte...' })
 
-    const es = new EventSource('/api/concepts/embeddings/stream?threshold=0.75')
+    const es = new EventSource(`/api/concepts/embeddings/stream?threshold=${threshold}`)
     esRef.current = es
 
     es.addEventListener('status', (e) => {
@@ -129,6 +130,20 @@ export default function EmbeddingSimilarity({ onChanged }: Props) {
           style={{ borderColor: 'var(--color-text-muted)', color: 'var(--color-text-muted)' }}>
           {language === 'de' ? 'Similarity-Edges löschen' : 'Clear Similarity Edges'}
         </button>
+      </div>
+
+      {/* Threshold Slider */}
+      <div className="flex items-center gap-3">
+        <label className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+          Threshold
+        </label>
+        <input type="range" min="0.5" max="0.95" step="0.05"
+          value={threshold} disabled={running}
+          onChange={(e) => setThreshold(parseFloat(e.target.value))}
+          className="w-32 accent-cyan-400" />
+        <span className="text-xs font-mono" style={{ color: 'var(--color-primary)' }}>
+          {threshold.toFixed(2)}
+        </span>
       </div>
 
       {progress && (
