@@ -196,3 +196,11 @@ Find 3-8 HIGH-CONFIDENCE relations. Respond ONLY in valid JSON:
         db.add(ConceptEdge(
             source_concept_id=src_id, target_concept_id=tgt_id,
             relation_type_id=rt_id, strength=0.5,
+            origin="ai_suggested", status="suggested",
+            reason=reason,
+        ))
+        existing.add((src_id, tgt_id))
+        created += 1
+
+    db.commit()
+    return {"suggested": created, "total_concepts": len(concepts)}
