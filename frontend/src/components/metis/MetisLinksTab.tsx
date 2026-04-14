@@ -1,22 +1,32 @@
-// MetisLinksTab — Review aller AI-Edge-Vorschlaege
-// Zeigt nur pending Edges, Filter nach Relationstyp
-// Confirmed Edges sind in OntologyOverview sichtbar
+// MetisLinksTab — Review aller AI-Edge-Vorschläge aus dem Konzept-Graph
+// Gleiche Button-Struktur wie RelationSuggestions (Edit/Confirm/Reject)
+// Doppelklick auf Konzept → navigiert zur Quelle
+// Evidence: zeigt gemeinsame Quellen bei Klick
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { get, put } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { ConceptGraph, ConceptNode } from '../../types/metis'
 
 type SortMode = 'weakest' | 'strongest'
 
+interface EvidenceData {
+  source: { name: string; sources: { type: string; id: number; title: string; excerpt: string; url: string | null }[] }
+  target: { name: string; sources: { type: string; id: number; title: string; excerpt: string; url: string | null }[] }
+  shared_sources: { type: string; id: number; title: string; url: string | null }[]
+  reason: string
+}
+
 export default function MetisLinksTab() {
-  const { t, language } = useLanguage()
+  const { language } = useLanguage()
+  const navigate = useNavigate()
   const [graph, setGraph] = useState<ConceptGraph | null>(null)
   const [loading, setLoading] = useState(true)
-  const [reviewing, setReviewing] = useState<number | null>(null)
-  const [reason, setReason] = useState('')
   const [filterRelation, setFilterRelation] = useState('all')
   const [sort, setSort] = useState<SortMode>('weakest')
+  const [evidence, setEvidence] = useState<Record<number, EvidenceData>>({})
+  const [expandedId, setExpandedId] = useState<number | null>(null)
 
   const loadGraph = useCallback(async () => {
     try {
@@ -29,15 +39,11 @@ export default function MetisLinksTab() {
 
   useEffect(() => { loadGraph() }, [loadGraph])
 
-  // Nur pending Edges (positive IDs)
   const pendingEdges = useMemo(() => {
     if (!graph) return []
-    return graph.edges.filter(e =>
-      e.id > 0 && e.status === 'suggested'
-    )
+    return graph.edges.filter(e => e.id > 0 && e.status === 'suggested')
   }, [graph])
 
-  // Verfuegbare Relationstypen aus den Edges
   const relationTypes = useMemo(() => {
     const types = new Set(pendingEdges.map(e =>
       typeof e.relation_type === 'object' ? e.relation_type?.name || 'unknown' : e.relation_type || 'unknown'
@@ -45,38 +51,42 @@ export default function MetisLinksTab() {
     return Array.from(types).sort()
   }, [pendingEdges])
 
-  // Gefiltert + sortiert
   const filtered = useMemo(() => {
     let edges = pendingEdges
     if (filterRelation !== 'all') {
-      edges = edges.filter(e => (typeof e.relation_type === 'object' ? e.relation_type?.name || 'unknown' : e.relation_type || 'unknown') === filterRelation)
+      edges = edges.filter(e => {
+        const name = typeof e.relation_type === 'object' ? e.relation_type?.name : e.relation_type
+        return (name || 'unknown') === filterRelation
+      })
     }
-    if (sort === 'weakest') {
-      edges = [...edges].sort((a, b) => (a.strength ?? 0) - (b.strength ?? 0))
-    } else {
-      edges = [...edges].sort((a, b) => (b.strength ?? 0) - (a.strength ?? 0))
-    }
-    return edges
+    return sort === 'weakest'
+      ? [...edges].sort((a, b) => (a.strength ?? 0) - (b.strength ?? 0))
+      : [...edges].sort((a, b) => (b.strength ?? 0) - (a.strength ?? 0))
   }, [pendingEdges, filterRelation, sort])
 
-  // Node-Titel finden
   const nodeTitle = (nodeId: number): ConceptNode | undefined =>
     graph?.nodes.find(n => n.id === nodeId)
 
-  // Confirm/Reject — nutzt /api/relations Endpoints
-  const handleReview = async (
-    edgeId: number, action: 'confirm' | 'reject',
-  ) => {
+  const handleReview = async (edgeId: number, action: 'confirm' | 'reject') => {
     try {
-      await put(`/api/relations/${edgeId}/${action}`, {
-        reason: reason || null,
-      })
-      setReviewing(null)
-      setReason('')
+      await put(`/api/relations/${edgeId}/${action}`)
       await loadGraph()
-    } catch (err) {
-      console.error('Review fehlgeschlagen:', err)
+    } catch (err) { console.error('Review fehlgeschlagen:', err) }
+  }
+
+  const loadEvidence = async (edgeId: number) => {
+    if (expandedId === edgeId) { setExpandedId(null); return }
+    if (!evidence[edgeId]) {
+      try {
+        const data = await get<EvidenceData>(`/api/relations/${edgeId}/evidence`)
+        setEvidence(prev => ({ ...prev, [edgeId]: data }))
+      } catch (err) { console.error('Evidence laden fehlgeschlagen:', err) }
     }
+    setExpandedId(edgeId)
+  }
+
+  const navigateToSource = (url: string | null) => {
+    if (url) navigate(url)
   }
 
   if (loading) return (
@@ -87,7 +97,6 @@ export default function MetisLinksTab() {
 
   return (
     <div>
-      {/* Statistik */}
       <div className="flex gap-4 text-xs mb-4"
         style={{ color: 'var(--color-text-secondary)' }}>
         <span style={{ color: 'var(--color-warning)' }}>
@@ -95,98 +104,126 @@ export default function MetisLinksTab() {
         </span>
       </div>
 
-      {/* Filter */}
       <div className="flex gap-3 mb-4">
         <select value={filterRelation}
           onChange={e => setFilterRelation(e.target.value)}
           className="hud-input text-xs">
-          <option value="all">
-            {language === 'de' ? 'Alle Typen' : 'All types'}
-          </option>
-          {relationTypes.map(rt => (
-            <option key={rt} value={rt}>{rt}</option>
-          ))}
+          <option value="all">{language === 'de' ? 'Alle Typen' : 'All types'}</option>
+          {relationTypes.map(rt => <option key={rt} value={rt}>{rt}</option>)}
         </select>
         <select value={sort}
           onChange={e => setSort(e.target.value as SortMode)}
           className="hud-input text-xs">
-          <option value="weakest">
-            {language === 'de' ? 'Schwaechste zuerst' : 'Weakest first'}
-          </option>
-          <option value="strongest">
-            {language === 'de' ? 'Staerkste zuerst' : 'Strongest first'}
-          </option>
+          <option value="weakest">{language === 'de' ? 'Schwächste zuerst' : 'Weakest first'}</option>
+          <option value="strongest">{language === 'de' ? 'Stärkste zuerst' : 'Strongest first'}</option>
         </select>
       </div>
 
-      {/* Edge-Liste */}
       {filtered.length === 0 ? (
         <div className="hud-card p-8 text-center">
           <p style={{ color: 'var(--color-text-muted)' }}>
-            {language === 'de'
-              ? 'Keine offenen Verbindungen.'
-              : 'No pending links.'}
+            {language === 'de' ? 'Keine offenen Verbindungen.' : 'No pending links.'}
           </p>
         </div>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {filtered.map(edge => {
             const src = nodeTitle(edge.source)
             const tgt = nodeTitle(edge.target)
             if (!src || !tgt) return null
-            const relName = typeof edge.relation_type === 'object' && edge.relation_type ? edge.relation_type.name : (edge.relation_type || 'unknown')
+            const relName = typeof edge.relation_type === 'object' && edge.relation_type
+              ? edge.relation_type.name : (edge.relation_type || 'unknown')
+            const ev = expandedId === edge.id ? evidence[edge.id] : null
+
             return (
-              <div key={edge.id} className="hud-card px-3 py-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <span style={{ color: 'var(--color-text-primary)' }}>
+              <div key={edge.id} className="p-3 rounded-lg border"
+                style={{ background: 'var(--color-bg-surface)', borderColor: 'rgba(255, 170, 0, 0.2)' }}>
+                <div className="flex items-center gap-2 text-sm flex-wrap">
+                  <span className="cursor-pointer hover:underline"
+                    style={{ color: 'var(--color-text-primary)' }}
+                    onDoubleClick={() => loadEvidence(edge.id)}>
                     {src.name}
                   </span>
-                  <span className="text-xs"
-                    style={{ color: 'var(--color-text-muted)' }}>
-                    \u2194
+                  <span className="font-semibold px-2 py-0.5 rounded text-xs"
+                    style={{ color: 'var(--color-warning)', background: 'rgba(255, 170, 0, 0.1)' }}>
+                    {relName}
                   </span>
-                  <span style={{ color: 'var(--color-text-primary)' }}>
+                  <span className="cursor-pointer hover:underline"
+                    style={{ color: 'var(--color-text-primary)' }}
+                    onDoubleClick={() => loadEvidence(edge.id)}>
                     {tgt.name}
                   </span>
+                  <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    {((edge.strength ?? 0) * 100).toFixed(0)}%
+                  </span>
                 </div>
-                <div className="flex items-center gap-3 mt-1 text-[10px]"
-                  style={{ color: 'var(--color-text-muted)' }}>
-                  <span>{relName}</span>
-                  <span>{((edge.strength ?? 0) * 100).toFixed(0)}%</span>
-                  {edge.reason && (
-                    <span className="truncate max-w-48">
-                      — {edge.reason}
-                    </span>
-                  )}
+
+                {edge.reason && (
+                  <p className="text-xs mt-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    {edge.reason}
+                  </p>
+                )}
+
+                <div className="flex gap-2 mt-2">
+                  <button onClick={() => loadEvidence(edge.id)}
+                    className="hud-btn text-xs px-2 py-0.5"
+                    style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}>
+                    {language === 'de' ? 'Quellen' : 'Evidence'}
+                  </button>
+                  <button onClick={() => handleReview(edge.id, 'confirm')}
+                    className="hud-btn text-xs px-2 py-0.5"
+                    style={{ borderColor: 'var(--color-success)', color: 'var(--color-success)' }}>
+                    {language === 'de' ? 'Bestätigen' : 'Confirm'}
+                  </button>
+                  <button onClick={() => handleReview(edge.id, 'reject')}
+                    className="hud-btn text-xs px-2 py-0.5"
+                    style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}>
+                    {language === 'de' ? 'Ablehnen' : 'Reject'}
+                  </button>
                 </div>
-                {reviewing === edge.id ? (
-                  <div className="mt-2 space-y-1">
-                    <input type="text" value={reason}
-                      onChange={e => setReason(e.target.value)}
-                      placeholder={t.metis?.reasonPlaceholder || 'Reason...'}
-                      className="hud-input w-full text-[10px] px-2 py-1" />
-                    <div className="flex gap-1">
-                      <button onClick={() => handleReview(edge.id, 'confirm')}
-                        className="flex-1 text-[10px] px-2 py-1 rounded"
-                        style={{ backgroundColor: '#4ade8025',
-                          color: '#4ade80' }}>
-                        {t.metis?.confirm || 'Confirm'}
-                      </button>
-                      <button onClick={() => handleReview(edge.id, 'reject')}
-                        className="flex-1 text-[10px] px-2 py-1 rounded"
-                        style={{ backgroundColor: '#ef444425',
-                          color: '#ef4444' }}>
-                        {t.metis?.reject || 'Reject'}
-                      </button>
+
+                {ev && (
+                  <div className="mt-3 p-2 rounded text-xs space-y-2"
+                    style={{ background: 'var(--color-bg-base)' }}>
+                    {ev.shared_sources.length > 0 && (
+                      <div>
+                        <span className="font-medium" style={{ color: 'var(--color-primary)' }}>
+                          {language === 'de' ? 'Gemeinsame Quellen:' : 'Shared sources:'}
+                        </span>
+                        {ev.shared_sources.map((s, i) => (
+                          <span key={i} className="ml-2 cursor-pointer hover:underline"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                            onClick={() => navigateToSource(s.url)}>
+                            {s.title}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div>
+                      <span className="font-medium" style={{ color: 'var(--color-primary)' }}>
+                        {ev.source.name}:
+                      </span>
+                      {ev.source.sources.map((s, i) => (
+                        <span key={i} className="ml-2 cursor-pointer hover:underline"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                          onClick={() => navigateToSource(s.url)}>
+                          {s.title}
+                        </span>
+                      ))}
+                    </div>
+                    <div>
+                      <span className="font-medium" style={{ color: 'var(--color-primary)' }}>
+                        {ev.target.name}:
+                      </span>
+                      {ev.target.sources.map((s, i) => (
+                        <span key={i} className="ml-2 cursor-pointer hover:underline"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                          onClick={() => navigateToSource(s.url)}>
+                          {s.title}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                ) : (
-                  <button onClick={() => setReviewing(edge.id)}
-                    className="mt-2 text-[10px] px-2 py-0.5 rounded"
-                    style={{ backgroundColor: 'var(--color-hover-bg)',
-                      color: 'var(--color-text-secondary)' }}>
-                    {t.metis?.confirm || 'Confirm'} / {t.metis?.reject || 'Reject'}
-                  </button>
                 )}
               </div>
             )
