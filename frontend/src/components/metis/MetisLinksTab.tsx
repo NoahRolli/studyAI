@@ -166,17 +166,17 @@ export default function MetisLinksTab() {
 
                 <div className="flex gap-2 mt-2">
                   <button onClick={() => loadEvidence(edge.id)}
-                    className="hud-btn text-xs px-2 py-0.5"
+                    className="hud-btn-sm"
                     style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}>
                     {language === 'de' ? 'Quellen' : 'Evidence'}
                   </button>
                   <button onClick={() => handleReview(edge.id, 'confirm')}
-                    className="hud-btn text-xs px-2 py-0.5"
+                    className="hud-btn-sm"
                     style={{ borderColor: 'var(--color-success)', color: 'var(--color-success)' }}>
                     {language === 'de' ? 'Bestätigen' : 'Confirm'}
                   </button>
                   <button onClick={() => handleReview(edge.id, 'reject')}
-                    className="hud-btn text-xs px-2 py-0.5"
+                    className="hud-btn-sm"
                     style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}>
                     {language === 'de' ? 'Ablehnen' : 'Reject'}
                   </button>
