@@ -13,7 +13,7 @@ from backend.models.concept import Concept, ConceptEdge, ConceptSource
 from backend.models.relation import RelationType
 from backend.models.summary import Summary
 from backend.models.note import Note
-from backend.api.concepts_ai import ai_chat, parse_json_response
+from backend.api.concepts_ai import ai_chat, ai_chat_with_provider, parse_json_response
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/relations", tags=["relations-ai"])
