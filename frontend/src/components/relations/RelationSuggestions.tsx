@@ -1,12 +1,12 @@
 // RelationSuggestions — Globale Queue aller AI-Vorschläge
-// Edit-Button öffnet Modal zum Typ ändern vor Bestätigung
-// Detect-Button, Bestätigen/Ablehnen einzeln oder alle
+// Detect mit Live-Polling (zeigt neue Vorschläge während Generierung)
 // Cleanup: Suggestions löschen + verwaiste Konzepte aufräumen
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { get, post, put, del } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
+import LoadingDot from '../LoadingDot'
 import OntologyEditModal from './OntologyEditModal'
 import type { EditTarget } from './OntologyEditModal'
 import type { RelationData } from '../../types/relations'
@@ -24,6 +24,7 @@ export default function RelationSuggestions({ onChanged }: Props) {
   const [loading, setLoading] = useState(true)
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
   const [cleanupMsg, setCleanupMsg] = useState<string | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const loadSuggestions = useCallback(async () => {
     try {
@@ -36,24 +37,44 @@ export default function RelationSuggestions({ onChanged }: Props) {
 
   useEffect(() => { loadSuggestions() }, [loadSuggestions])
 
-  // Ollama Detect starten
+  // Polling stoppen bei Unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [])
+
+  // Detect mit Live-Polling
   const handleDetect = async () => {
     setDetecting(true)
     setDetectResult(null)
+    setCleanupMsg(null)
+
+    // Polling starten — alle 5s Suggestions neu laden
+    pollRef.current = setInterval(async () => {
+      try {
+        const data = await get<RelationData[]>('/api/relations?status=suggested')
+        setSuggestions(data)
+      } catch { /* Polling-Fehler ignorieren */ }
+    }, 5000)
+
     try {
-      const result = await post<{ suggested: number; total_concepts: number }>(
-        '/api/relations/detect',
-      )
+      const result = await post<{
+        suggested: number; rounds: number; total_concepts: number
+      }>('/api/relations/detect')
       const msg = language === 'de'
-        ? `${result.suggested} neue Vorschläge aus ${result.total_concepts} Konzepten`
-        : `${result.suggested} new suggestions from ${result.total_concepts} concepts`
+        ? `${result.suggested} neue Vorschläge aus ${result.rounds} Runden (${result.total_concepts} Konzepte)`
+        : `${result.suggested} new suggestions from ${result.rounds} rounds (${result.total_concepts} concepts)`
       setDetectResult(msg)
       await loadSuggestions()
       onChanged?.()
     } catch (err) {
       console.error('Detect fehlgeschlagen:', err)
       setDetectResult(language === 'de' ? 'Fehler bei Erkennung' : 'Detection failed')
-    } finally { setDetecting(false) }
+    } finally {
+      setDetecting(false)
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+    }
   }
 
   // Alle Suggestions löschen
@@ -83,7 +104,7 @@ export default function RelationSuggestions({ onChanged }: Props) {
     } catch (err) { console.error('Cleanup fehlgeschlagen:', err) }
   }
 
-  // Bestätigen
+  // Bestätigen / Ablehnen
   const handleConfirm = async (id: number) => {
     try {
       await put(`/api/relations/${id}/confirm`)
@@ -92,7 +113,6 @@ export default function RelationSuggestions({ onChanged }: Props) {
     } catch (err) { console.error('Bestätigung fehlgeschlagen:', err) }
   }
 
-  // Ablehnen
   const handleReject = async (id: number) => {
     try {
       await put(`/api/relations/${id}/reject`)
@@ -101,19 +121,19 @@ export default function RelationSuggestions({ onChanged }: Props) {
     } catch (err) { console.error('Ablehnung fehlgeschlagen:', err) }
   }
 
-  // Alle bestätigen / ablehnen
   const handleConfirmAll = async () => {
     for (const s of suggestions) await put(`/api/relations/${s.id}/confirm`)
     setSuggestions([])
     onChanged?.()
   }
+
   const handleRejectAll = async () => {
     for (const s of suggestions) await put(`/api/relations/${s.id}/reject`)
     setSuggestions([])
     onChanged?.()
   }
 
-  // Edit-Modal öffnen
+  // Edit-Modal
   const handleEdit = (s: RelationData) => {
     setEditTarget({
       mode: 'relation', id: s.id,
@@ -144,13 +164,13 @@ export default function RelationSuggestions({ onChanged }: Props) {
             </span>
           )}
         </h3>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <button onClick={handleCleanOrphans}
             className="hud-btn text-xs px-2 py-0.5"
             style={{ borderColor: 'var(--color-text-muted)', color: 'var(--color-text-muted)' }}>
             {language === 'de' ? 'Verwaiste aufräumen' : 'Clean Orphans'}
           </button>
-          {suggestions.length > 0 && (
+          {suggestions.length > 0 && !detecting && (
             <button onClick={handleClearSuggestions}
               className="hud-btn text-xs px-2 py-0.5"
               style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}>
@@ -160,8 +180,9 @@ export default function RelationSuggestions({ onChanged }: Props) {
           <button onClick={handleDetect} disabled={detecting}
             className="hud-btn text-sm">
             {detecting
-              ? (language === 'de' ? 'Analysiere...' : 'Analyzing...')
+              ? (language === 'de' ? 'Analysiere' : 'Analyzing')
               : (language === 'de' ? 'Relationen erkennen' : 'Detect Relations')}
+            <LoadingDot active={detecting} />
           </button>
         </div>
       </div>
@@ -174,8 +195,18 @@ export default function RelationSuggestions({ onChanged }: Props) {
         </p>
       )}
 
+      {/* Detect-Hinweis */}
+      {detecting && (
+        <p className="text-xs px-3 py-2 rounded animate-pulse"
+          style={{ background: 'rgba(0, 212, 255, 0.05)', color: 'var(--color-primary)' }}>
+          {language === 'de'
+            ? `10 Runden laufen — ${suggestions.length} Vorschläge bisher...`
+            : `Running 10 rounds — ${suggestions.length} suggestions so far...`}
+        </p>
+      )}
+
       {/* Batch-Aktionen */}
-      {suggestions.length > 1 && (
+      {suggestions.length > 1 && !detecting && (
         <div className="flex gap-2">
           <button onClick={handleConfirmAll} className="text-xs"
             style={{ color: 'var(--color-success)' }}>
@@ -194,7 +225,7 @@ export default function RelationSuggestions({ onChanged }: Props) {
         <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
           {language === 'de' ? 'Laden...' : 'Loading...'}
         </p>
-      ) : suggestions.length === 0 ? (
+      ) : suggestions.length === 0 && !detecting ? (
         <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
           {language === 'de'
             ? 'Keine offenen Vorschläge. Klicke "Relationen erkennen" um neue zu generieren.'
@@ -208,7 +239,6 @@ export default function RelationSuggestions({ onChanged }: Props) {
                 background: 'var(--color-bg-surface)',
                 borderColor: 'rgba(255, 170, 0, 0.2)',
               }}>
-              {/* Tripel */}
               <div className="flex items-center gap-2 text-sm flex-wrap">
                 <span className="cursor-pointer hover:underline"
                   style={{ color: 'var(--color-text-primary)' }}
@@ -225,16 +255,12 @@ export default function RelationSuggestions({ onChanged }: Props) {
                   {s.target_title || `Konzept #${s.target_id}`}
                 </span>
               </div>
-
-              {/* Begründung */}
               {s.reason && (
                 <p className="text-xs mt-1.5"
                   style={{ color: 'var(--color-text-secondary)' }}>
                   {s.reason}
                 </p>
               )}
-
-              {/* Aktionen: Edit + Confirm + Reject */}
               <div className="flex gap-2 mt-2">
                 <button onClick={() => handleEdit(s)}
                   className="hud-btn text-xs px-2 py-0.5"
@@ -257,7 +283,6 @@ export default function RelationSuggestions({ onChanged }: Props) {
         </div>
       )}
 
-      {/* Edit Modal */}
       {editTarget && (
         <OntologyEditModal
           target={editTarget}
