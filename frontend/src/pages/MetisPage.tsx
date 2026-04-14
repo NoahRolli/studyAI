@@ -1,17 +1,16 @@
 // MetisPage — Orchestrator für den Metis Knowledge-Graph
-// Konzept-Graph: Schlagworte als Nodes in 3D-Sphäre oder Liste.
-// Toolbar, Detail-Panel, MiniMap, Fullscreen, Label-Toggle.
+// UI-Shell: Toolbar, Sphäre/Liste, Detail-Panels, MiniMap, Fullscreen
+// Datenlogik ausgelagert in useMetisGraph
 
-import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react'
-import { useTasks } from '../context/TaskContext'
-import { get, post } from '../hooks/useAPI'
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useLanguage } from '../hooks/useLanguage'
+import { useMetisGraph } from '../hooks/useMetisGraph'
 import MetisToolbar from '../components/metis/MetisToolbar'
 import ConceptListView from '../components/metis/ConceptListView'
-import ConceptDetailPanel from "../components/metis/ConceptDetailPanel"
-import ClusterDetail from "../components/metis/ClusterDetail"
+import ConceptDetailPanel from '../components/metis/ConceptDetailPanel'
+import ClusterDetail from '../components/metis/ClusterDetail'
 import MetisMiniMap3D from '../components/metis/MetisMiniMap3D'
-import type { MetisViewMode, ConceptGraph, MetisGraph } from '../types/metis'
+import type { MetisViewMode } from '../types/metis'
 
 const MetisSphere3D = lazy(
   () => import('../components/metis/MetisSphere3D')
@@ -19,15 +18,13 @@ const MetisSphere3D = lazy(
 
 export default function MetisPage() {
   const { t } = useLanguage()
-  const [conceptGraph, setConceptGraph] = useState<ConceptGraph>({
-    nodes: [], edges: [], clusters: [],
-  })
+  const {
+    conceptGraph, sphereGraph, loading, loadGraph,
+    syncing, linking, clustering,
+    handleSync, handleAutoLink, handleAutoCluster,
+  } = useMetisGraph()
+
   const [view, setView] = useState<MetisViewMode>('3d')
-  const [loading, setLoading] = useState(true)
-  const { tasks, runTask } = useTasks()
-  const syncing = tasks.some(t => t.id === 'metis-sync' && t.status === 'running')
-  const linking = tasks.some(t => t.id === 'metis-link' && t.status === 'running')
-  const clustering = tasks.some(t => t.id === 'metis-cluster' && t.status === 'running')
   const [selectedConceptId, setSelectedConceptId] = useState<number | null>(null)
   const [selectedCluster, setSelectedCluster] = useState<number | null>(null)
   const [selectedFolder, setSelectedFolder] = useState<number | null>(null)
@@ -50,80 +47,23 @@ export default function MetisPage() {
     }
   }, [])
 
-  // Konzept-Graph als MetisGraph-Format (für Sphäre)
-  const sphereGraph = useMemo<MetisGraph>(() => ({
-    nodes: conceptGraph.nodes.map(c => ({
-      id: c.id, type: 'note' as const, source_id: c.id,
-      title: c.name, pos_x: null, pos_y: null,
-      embedding_stale: false, cluster_ids: [], source_count: c.source_count,
-      folder_id: c.folder_id, folder_name: c.folder_name,
-    })),
-    edges: conceptGraph.edges.map(e => ({
-      id: e.id, source_node_id: e.source,
-      target_node_id: e.target,
-      relation_type: e.relation_type,
-      strength: e.strength,
-      status: e.status || 'suggested',
-      reason: e.reason,
-    })),
-    clusters: conceptGraph.clusters.map(cl => ({
-      id: cl.id, label: cl.label,
-      description: cl.description,
-      color: null, node_ids: cl.node_ids,
-    })),
-    folders: (conceptGraph.folders || []).map(f => ({ id: f.id, name: f.name })),
-  }), [conceptGraph])
-
-  // Konzept-Graph laden
-  const loadGraph = useCallback(async () => {
-    try {
-      const data = await get<ConceptGraph>('/api/concepts/graph')
-      setConceptGraph(data)
-    } catch (err) {
-      console.error('Concept graph load failed:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-  useEffect(() => { loadGraph() }, [loadGraph])
-
-  // Sync — Konzepte aus Notes + Summaries extrahieren
-  const handleSync = useCallback(() => {
-    runTask("metis-sync", "Sync Concepts", async () => {
-      await post("/api/concepts/sync")
-      await loadGraph()
-    })
-  }, [runTask, loadGraph])
-
-  // Auto-Link — AI schlaegt Relationen vor
-  const handleAutoLink = useCallback(() => {
-    runTask("metis-link", "Detect Connections", async () => {
-      await post("/api/concepts/auto-link")
-      await loadGraph()
-    })
-  }, [runTask, loadGraph])
-
-  // Auto-Cluster — AI gruppiert Konzepte thematisch
-  const handleAutoCluster = useCallback(() => {
-    runTask("metis-cluster", "Group Topics", async () => {
-      await post("/api/concepts/auto-cluster")
-      await loadGraph()
-    })
-  }, [runTask, loadGraph])
+  // Selection-Handler
   const handleNodeClick = useCallback((nodeId: number) => {
-    setSelectedCluster(null); setSelectedFolder(null);
+    setSelectedCluster(null); setSelectedFolder(null)
     setSelectedConceptId(nodeId)
   }, [])
 
   const handleClusterClick = useCallback((id: number) => {
-    setSelectedConceptId(null); setSelectedFolder(null); setSelectedCluster(id)
+    setSelectedConceptId(null); setSelectedFolder(null)
+    setSelectedCluster(id)
   }, [])
 
   const handleFolderClick = useCallback((id: number) => {
-    setSelectedConceptId(null); setSelectedCluster(null); setSelectedFolder(id)
+    setSelectedConceptId(null); setSelectedCluster(null)
+    setSelectedFolder(id)
   }, [])
 
-  // Fullscreen toggle mit Escape-Listener
+  // Fullscreen Escape-Listener
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && fullscreen) setFullscreen(false)
@@ -178,10 +118,7 @@ export default function MetisPage() {
             </p>
           </div>
         ) : view === 'list' ? (
-          <ConceptListView
-            graph={conceptGraph}
-            onRefresh={loadGraph}
-          />
+          <ConceptListView graph={conceptGraph} onRefresh={loadGraph} />
         ) : (
           <Suspense fallback={
             <div className="flex items-center justify-center h-full">
@@ -231,7 +168,7 @@ export default function MetisPage() {
           />
         )}
 
-        {/* Cluster/Folder Detail */}
+        {/* Detail-Panels */}
         {selectedCluster !== null && (
           <ClusterDetail clusterId={selectedCluster} graph={sphereGraph}
             onClose={() => setSelectedCluster(null)}
@@ -242,7 +179,6 @@ export default function MetisPage() {
             onClose={() => setSelectedFolder(null)}
             onNodeSelect={(nid) => { setSelectedFolder(null); setSelectedConceptId(nid) }} />
         )}
-        {/* Konzept-Detail-Panel */}
         {selectedConceptId && (
           <ConceptDetailPanel
             conceptId={selectedConceptId}
