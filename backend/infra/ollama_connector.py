@@ -1,7 +1,7 @@
 # Ollama Connector — Dynamische URL-Auflösung mit Multi-Primary + Fallback
 # Primary-URLs: Kommasepariert (z.B. LAN + WireGuard)
 # Fallback: Lokales Ollama auf dem Server (CPU)
-# Ergebnis wird 60s gecacht
+# Ergebnis wird 60s gecacht, bei Fehler sofort invalidiert
 
 import time
 import httpx
@@ -24,6 +24,13 @@ _PRIMARY_URL = _PRIMARY_URLS[0] if _PRIMARY_URLS else ""
 _cached_url: str = _FALLBACK_URL
 _cache_timestamp: float = 0.0
 _CACHE_TTL: float = 60.0
+
+
+def invalidate_cache():
+    """Cache invalidieren — erzwingt neue URL-Suche beim nächsten Aufruf."""
+    global _cache_timestamp
+    _cache_timestamp = 0.0
+    logger.info("Ollama URL-Cache invalidiert")
 
 
 async def get_ollama_url() -> str:
