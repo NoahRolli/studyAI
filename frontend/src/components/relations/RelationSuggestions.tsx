@@ -110,6 +110,7 @@ export default function RelationSuggestions({ onChanged }: Props) {
     setDetecting(false)
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
     if (esRef.current) { esRef.current.close(); esRef.current = null }
+    loadSuggestions()
   }
 
   const handleClear = async () => {
@@ -174,6 +175,12 @@ export default function RelationSuggestions({ onChanged }: Props) {
               ? (language === 'de' ? 'Analysiere...' : 'Analyzing...')
               : (language === 'de' ? 'Relationen erkennen' : 'Detect Relations')}
           </button>
+          {detecting && (
+            <button onClick={cleanup} className="hud-btn-sm"
+              style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}>
+              {language === 'de' ? 'Abbrechen' : 'Cancel'}
+            </button>
+          )}
         </div>
       </div>
 
