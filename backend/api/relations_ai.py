@@ -205,3 +205,14 @@ Find 3-8 HIGH-CONFIDENCE relations. Respond ONLY in valid JSON:
     db.commit()
     return {"suggested": created, "total_concepts": len(concepts)}
 
+
+
+@router.delete("/suggestions")
+def clear_suggestions(db: Session = Depends(get_db)):
+    """Alle vorgeschlagenen Edges löschen (confirmed + rejected bleiben)."""
+    count = db.query(ConceptEdge).filter(
+        ConceptEdge.status == "suggested"
+    ).delete()
+    db.commit()
+    logger.info(f"{count} Suggestions gelöscht")
+    return {"deleted": count}
