@@ -62,16 +62,14 @@ async def ai_chat(prompt: str, page: str = "metis") -> str:
 
             logging.getLogger(__name__).warning("Groq 429 in concepts_ai — Fallback auf Ollama")
             # Fallthrough zu Ollama
-    # Ollama — bei Groq-Fallback direkt Server (localhost), sonst Connector
+    # Ollama — Connector gibt MacBook (Primary) oder Server (Fallback)
+    # Bei Groq-Fallback: lokales Modell (MacBook GPU schneller als Server CPU)
     if provider == "groq":
-        # Groq 429 Fallback → Server-Ollama direkt (nicht MacBook)
-        base_url_override = "http://127.0.0.1:11434"
-        model = OLLAMA_MODEL_SERVER
+        model = OLLAMA_MODEL
     else:
-        base_url_override = None
         model = OLLAMA_MODEL if provider == "ollama_local" else OLLAMA_MODEL_SERVER
     for attempt in range(2):
-        base_url = base_url_override or await get_ollama_url()
+        base_url = await get_ollama_url()
         try:
             async with httpx.AsyncClient(timeout=300.0) as client:
                 resp = await client.post(f"{base_url}/api/chat", json={
