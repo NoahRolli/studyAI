@@ -56,10 +56,18 @@ function TaskItem({ task, onDismiss, onAbort }: {
           {task.label}
         </span>
         {task.status === 'running' && (
-          <span className="tabular-nums"
-            style={{ color: 'var(--color-text-muted)', minWidth: '3ch' }}>
-            {timeStr}
-          </span>
+          <>
+            <span className="tabular-nums"
+              style={{ color: 'var(--color-text-muted)', minWidth: '3ch' }}>
+              {timeStr}
+            </span>
+            {task.detail && (
+              <span className="text-xs truncate max-w-48"
+                style={{ color: 'var(--color-primary)' }}>
+                {task.detail}
+              </span>
+            )}
+          </>
         )}
         <span className="ml-auto" style={{ color: 'var(--color-text-muted)', fontSize: '10px' }}>
           {expanded ? '\u25B2' : '\u25BC'}
