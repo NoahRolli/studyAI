@@ -1,10 +1,11 @@
 // RelationSuggestions — Globale Queue aller AI-Vorschläge
 // Edit-Button öffnet Modal zum Typ ändern vor Bestätigung
 // Detect-Button, Bestätigen/Ablehnen einzeln oder alle
+// Cleanup: Suggestions löschen + verwaiste Konzepte aufräumen
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { get, post, put } from '../../hooks/useAPI'
+import { get, post, put, del } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import OntologyEditModal from './OntologyEditModal'
 import type { EditTarget } from './OntologyEditModal'
@@ -22,6 +23,7 @@ export default function RelationSuggestions({ onChanged }: Props) {
   const [detectResult, setDetectResult] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
+  const [cleanupMsg, setCleanupMsg] = useState<string | null>(null)
 
   const loadSuggestions = useCallback(async () => {
     try {
@@ -52,6 +54,33 @@ export default function RelationSuggestions({ onChanged }: Props) {
       console.error('Detect fehlgeschlagen:', err)
       setDetectResult(language === 'de' ? 'Fehler bei Erkennung' : 'Detection failed')
     } finally { setDetecting(false) }
+  }
+
+  // Alle Suggestions löschen
+  const handleClearSuggestions = async () => {
+    const label = language === 'de' ? 'Alle Vorschläge löschen?' : 'Delete all suggestions?'
+    if (!confirm(label)) return
+    try {
+      const result = await del<{ deleted: number }>('/api/relations/suggestions')
+      const msg = language === 'de'
+        ? `${result.deleted} Vorschläge gelöscht`
+        : `${result.deleted} suggestions deleted`
+      setCleanupMsg(msg)
+      setSuggestions([])
+      onChanged?.()
+    } catch (err) { console.error('Clear fehlgeschlagen:', err) }
+  }
+
+  // Verwaiste Konzepte aufräumen
+  const handleCleanOrphans = async () => {
+    try {
+      const result = await del<{ deleted: number }>('/api/concepts/orphaned')
+      const msg = language === 'de'
+        ? `${result.deleted} verwaiste Konzepte gelöscht`
+        : `${result.deleted} orphaned concepts deleted`
+      setCleanupMsg(msg)
+      onChanged?.()
+    } catch (err) { console.error('Cleanup fehlgeschlagen:', err) }
   }
 
   // Bestätigen
@@ -105,7 +134,7 @@ export default function RelationSuggestions({ onChanged }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Header + Detect */}
+      {/* Header + Aktionen */}
       <div className="flex items-center justify-between">
         <h3 className="hud-title text-glow text-lg">
           {language === 'de' ? 'AI-VORSCHLÄGE' : 'AI SUGGESTIONS'}
@@ -115,19 +144,33 @@ export default function RelationSuggestions({ onChanged }: Props) {
             </span>
           )}
         </h3>
-        <button onClick={handleDetect} disabled={detecting}
-          className="hud-btn text-sm">
-          {detecting
-            ? (language === 'de' ? 'Analysiere...' : 'Analyzing...')
-            : (language === 'de' ? 'Relationen erkennen' : 'Detect Relations')}
-        </button>
+        <div className="flex gap-2">
+          <button onClick={handleCleanOrphans}
+            className="hud-btn text-xs px-2 py-0.5"
+            style={{ borderColor: 'var(--color-text-muted)', color: 'var(--color-text-muted)' }}>
+            {language === 'de' ? 'Verwaiste aufräumen' : 'Clean Orphans'}
+          </button>
+          {suggestions.length > 0 && (
+            <button onClick={handleClearSuggestions}
+              className="hud-btn text-xs px-2 py-0.5"
+              style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}>
+              {language === 'de' ? 'Alle löschen' : 'Clear All'}
+            </button>
+          )}
+          <button onClick={handleDetect} disabled={detecting}
+            className="hud-btn text-sm">
+            {detecting
+              ? (language === 'de' ? 'Analysiere...' : 'Analyzing...')
+              : (language === 'de' ? 'Relationen erkennen' : 'Detect Relations')}
+          </button>
+        </div>
       </div>
 
-      {/* Detect-Resultat */}
-      {detectResult && (
+      {/* Feedback-Nachricht */}
+      {(detectResult || cleanupMsg) && (
         <p className="text-xs px-3 py-2 rounded"
           style={{ background: 'var(--color-hover-bg)', color: 'var(--color-text-secondary)' }}>
-          {detectResult}
+          {detectResult || cleanupMsg}
         </p>
       )}
 
