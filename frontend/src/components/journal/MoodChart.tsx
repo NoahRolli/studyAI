@@ -14,7 +14,8 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { useLanguage } from '../../hooks/useLanguage'
-import type { MoodResult, JournalEntry, FuzzyMembership } from '../../types/models'
+import type { MoodResult, JournalEntry } from "../../types/models"
+import { FUZZY_CONFIG } from "./FuzzyBar"
 
 // Props — Daten kommen vom Parent
 interface MoodChartProps {
@@ -33,7 +34,7 @@ interface ChartPoint {
 }
 
 function MoodChart({ entries, moods, loading }: MoodChartProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   // --- Daten aufbereiten ---
   const entryMap = new Map(entries.map((e) => [e.id, e]))
@@ -130,7 +131,7 @@ function MoodTooltip({ active, payload }: any) {
         {point.date}
       </p>
       <p className="text-sm mt-1">
-        <span style={{ color: 'var(--color-primary)' }}>{point.fuzzy_label || point.label}</span>
+        <span style={{ color: 'var(--color-primary)' }}>{point.fuzzy_label && FUZZY_CONFIG[point.fuzzy_label] ? FUZZY_CONFIG[point.fuzzy_label][language as "de" | "en"] : point.label}</span>
         <span className="ml-2" style={{ color: 'var(--color-text-muted)' }}>
           ({point.score.toFixed(1)})
         </span>

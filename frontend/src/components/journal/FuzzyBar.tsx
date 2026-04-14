@@ -5,7 +5,7 @@
 import type { FuzzyMembership } from '../../types/models'
 
 // Farben und Labels pro Fuzzy-Kategorie
-const FUZZY_CONFIG: Record<string, { color: string; de: string; en: string }> = {
+export const FUZZY_CONFIG: Record<string, { color: string; de: string; en: string }> = {
   sehr_schlecht: { color: '#ef4444', de: 'Sehr schlecht', en: 'Very bad' },
   schlecht:      { color: '#f97316', de: 'Schlecht', en: 'Bad' },
   neutral:       { color: '#eab308', de: 'Neutral', en: 'Neutral' },
