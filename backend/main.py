@@ -43,6 +43,7 @@ from backend.api.git_tracker import router as git_tracker_router
 from backend.api.concepts import router as concepts_router
 from backend.api.concepts_ai import router as concepts_ai_router
 from backend.api.concepts_link import router as concepts_link_router
+from backend.api.concepts_embedding import router as concepts_embedding_router
 from backend.api.concepts_cluster import router as concepts_cluster_router
 from backend.api.concepts_graph import router as concepts_graph_router
 from backend.api.settings import router as settings_router
@@ -166,6 +167,7 @@ app.include_router(concepts_graph_router)
 app.include_router(concepts_router)
 app.include_router(concepts_cluster_router)
 app.include_router(concepts_ai_router)
+app.include_router(concepts_embedding_router)
 app.include_router(concepts_link_router)
 
 # Static Files — gebautes Frontend servieren (nur in Production)
