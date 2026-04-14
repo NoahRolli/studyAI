@@ -44,6 +44,21 @@
   transition: all 0.3s ease;
   cursor: pointer;
 }
+.hud-btn-sm {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid var(--color-border-glow);
+  color: var(--color-primary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.hud-btn-sm:hover {
+  background: rgba(0, 212, 255, 0.2);
+}
 .hud-btn:hover {
   background: rgba(0, 212, 255, 0.2);
   box-shadow: var(--color-primary-glow);
