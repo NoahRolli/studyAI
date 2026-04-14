@@ -73,7 +73,7 @@ async def ai_chat(prompt: str, page: str = "metis") -> str:
     for attempt in range(2):
         base_url = base_url_override or await get_ollama_url()
         try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
+            async with httpx.AsyncClient(timeout=300.0) as client:
                 resp = await client.post(f"{base_url}/api/chat", json={
                     "model": model,
                     "messages": [{"role": "user", "content": prompt}],
