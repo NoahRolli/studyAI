@@ -11,12 +11,14 @@ export interface Task {
   status: 'running' | 'done' | 'error'
   startTime: number
   error?: string
+  detail?: string
 }
 
 interface TaskContextType {
   tasks: Task[]
   hasRunning: boolean
   runTask: (id: string, label: string, fn: (signal: AbortSignal) => Promise<unknown>) => Promise<void>
+  updateDetail: (id: string, detail: string) => void
   abortTask: (id: string) => void
   dismissTask: (id: string) => void
   clearDone: () => void
@@ -71,6 +73,10 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
   }, [updateTask])
 
+  const updateDetail = useCallback((id: string, detail: string) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, detail } : t))
+  }, [])
+
   const abortTask = useCallback((id: string) => {
     const controller = abortMap.current.get(id)
     if (controller) controller.abort()
@@ -88,7 +94,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const hasRunning = tasks.some(t => t.status === 'running')
 
   return (
-    <Ctx.Provider value={{ tasks, hasRunning, runTask, abortTask, dismissTask, clearDone }}>
+    <Ctx.Provider value={{ tasks, hasRunning, runTask, updateDetail, abortTask, dismissTask, clearDone }}>
       {children}
     </Ctx.Provider>
   )
