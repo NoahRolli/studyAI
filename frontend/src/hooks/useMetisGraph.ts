@@ -1,5 +1,5 @@
-// useMetisGraph — Datenlogik für den Metis Knowledge-Graph
-// Lädt ConceptGraph, transformiert zu MetisGraph, steuert Aktionen
+// useMetisGraph — Datenlogik fuer den Metis Knowledge-Graph
+// Laedt ConceptGraph, transformiert zu MetisGraph, steuert Aktionen
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTasks } from '../context/TaskContext'
@@ -18,7 +18,7 @@ export function useMetisGraph() {
   const linking = tasks.some(t => t.id === 'metis-link' && t.status === 'running')
   const clustering = tasks.some(t => t.id === 'metis-cluster' && t.status === 'running')
 
-  // Konzept-Graph als MetisGraph-Format (für Sphäre)
+  // Konzept-Graph als MetisGraph-Format (fuer Sphaere)
   const sphereGraph = useMemo<MetisGraph>(() => ({
     nodes: conceptGraph.nodes.map(c => ({
       id: c.id, type: 'note' as const, source_id: c.id,
@@ -58,24 +58,24 @@ export function useMetisGraph() {
 
   // Sync — Konzepte aus Notes + Summaries extrahieren
   const handleSync = useCallback(() => {
-    runTask("metis-sync", "Sync Concepts", async () => {
-      await post("/api/concepts/sync")
+    runTask('metis-sync', 'Sync Concepts', async (signal) => {
+      await post('/api/concepts/sync', undefined, signal)
       await loadGraph()
     })
   }, [runTask, loadGraph])
 
-  // Auto-Link — AI schlägt Relationen vor
+  // Auto-Link — AI schlaegt Relationen vor
   const handleAutoLink = useCallback(() => {
-    runTask("metis-link", "Detect Connections", async () => {
-      await post("/api/concepts/auto-link")
+    runTask('metis-link', 'Detect Connections', async (signal) => {
+      await post('/api/concepts/auto-link', undefined, signal)
       await loadGraph()
     })
   }, [runTask, loadGraph])
 
   // Auto-Cluster — AI gruppiert Konzepte thematisch
   const handleAutoCluster = useCallback(() => {
-    runTask("metis-cluster", "Group Topics", async () => {
-      await post("/api/concepts/auto-cluster")
+    runTask('metis-cluster', 'Group Topics', async (signal) => {
+      await post('/api/concepts/auto-cluster', undefined, signal)
       await loadGraph()
     })
   }, [runTask, loadGraph])
