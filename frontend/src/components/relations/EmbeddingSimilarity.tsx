@@ -33,7 +33,7 @@ export default function EmbeddingSimilarity({ onChanged }: Props) {
     setResult(null)
     setProgress({ phase: 'start', message: 'Starte...' })
 
-    const es = new EventSource('/api/concepts/embeddings/stream?threshold=0.65')
+    const es = new EventSource('/api/concepts/embeddings/stream?threshold=0.75')
     esRef.current = es
 
     es.addEventListener('status', (e) => {
