@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { get, put, del } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import DetectProgressPanel from './DetectProgressPanel'
+import EmbeddingSimilarity from './EmbeddingSimilarity'
 import SuggestionCard from './SuggestionCard'
 import OntologyEditModal from './OntologyEditModal'
 import type { EditTarget } from './OntologyEditModal'
@@ -188,6 +189,8 @@ export default function RelationSuggestions({ onChanged }: Props) {
         <DetectProgressPanel rounds={roundLogs} elapsed={elapsed}
           active={detecting} totalCreated={totalCreated} />
       )}
+      <EmbeddingSimilarity onChanged={onChanged} />
+
       {(detectResult || cleanupMsg) && (
         <p className="text-xs px-3 py-2 rounded"
           style={{ background: 'var(--color-hover-bg)', color: 'var(--color-text-secondary)' }}>
