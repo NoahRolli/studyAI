@@ -133,15 +133,17 @@ export default function EmbeddingSimilarity({ onChanged }: Props) {
       </div>
 
       {/* Threshold Slider */}
-      <div className="flex items-center gap-3">
-        <label className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+      <div className="flex items-center gap-3 px-3 py-2 rounded border"
+        style={{ borderColor: 'var(--color-border-glow)', background: 'rgba(0, 212, 255, 0.03)' }}>
+        <label className="text-xs uppercase" style={{ color: 'var(--color-text-muted)', letterSpacing: '0.05em' }}>
           Threshold
         </label>
         <input type="range" min="0.5" max="0.95" step="0.05"
           value={threshold} disabled={running}
           onChange={(e) => setThreshold(parseFloat(e.target.value))}
-          className="w-32 accent-cyan-400" />
-        <span className="text-xs font-mono" style={{ color: 'var(--color-primary)' }}>
+          className="hud-slider w-32" />
+        <span className="text-xs font-mono px-2 py-0.5 rounded border"
+          style={{ color: 'var(--color-primary)', borderColor: 'var(--color-border-glow)' }}>
           {threshold.toFixed(2)}
         </span>
       </div>
