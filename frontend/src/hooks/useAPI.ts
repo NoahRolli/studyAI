@@ -55,10 +55,11 @@ export function get<T>(endpoint: string): Promise<T> {
 }
 
 // POST — Daten erstellen (z.B. neues Modul anlegen)
-export function post<T>(endpoint: string, body?: unknown): Promise<T> {
+export function post<T>(endpoint: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   return fetchApi<T>(endpoint, {
     method: 'POST',
     body: body ? JSON.stringify(body) : undefined,
+    signal,
   })
 }
 
