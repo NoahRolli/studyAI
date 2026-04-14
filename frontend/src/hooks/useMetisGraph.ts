@@ -1,24 +1,68 @@
 // useMetisGraph — Datenlogik fuer den Metis Knowledge-Graph
 // Laedt ConceptGraph, transformiert zu MetisGraph, steuert Aktionen
+// Auto-Link + Auto-Cluster nutzen SSE-Streams fuer Live-Progress
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTasks } from '../context/TaskContext'
 import { get, post } from './useAPI'
 import type { ConceptGraph, MetisGraph } from '../types/metis'
+
+// SSE-Helper: oeffnet EventSource, meldet Progress via updateDetail
+function connectSSE(
+  url: string, taskId: string,
+  updateDetail: (id: string, detail: string) => void,
+  onComplete: () => void,
+  onError: () => void,
+): EventSource {
+  const es = new EventSource(url)
+
+  es.addEventListener('batch_start', (e) => {
+    const d = JSON.parse(e.data)
+    const folder = d.folder && d.folder !== '—' ? ` [${d.folder}]` : ''
+    updateDetail(taskId, `Batch ${d.batch}/${d.total}${folder} ...`)
+  })
+
+  es.addEventListener('batch_done', (e) => {
+    const d = JSON.parse(e.data)
+    const info = d.provider ? ` — ${d.provider}` : ''
+    const created = d.created != null ? ` +${d.created}` : ''
+    const clusters = d.clusters_in_batch != null ? ` +${d.clusters_in_batch} clusters` : ''
+    updateDetail(taskId, `Batch ${d.batch}/${d.total}${info}${created}${clusters}`)
+  })
+
+  es.addEventListener('batch_error', (e) => {
+    const d = JSON.parse(e.data)
+    updateDetail(taskId, `Batch ${d.batch}/${d.total} — Fehler`)
+  })
+
+  es.addEventListener('complete', () => {
+    es.close()
+    onComplete()
+  })
+
+  es.onerror = () => {
+    es.close()
+    onError()
+  }
+
+  return es
+}
 
 export function useMetisGraph() {
   const [conceptGraph, setConceptGraph] = useState<ConceptGraph>({
     nodes: [], edges: [], clusters: [],
   })
   const [loading, setLoading] = useState(true)
-  const { tasks, runTask } = useTasks()
+  const { tasks, runTask, updateDetail } = useTasks()
+  const esRef = useRef<EventSource | null>(null)
 
-  // Task-Status aus globalem TaskContext
   const syncing = tasks.some(t => t.id === 'metis-sync' && t.status === 'running')
   const linking = tasks.some(t => t.id === 'metis-link' && t.status === 'running')
   const clustering = tasks.some(t => t.id === 'metis-cluster' && t.status === 'running')
 
-  // Konzept-Graph als MetisGraph-Format (fuer Sphaere)
+  // Cleanup bei Unmount
+  useEffect(() => () => { esRef.current?.close() }, [])
+
   const sphereGraph = useMemo<MetisGraph>(() => ({
     nodes: conceptGraph.nodes.map(c => ({
       id: c.id, type: 'note' as const, source_id: c.id,
@@ -42,7 +86,6 @@ export function useMetisGraph() {
     folders: (conceptGraph.folders || []).map(f => ({ id: f.id, name: f.name })),
   }), [conceptGraph])
 
-  // Konzept-Graph laden
   const loadGraph = useCallback(async () => {
     try {
       const data = await get<ConceptGraph>('/api/concepts/graph')
@@ -56,7 +99,7 @@ export function useMetisGraph() {
 
   useEffect(() => { loadGraph() }, [loadGraph])
 
-  // Sync — Konzepte aus Notes + Summaries extrahieren
+  // Sync — bleibt POST (schnell, kein AI-Call pro Item)
   const handleSync = useCallback(() => {
     runTask('metis-sync', 'Sync Concepts', async (signal) => {
       await post('/api/concepts/sync', undefined, signal)
@@ -64,21 +107,37 @@ export function useMetisGraph() {
     })
   }, [runTask, loadGraph])
 
-  // Auto-Link — AI schlaegt Relationen vor
+  // Auto-Link via SSE
   const handleAutoLink = useCallback(() => {
     runTask('metis-link', 'Detect Connections', async (signal) => {
-      await post('/api/concepts/auto-link', undefined, signal)
-      await loadGraph()
+      return new Promise<void>((resolve, reject) => {
+        const es = connectSSE(
+          '/api/concepts/auto-link/stream',
+          'metis-link', updateDetail,
+          () => { esRef.current = null; loadGraph(); resolve() },
+          () => { esRef.current = null; loadGraph(); reject(new Error('Connection lost')) },
+        )
+        esRef.current = es
+        signal.addEventListener('abort', () => { es.close(); esRef.current = null; loadGraph(); resolve() })
+      })
     })
-  }, [runTask, loadGraph])
+  }, [runTask, updateDetail, loadGraph])
 
-  // Auto-Cluster — AI gruppiert Konzepte thematisch
+  // Auto-Cluster via SSE
   const handleAutoCluster = useCallback(() => {
     runTask('metis-cluster', 'Group Topics', async (signal) => {
-      await post('/api/concepts/auto-cluster', undefined, signal)
-      await loadGraph()
+      return new Promise<void>((resolve, reject) => {
+        const es = connectSSE(
+          '/api/concepts/auto-cluster/stream',
+          'metis-cluster', updateDetail,
+          () => { esRef.current = null; loadGraph(); resolve() },
+          () => { esRef.current = null; loadGraph(); reject(new Error('Connection lost')) },
+        )
+        esRef.current = es
+        signal.addEventListener('abort', () => { es.close(); esRef.current = null; loadGraph(); resolve() })
+      })
     })
-  }, [runTask, loadGraph])
+  }, [runTask, updateDetail, loadGraph])
 
   return {
     conceptGraph, sphereGraph, loading, loadGraph,
