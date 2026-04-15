@@ -3,7 +3,7 @@
 // 2h Cooldown via localStorage, sanft wegklickbar
 
 import { useState, useEffect } from 'react'
-import { get, post } from '../../hooks/useAPI'
+import { post } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 
 const COOLDOWN_KEY = 'pallas-mood-checkin-last'
