@@ -1,7 +1,6 @@
 // MoodChart — Stimmungsverlauf mit Check-In + Journal Daten
-// Zeiträume: Tag, Woche, Monat, Jahr, Gesamt
-// Daten kommen vom /api/journal/mood-checkins/aggregated Endpoint
-// Journal-Mood-Scores (-1..1) werden auf 1-10 Skala normalisiert
+// Zeiträume: Woche, Monat, Jahr, Gesamt
+// Klick auf Datenpunkt oeffnet Tages-Detailansicht
 
 import { useState, useEffect, useCallback } from 'react'
 import {
@@ -10,8 +9,10 @@ import {
 } from 'recharts'
 import { get } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
+import MoodScaleLegend, { getScoreColor, getScoreLabel } from './MoodScaleLegend'
+import MoodDayView from './MoodDayView'
 
-type Range = 'day' | 'week' | 'month' | 'year' | 'all'
+type Range = 'week' | 'month' | 'year' | 'all'
 
 interface AggPoint {
   date: string
@@ -22,14 +23,16 @@ interface AggPoint {
 }
 
 interface ChartPoint {
+  date: string
   label: string
   score: number
   checkins: number
   hasJournal: boolean
+  journalScore: number | null
 }
 
 const RANGE_DAYS: Record<Range, number> = {
-  day: 1, week: 7, month: 30, year: 365, all: 3650,
+  week: 7, month: 30, year: 365, all: 3650,
 }
 
 export default function MoodChart() {
@@ -37,28 +40,24 @@ export default function MoodChart() {
   const [range, setRange] = useState<Range>('month')
   const [data, setData] = useState<ChartPoint[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedDay, setSelectedDay] = useState<ChartPoint | null>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const days = RANGE_DAYS[range]
       const raw = await get<AggPoint[]>(
-        `/api/journal/mood-checkins/aggregated?days=${days}`
+        `/api/journal/mood-checkins/aggregated?days=${RANGE_DAYS[range]}`
       )
-      const points: ChartPoint[] = raw.map(p => ({
-        label: range === 'day'
-          ? p.date
-          : p.date.slice(5),
+      setData(raw.map(p => ({
+        date: p.date,
+        label: p.date.slice(5),
         score: p.combined_score,
         checkins: p.checkin_count,
         hasJournal: p.journal_score !== null,
-      }))
-      setData(points)
-    } catch (err) {
-      console.error('Mood-Daten laden fehlgeschlagen:', err)
-    } finally {
-      setLoading(false)
-    }
+        journalScore: p.journal_score,
+      })))
+    } catch (err) { console.error(err) }
+    finally { setLoading(false) }
   }, [range])
 
   useEffect(() => { loadData() }, [loadData])
@@ -70,16 +69,21 @@ export default function MoodChart() {
     { key: 'all', de: 'Gesamt', en: 'All' },
   ]
 
+  const handleDotClick = (data: any) => {
+    if (data?.activePayload?.[0]?.payload) {
+      setSelectedDay(data.activePayload[0].payload)
+    }
+  }
+
   return (
-    <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="hud-title text-sm"
-          style={{ color: 'var(--color-primary)' }}>
+    <div className="animate-fade-in space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="hud-title text-sm" style={{ color: 'var(--color-primary)' }}>
           {language === 'de' ? 'STIMMUNGSVERLAUF' : 'MOOD TIMELINE'}
         </h3>
         <div className="flex gap-1">
           {ranges.map(r => (
-            <button key={r.key} onClick={() => setRange(r.key)}
+            <button key={r.key} onClick={() => { setRange(r.key); setSelectedDay(null) }}
               className="text-xs px-2 py-0.5 rounded border transition-all"
               style={{
                 borderColor: range === r.key ? 'var(--color-primary)' : 'var(--color-border)',
@@ -92,25 +96,25 @@ export default function MoodChart() {
         </div>
       </div>
 
+      <MoodScaleLegend />
+
       <div className="hud-card p-4">
         {loading ? (
-          <p className="text-sm text-center py-8"
-            style={{ color: 'var(--color-text-muted)' }}>
+          <p className="text-sm text-center py-8" style={{ color: 'var(--color-text-muted)' }}>
             {language === 'de' ? 'Laden...' : 'Loading...'}
           </p>
         ) : data.length === 0 ? (
-          <p className="text-sm text-center py-8"
-            style={{ color: 'var(--color-text-muted)' }}>
+          <p className="text-sm text-center py-8" style={{ color: 'var(--color-text-muted)' }}>
             {language === 'de'
               ? 'Keine Daten. Erfasse deine Stimmung auf der Startseite.'
               : 'No data. Log your mood on the welcome page.'}
           </p>
         ) : (
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+            <LineChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+              onClick={handleDotClick} style={{ cursor: 'pointer' }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-hover-bg)" />
-              <XAxis dataKey="label"
-                stroke="var(--color-border)"
+              <XAxis dataKey="label" stroke="var(--color-border)"
                 tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
               <YAxis domain={[1, 10]} ticks={[1, 3, 5, 7, 10]}
                 stroke="var(--color-border)"
@@ -120,47 +124,50 @@ export default function MoodChart() {
               <Line type="monotone" dataKey="score"
                 stroke="var(--color-primary)" strokeWidth={2}
                 dot={<MoodDot />}
-                activeDot={{ r: 6, fill: 'var(--color-primary)' }} />
+                activeDot={{ r: 7, fill: 'var(--color-primary)', cursor: 'pointer' }} />
             </LineChart>
           </ResponsiveContainer>
         )}
       </div>
+
+      {/* Tages-Detailansicht */}
+      {selectedDay && (
+        <MoodDayView
+          date={selectedDay.date}
+          journalScore={selectedDay.journalScore}
+          onClose={() => setSelectedDay(null)}
+        />
+      )}
     </div>
   )
 }
 
-// Dot — zeigt ob Journal-Eintrag vorhanden (ausgefuellter Punkt)
 function MoodDot(props: any) {
   const { cx, cy, payload } = props
   if (!cx || !cy) return null
-  const fill = payload.hasJournal ? 'var(--color-primary)' : '#0a0e17'
   return (
     <circle cx={cx} cy={cy} r={4}
-      fill={fill} stroke="var(--color-primary)" strokeWidth={2} />
+      fill={payload.hasJournal ? 'var(--color-primary)' : '#0a0e17'}
+      stroke={getScoreColor(payload.score)} strokeWidth={2} />
   )
 }
 
-// Tooltip
 function MoodTooltip({ active, payload, language }: any) {
   if (!active || !payload?.length) return null
   const p = payload[0].payload as ChartPoint
   return (
     <div className="rounded-lg px-3 py-2 shadow-lg border"
-      style={{
-        background: 'var(--color-bg-elevated)',
-        borderColor: 'var(--color-border-glow)',
-      }}>
-      <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-        {p.label}
-      </p>
-      <p className="text-sm mt-1" style={{ color: 'var(--color-primary)' }}>
-        Score: {p.score}
+      style={{ background: 'var(--color-bg-elevated)', borderColor: 'var(--color-border-glow)' }}>
+      <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{p.date}</p>
+      <p className="text-sm mt-1" style={{ color: getScoreColor(p.score) }}>
+        {p.score} — {getScoreLabel(p.score, language)}
       </p>
       <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-        {p.checkins > 0
-          ? `${p.checkins} Check-In${p.checkins > 1 ? 's' : ''}`
-          : (language === 'de' ? 'Kein Check-In' : 'No check-in')}
-        {p.hasJournal ? ' + Journal' : ''}
+        {p.checkins > 0 ? `${p.checkins} Check-In${p.checkins > 1 ? 's' : ''}` : ''}
+        {p.hasJournal ? (p.checkins > 0 ? ' + Journal' : 'Journal') : ''}
+      </p>
+      <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+        {language === 'de' ? 'Klick fuer Details' : 'Click for details'}
       </p>
     </div>
   )
