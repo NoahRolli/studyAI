@@ -69,9 +69,9 @@ export default function MoodChart() {
     { key: 'all', de: 'Gesamt', en: 'All' },
   ]
 
-  const handleChartClick = (e: any) => {
-    if (e?.activePayload?.[0]?.payload?.date) {
-      setSelectedDay(e.activePayload[0].payload)
+  const handleChartClick = (point: any) => {
+    if (point?.payload?.date) {
+      setSelectedDay(point.payload)
     }
   }
 
@@ -112,7 +112,6 @@ export default function MoodChart() {
         ) : (
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
-              onClick={handleChartClick}
               >
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-hover-bg)" />
               <XAxis dataKey="label" stroke="var(--color-border)"
@@ -125,7 +124,8 @@ export default function MoodChart() {
               <Line type="monotone" dataKey="score"
                 stroke="var(--color-primary)" strokeWidth={2}
                 dot={<MoodDot />}
-                activeDot={{ r: 7, fill: "var(--color-primary)", cursor: "pointer" }} />
+                activeDot={{ r: 7, fill: "var(--color-primary)", cursor: "pointer",
+                  onClick: (_: any, e: any) => handleChartClick(e) }} />
             </LineChart>
           </ResponsiveContainer>
         )}
