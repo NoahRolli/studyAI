@@ -5,6 +5,7 @@
 
 from sqlalchemy import Column, Integer, Float, String, DateTime, Text
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from backend.journal.models.journal_database import JournalBase
 
 
@@ -53,7 +54,7 @@ class MoodCheckIn(JournalBase):
     # Exakter Zeitpunkt der Erfassung
     timestamp = Column(
         DateTime, nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(ZoneInfo("Europe/Zurich")),
     )
 
     # Datum fuer Aggregation (YYYY-MM-DD)
