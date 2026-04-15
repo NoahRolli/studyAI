@@ -1,143 +1,167 @@
-// MoodChart — Stimmungsverlauf als Linien-Chart
-// Zeigt Mood-Scores (-1.0 bis 1.0) über Zeit an
-// Daten kommen als Props vom Parent (Journal.tsx)
-// Verwendet recharts mit HUD-Farbpalette
+// MoodChart — Stimmungsverlauf mit Check-In + Journal Daten
+// Zeiträume: Tag, Woche, Monat, Jahr, Gesamt
+// Daten kommen vom /api/journal/mood-checkins/aggregated Endpoint
+// Journal-Mood-Scores (-1..1) werden auf 1-10 Skala normalisiert
 
+import { useState, useEffect, useCallback } from 'react'
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
+import { get } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
-import type { MoodResult, JournalEntry } from "../../types/models"
-import { FUZZY_CONFIG } from "./FuzzyBar"
 
-// Props — Daten kommen vom Parent
-interface MoodChartProps {
-  entries: JournalEntry[]
-  moods: MoodResult[]
-  loading: boolean
-}
+type Range = 'day' | 'week' | 'month' | 'year' | 'all'
 
-// Datenformat für recharts
-interface ChartPoint {
+interface AggPoint {
   date: string
-  score: number
-  label: string
-  title: string
-  fuzzy_label?: string
+  checkin_scores: number[]
+  journal_score: number | null
+  combined_score: number
+  checkin_count: number
 }
 
-function MoodChart({ entries, moods, loading }: MoodChartProps) {
-  const { t, language } = useLanguage()
+interface ChartPoint {
+  label: string
+  score: number
+  checkins: number
+  hasJournal: boolean
+}
 
-  // --- Daten aufbereiten ---
-  const entryMap = new Map(entries.map((e) => [e.id, e]))
-  const data: ChartPoint[] = moods
-    .filter((m) => !m.error)
-    .map((m) => {
-      const entry = entryMap.get(m.entry_id)
-      return {
-        date: entry?.date ?? t.moodChart.unknown,
-        score: m.score,
-        label: m.label,
-        title: entry?.title ?? '',
-        fuzzy_label: m.fuzzy_label,
-      }
-    })
-    .sort((a, b) => a.date.localeCompare(b.date))
+const RANGE_DAYS: Record<Range, number> = {
+  day: 1, week: 7, month: 30, year: 365, all: 3650,
+}
 
-  // --- Render ---
-  if (loading) {
-    return (
-      <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">
-        {t.moodChart.loading}
-      </p>
-    )
-  }
+export default function MoodChart() {
+  const { language } = useLanguage()
+  const [range, setRange] = useState<Range>('month')
+  const [data, setData] = useState<ChartPoint[]>([])
+  const [loading, setLoading] = useState(true)
 
-  if (data.length === 0) {
-    return (
-      <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">
-        {t.moodChart.empty}
-      </p>
-    )
-  }
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const days = RANGE_DAYS[range]
+      const raw = await get<AggPoint[]>(
+        `/api/journal/mood-checkins/aggregated?days=${days}`
+      )
+      const points: ChartPoint[] = raw.map(p => ({
+        label: range === 'day'
+          ? p.date
+          : p.date.slice(5),
+        score: p.combined_score,
+        checkins: p.checkin_count,
+        hasJournal: p.journal_score !== null,
+      }))
+      setData(points)
+    } catch (err) {
+      console.error('Mood-Daten laden fehlgeschlagen:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [range])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  const ranges: { key: Range; de: string; en: string }[] = [
+    { key: 'week', de: 'Woche', en: 'Week' },
+    { key: 'month', de: 'Monat', en: 'Month' },
+    { key: 'year', de: 'Jahr', en: 'Year' },
+    { key: 'all', de: 'Gesamt', en: 'All' },
+  ]
 
   return (
     <div className="animate-fade-in">
-      <h3
-        className="hud-title text-sm mb-4"
-        style={{ color: 'var(--color-primary)' }}
-      >
-        {t.moodChart.title}
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="hud-title text-sm"
+          style={{ color: 'var(--color-primary)' }}>
+          {language === 'de' ? 'STIMMUNGSVERLAUF' : 'MOOD TIMELINE'}
+        </h3>
+        <div className="flex gap-1">
+          {ranges.map(r => (
+            <button key={r.key} onClick={() => setRange(r.key)}
+              className="text-xs px-2 py-0.5 rounded border transition-all"
+              style={{
+                borderColor: range === r.key ? 'var(--color-primary)' : 'var(--color-border)',
+                background: range === r.key ? 'rgba(0, 212, 255, 0.1)' : 'transparent',
+                color: range === r.key ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              }}>
+              {language === 'de' ? r.de : r.en}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {/* Chart-Container mit HUD-Border */}
       <div className="hud-card p-4">
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-hover-bg)" />
-            <XAxis
-              dataKey="date"
-              stroke="var(--color-border)"
-              tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
-            />
-            <YAxis
-              domain={[-1, 1]}
-              ticks={[-1, -0.5, 0, 0.5, 1]}
-              stroke="var(--color-border)"
-              tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
-            />
-            <ReferenceLine y={0} stroke="var(--color-border)" strokeDasharray="4 4" />
-            <Tooltip content={<MoodTooltip />} />
-            <Line
-              type="monotone"
-              dataKey="score"
-              stroke="var(--color-primary)"
-              strokeWidth={2}
-              dot={{ r: 4, fill: '#0a0e17', stroke: 'var(--color-primary)', strokeWidth: 2 }}
-              activeDot={{ r: 6, fill: 'var(--color-primary)' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {loading ? (
+          <p className="text-sm text-center py-8"
+            style={{ color: 'var(--color-text-muted)' }}>
+            {language === 'de' ? 'Laden...' : 'Loading...'}
+          </p>
+        ) : data.length === 0 ? (
+          <p className="text-sm text-center py-8"
+            style={{ color: 'var(--color-text-muted)' }}>
+            {language === 'de'
+              ? 'Keine Daten. Erfasse deine Stimmung auf der Startseite.'
+              : 'No data. Log your mood on the welcome page.'}
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-hover-bg)" />
+              <XAxis dataKey="label"
+                stroke="var(--color-border)"
+                tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
+              <YAxis domain={[1, 10]} ticks={[1, 3, 5, 7, 10]}
+                stroke="var(--color-border)"
+                tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
+              <ReferenceLine y={5} stroke="var(--color-border)" strokeDasharray="4 4" />
+              <Tooltip content={<MoodTooltip language={language} />} />
+              <Line type="monotone" dataKey="score"
+                stroke="var(--color-primary)" strokeWidth={2}
+                dot={<MoodDot />}
+                activeDot={{ r: 6, fill: 'var(--color-primary)' }} />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   )
 }
 
-// Custom Tooltip — zeigt Titel, Label und Score beim Hovern
-function MoodTooltip({ active, payload }: any) {
-  if (!active || !payload?.length) return null
-  const point = payload[0].payload as ChartPoint
+// Dot — zeigt ob Journal-Eintrag vorhanden (ausgefuellter Punkt)
+function MoodDot(props: any) {
+  const { cx, cy, payload } = props
+  if (!cx || !cy) return null
+  const fill = payload.hasJournal ? 'var(--color-primary)' : '#0a0e17'
   return (
-    <div
-      className="rounded-lg px-3 py-2 shadow-lg border"
+    <circle cx={cx} cy={cy} r={4}
+      fill={fill} stroke="var(--color-primary)" strokeWidth={2} />
+  )
+}
+
+// Tooltip
+function MoodTooltip({ active, payload, language }: any) {
+  if (!active || !payload?.length) return null
+  const p = payload[0].payload as ChartPoint
+  return (
+    <div className="rounded-lg px-3 py-2 shadow-lg border"
       style={{
         background: 'var(--color-bg-elevated)',
         borderColor: 'var(--color-border-glow)',
-        boxShadow: 'var(--color-primary-glow)',
-      }}
-    >
-      <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-        {point.title}
+      }}>
+      <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+        {p.label}
+      </p>
+      <p className="text-sm mt-1" style={{ color: 'var(--color-primary)' }}>
+        Score: {p.score}
       </p>
       <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-        {point.date}
-      </p>
-      <p className="text-sm mt-1">
-        <span style={{ color: 'var(--color-primary)' }}>{point.fuzzy_label && FUZZY_CONFIG[point.fuzzy_label] ? FUZZY_CONFIG[point.fuzzy_label][language as "de" | "en"] : point.label}</span>
-        <span className="ml-2" style={{ color: 'var(--color-text-muted)' }}>
-          ({point.score.toFixed(1)})
-        </span>
+        {p.checkins > 0
+          ? `${p.checkins} Check-In${p.checkins > 1 ? 's' : ''}`
+          : (language === 'de' ? 'Kein Check-In' : 'No check-in')}
+        {p.hasJournal ? ' + Journal' : ''}
       </p>
     </div>
   )
 }
-
-export default MoodChart
