@@ -226,11 +226,8 @@ function Journal() {
 
           {/* Tab: Stimmung */}
           {s.activeTab === 'mood' && (
-            <MoodChart
-              entries={s.entries}
-              moods={a.moods}
-              loading={!a.moodsLoaded && a.moods.length === 0}
-            />
+            <MoodChart />
+
           )}
 
           {/* Tab: Themen */}
