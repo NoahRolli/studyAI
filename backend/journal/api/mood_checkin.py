@@ -13,6 +13,9 @@ from backend.journal.models.mood_checkin import (
     MoodCheckIn, calculate_mood_score, MOOD_WEIGHTS,
 )
 from backend.journal.models.mood_cache import MoodCache
+from backend.journal.services.session_service import session_manager
+from backend.journal.services.crypto_service import decrypt_text
+from backend.journal.api.dependencies import require_unlocked
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/journal/mood-checkins", tags=["mood-checkins"])
@@ -115,48 +118,49 @@ async def get_aggregated_moods(
     checkins = db.query(MoodCheckIn).filter(
         MoodCheckIn.date >= since
     ).all()
-
     checkin_by_date: dict[str, list[float]] = {}
     for c in checkins:
         if c.date not in checkin_by_date:
             checkin_by_date[c.date] = []
         checkin_by_date[c.date].append(c.score)
 
-    # Journal-Mood-Scores nach Datum
-    mood_caches = db.query(MoodCache).all()
-    # MoodCache hat entry_id, brauchen Datum vom Entry
-    from backend.journal.models.journal_entry import JournalEntry
+    # Journal-Mood-Scores — Datum entschluesseln, Score normalisieren
     journal_scores: dict[str, float] = {}
-    for mc in mood_caches:
-        entry = db.query(JournalEntry).filter(
-            JournalEntry.id == mc.entry_id
-        ).first()
-        if entry and entry.date >= since:
-            journal_scores[entry.date] = mc.score
+    key = session_manager.get_key()
+    if key:
+        from backend.journal.models.journal_entry import JournalEntry
+        mood_caches = db.query(MoodCache).all()
+        for mc in mood_caches:
+            entry = db.query(JournalEntry).filter(
+                JournalEntry.id == mc.entry_id
+            ).first()
+            if not entry:
+                continue
+            try:
+                date_str = decrypt_text(entry.encrypted_date, key)
+            except Exception:
+                continue
+            if date_str < since:
+                continue
+            # Normalisiere -1..1 auf 1..10 Skala
+            normalized = round((mc.score + 1) * 4.5 + 1, 1)
+            journal_scores[date_str] = max(1.0, min(10.0, normalized))
 
-    # Alle Daten zusammenfuehren
+    # Zusammenfuehren
     all_dates = sorted(set(list(checkin_by_date.keys()) + list(journal_scores.keys())))
     result: list[dict] = []
-
     for date in all_dates:
         ci_scores = checkin_by_date.get(date, [])
         j_score = journal_scores.get(date)
-
-        # Kombinierter Score: alle Werte mitteln
         all_scores = list(ci_scores)
         if j_score is not None:
             all_scores.append(j_score)
-
         combined = round(sum(all_scores) / len(all_scores), 1) if all_scores else 5.0
-
         result.append({
-            "date": date,
-            "checkin_scores": ci_scores,
-            "journal_score": j_score,
-            "combined_score": combined,
+            "date": date, "checkin_scores": ci_scores,
+            "journal_score": j_score, "combined_score": combined,
             "checkin_count": len(ci_scores),
         })
-
     return result
 
 
