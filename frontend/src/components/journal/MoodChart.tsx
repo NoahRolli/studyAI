@@ -37,7 +37,7 @@ const RANGE_DAYS: Record<Range, number> = {
 
 export default function MoodChart() {
   const { language } = useLanguage()
-  const [range, setRange] = useState<Range>('month')
+  const [range, setRange] = useState<Range>('all')
   const [data, setData] = useState<ChartPoint[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDay, setSelectedDay] = useState<ChartPoint | null>(null)
