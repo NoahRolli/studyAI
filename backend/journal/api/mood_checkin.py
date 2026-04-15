@@ -164,6 +164,25 @@ async def get_aggregated_moods(
     return result
 
 
+@router.get("/by-date/{date}")
+async def get_checkins_by_date(
+    date: str,
+    db: Session = Depends(get_journal_db),
+):
+    """Alle Check-Ins fuer ein bestimmtes Datum."""
+    checkins = db.query(MoodCheckIn).filter(
+        MoodCheckIn.date == date
+    ).order_by(MoodCheckIn.timestamp).all()
+    return [
+        {
+            "id": c.id, "timestamp": c.timestamp.isoformat(),
+            "moods": json.loads(c.moods), "score": c.score,
+            "note": c.note,
+        }
+        for c in checkins
+    ]
+
+
 @router.delete("/{checkin_id}")
 async def delete_checkin(
     checkin_id: int,
