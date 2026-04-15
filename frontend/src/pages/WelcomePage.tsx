@@ -8,6 +8,7 @@ import { useLanguage } from '../hooks/useLanguage'
 import LanguageToggle from '../components/LanguageToggle'
 import ThemeSelector from '../components/ThemeSelector'
 import WelcomeCards from '../components/welcome/WelcomeCards'
+import MoodCheckInModal from '../components/welcome/MoodCheckInModal'
 
 // Animations-Phasen (ms) — Total ~2.5s
 const TITLE_FADE_IN = 0
@@ -128,6 +129,8 @@ function WelcomePage() {
           </p>
         </div>
       </div>
+      {/* Mood Check-In Modal */}
+      <MoodCheckInModal />
     </div>
   )
 }
