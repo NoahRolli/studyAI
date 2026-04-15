@@ -69,10 +69,8 @@ export default function MoodChart() {
     { key: 'all', de: 'Gesamt', en: 'All' },
   ]
 
-  const handleDotClick = (data: any) => {
-    if (data?.activePayload?.[0]?.payload) {
-      setSelectedDay(data.activePayload[0].payload)
-    }
+  const handlePointClick = (payload: ChartPoint) => {
+    setSelectedDay(payload)
   }
 
   return (
@@ -112,7 +110,7 @@ export default function MoodChart() {
         ) : (
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
-              onClick={handleDotClick} style={{ cursor: 'pointer' }}>
+              >
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-hover-bg)" />
               <XAxis dataKey="label" stroke="var(--color-border)"
                 tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
@@ -124,7 +122,7 @@ export default function MoodChart() {
               <Line type="monotone" dataKey="score"
                 stroke="var(--color-primary)" strokeWidth={2}
                 dot={<MoodDot />}
-                activeDot={{ r: 7, fill: 'var(--color-primary)', cursor: 'pointer' }} />
+                activeDot={<ActiveDot onClick={handlePointClick} />} />
             </LineChart>
           </ResponsiveContainer>
         )}
@@ -141,6 +139,16 @@ export default function MoodChart() {
   )
 }
 
+
+function ActiveDot(props: any) {
+  const { cx, cy, payload, onClick } = props
+  if (!cx || !cy) return null
+  return (
+    <circle cx={cx} cy={cy} r={7}
+      fill="var(--color-primary)" cursor="pointer"
+      onClick={(e: React.MouseEvent) => { e.stopPropagation(); onClick(payload) }} />
+  )
+}
 function MoodDot(props: any) {
   const { cx, cy, payload } = props
   if (!cx || !cy) return null
@@ -165,9 +173,7 @@ function MoodTooltip({ active, payload, language }: any) {
         {p.checkins > 0 ? `${p.checkins} Check-In${p.checkins > 1 ? 's' : ''}` : ''}
         {p.hasJournal ? (p.checkins > 0 ? ' + Journal' : 'Journal') : ''}
       </p>
-      <p className="text-xs mt-0.5" style={{ color: 'var(--color-primary)' }}>
-        {language === 'de' ? 'Klick fuer Details' : 'Click for details'}
-      </p>
+
     </div>
   )
 }
