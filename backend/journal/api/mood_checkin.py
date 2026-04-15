@@ -5,6 +5,7 @@
 import json
 import logging
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -53,7 +54,7 @@ async def create_checkin(
     if not valid_moods:
         return {"error": "Keine gueltigen Moods ausgewaehlt"}
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(ZoneInfo("Europe/Zurich"))
     score = calculate_mood_score(valid_moods)
 
     checkin = MoodCheckIn(
@@ -80,7 +81,7 @@ async def create_checkin(
 @router.get("/today")
 async def get_today_checkins(db: Session = Depends(get_journal_db)):
     """Alle Check-Ins von heute."""
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = datetime.now(ZoneInfo("Europe/Zurich")).strftime("%Y-%m-%d")
     checkins = db.query(MoodCheckIn).filter(
         MoodCheckIn.date == today
     ).order_by(MoodCheckIn.timestamp).all()
@@ -112,7 +113,7 @@ async def get_aggregated_moods(
     db: Session = Depends(get_journal_db),
 ):
     """Tageswerte: Durchschnitt Check-Ins + Journal-Mood kombiniert."""
-    since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+    since = (datetime.now(ZoneInfo("Europe/Zurich")) - timedelta(days=days)).strftime("%Y-%m-%d")
 
     # Check-Ins nach Datum gruppieren
     checkins = db.query(MoodCheckIn).filter(
