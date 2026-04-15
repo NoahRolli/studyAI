@@ -130,7 +130,6 @@ export default function MoodChart() {
         )}
       </div>
 
-      {/* Tages-Detailansicht */}
       {selectedDay && (
         <MoodDayView
           date={selectedDay.date}
@@ -166,7 +165,7 @@ function MoodTooltip({ active, payload, language }: any) {
         {p.checkins > 0 ? `${p.checkins} Check-In${p.checkins > 1 ? 's' : ''}` : ''}
         {p.hasJournal ? (p.checkins > 0 ? ' + Journal' : 'Journal') : ''}
       </p>
-      <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+      <p className="text-xs mt-0.5" style={{ color: 'var(--color-primary)' }}>
         {language === 'de' ? 'Klick fuer Details' : 'Click for details'}
       </p>
     </div>
