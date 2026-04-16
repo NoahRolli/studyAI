@@ -50,6 +50,7 @@ from backend.api.concepts_cluster import router as concepts_cluster_router
 from backend.api.concepts_cluster_stream import router as concepts_cluster_stream_router
 from backend.api.concepts_graph import router as concepts_graph_router
 from backend.api.concepts_unlinked import router as concepts_unlinked_router
+from backend.api.concepts_gaps import router as concepts_gaps_router
 from backend.api.settings import router as settings_router
 from backend.models.module import Module  # noqa: F401
 from backend.models.document import Document  # noqa: F401
@@ -178,6 +179,7 @@ app.include_router(concepts_embedding_router)
 app.include_router(concepts_link_stream_router)
 app.include_router(concepts_link_router)
 app.include_router(concepts_unlinked_router)
+app.include_router(concepts_gaps_router)
 
 # Static Files — gebautes Frontend servieren (nur in Production)
 if _HAS_FRONTEND:
