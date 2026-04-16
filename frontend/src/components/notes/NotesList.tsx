@@ -49,7 +49,7 @@ function NotesList({
   }, [notes, search, sortNewest])
 
   return (
-    <div className="w-72 flex-shrink-0 flex flex-col gap-3 overflow-hidden">
+    <div className="flex-1 flex flex-col gap-3 overflow-hidden">
       {/* Header: Titel + Neu-Button */}
       <div className="flex items-center justify-between">
         <h1 className="hud-title text-glow text-2xl">{t.notes.title}</h1>

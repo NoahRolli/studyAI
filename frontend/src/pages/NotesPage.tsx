@@ -1,7 +1,5 @@
 // NotesPage — Orchestrator für das Notizen-Modul
-// Verwaltet State und API-Calls, delegiert Anzeige an Komponenten
-// Links: NotesList (Suche, Liste, Aktionen, Pin-Toggle)
-// Rechts: NoteEditor + BacklinksPanel + NoteAIPanel
+// Mobile: Liste ODER Editor (Vollbild), Desktop: nebeneinander
 // Cmd+K: QuickSwitcher Modal für schnelle Navigation
 
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -15,85 +13,67 @@ import NoteAIPanel from '../components/notes/NoteAIPanel'
 import RelationsPanel from '../components/relations/RelationsPanel'
 import QuickSwitcher from '../components/notes/QuickSwitcher'
 
-// Notiz-Typ für die Liste (ohne Content)
 interface NoteListItem {
-  id: number
-  title: string
-  is_pinned?: boolean
-  updated_at: string
-  created_at: string
+  id: number; title: string; is_pinned?: boolean
+  updated_at: string; created_at: string
 }
-
-// Volle Notiz mit Content
-interface NoteDetail extends NoteListItem {
-  content: string
-}
+interface NoteDetail extends NoteListItem { content: string }
 
 function NotesPage() {
   const { t } = useLanguage()
-
-  // State
   const [notes, setNotes] = useState<NoteListItem[]>([])
   const [selectedNote, setSelectedNote] = useState<NoteDetail | null>(null)
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState(false)
   const [savedMsg, setSavedMsg] = useState(false)
   const [showSwitcher, setShowSwitcher] = useState(false)
-
-  // Auto-Save Timer Ref
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
 
-  // --- Cmd+K Keyboard Shortcut ---
+  // Cmd+K
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        setShowSwitcher((v) => !v)
+        setShowSwitcher(v => !v)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // --- API-Aufrufe ---
+  // --- API ---
   async function loadNotes() {
-    try {
-      const data = await get<NoteListItem[]>('/api/notes')
-      setNotes(data)
-    } catch { /* Fehler ignorieren */ }
+    try { setNotes(await get<NoteListItem[]>('/api/notes')) }
+    catch { /* ignore */ }
   }
 
   async function loadNote(id: number) {
-    try {
-      const data = await get<NoteDetail>(`/api/notes/${id}`)
-      setSelectedNote(data)
-    } catch { /* Fehler ignorieren */ }
+    try { setSelectedNote(await get<NoteDetail>(`/api/notes/${id}`)) }
+    catch { /* ignore */ }
   }
 
   async function createNote(title?: string) {
     try {
       const data = await post<NoteDetail>('/api/notes', {
-        title: title || t.notes.untitled,
-        content: '',
+        title: title || t.notes.untitled, content: '',
       })
       await loadNotes()
       setSelectedNote(data)
       return data
-    } catch { /* Fehler ignorieren */ }
+    } catch { /* ignore */ }
   }
 
   const saveNote = useCallback(async (note: NoteDetail) => {
     setSaving(true)
     try {
       await put(`/api/notes/${note.id}`, {
-        title: note.title,
-        content: note.content,
+        title: note.title, content: note.content,
       })
       await loadNotes()
       setSavedMsg(true)
       setTimeout(() => setSavedMsg(false), 1500)
-    } catch { /* Fehler ignorieren */ }
+    } catch { /* ignore */ }
     setSaving(false)
   }, [])
 
@@ -103,30 +83,23 @@ function NotesPage() {
       await del(`/api/notes/${id}`)
       if (selectedNote?.id === id) setSelectedNote(null)
       await loadNotes()
-    } catch { /* Fehler ignorieren */ }
+    } catch { /* ignore */ }
   }
 
-  // --- Pin Toggle ---
   async function togglePin(id: number) {
-    try {
-      await put(`/api/notes/${id}/pin`, {})
-      await loadNotes()
-    } catch { /* Fehler ignorieren */ }
+    try { await put(`/api/notes/${id}/pin`, {}); await loadNotes() }
+    catch { /* ignore */ }
   }
 
-  // --- WikiLink Handler ---
   const handleWikiLinkClick = useCallback(async (title: string) => {
     const existing = notes.find(
-      (n) => n.title.toLowerCase() === title.toLowerCase()
+      n => n.title.toLowerCase() === title.toLowerCase()
     )
-    if (existing) {
-      await loadNote(existing.id)
-    } else {
-      await createNote(title)
-    }
+    if (existing) await loadNote(existing.id)
+    else await createNote(title)
   }, [notes])
 
-  // --- Auto-Save Handler ---
+  // --- Auto-Save ---
   function triggerAutoSave(updated: NoteDetail) {
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => saveNote(updated), 1000)
@@ -146,10 +119,18 @@ function NotesPage() {
     triggerAutoSave(updated)
   }
 
+  // Zurueck zur Liste (Mobile)
+  function handleBack() {
+    // Auto-Save auslösen falls pending
+    if (saveTimer.current && selectedNote) {
+      clearTimeout(saveTimer.current)
+      saveNote(selectedNote)
+    }
+    setSelectedNote(null)
+  }
+
   // --- Lifecycle ---
   useEffect(() => { loadNotes() }, [])
-
-  // --- ?open=ID Deep-Link von Metis (einmalig) ---
   useEffect(() => {
     const openId = searchParams.get("open")
     if (openId) {
@@ -157,31 +138,29 @@ function NotesPage() {
       setSearchParams({}, { replace: true })
     }
   }, [searchParams])
-
-  // Cleanup Auto-Save Timer
   useEffect(() => {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
   }, [])
 
   return (
-    <div className="animate-fade-in flex gap-6 h-[calc(100vh-3rem)]">
-      {/* Linke Spalte: Liste */}
-      <NotesList
-        notes={notes}
-        selectedId={selectedNote?.id ?? null}
-        search={search}
-        onSearchChange={setSearch}
-        onSelectNote={loadNote}
-        onCreateNote={() => createNote()}
-        onDeleteNote={deleteNote}
-        onTogglePin={togglePin}
-      />
+    <div className="animate-fade-in flex gap-0 md:gap-6 h-[calc(100vh-3rem)]">
+      {/* Liste: auf Mobile nur sichtbar wenn keine Note ausgewaehlt */}
+      <div className={`${selectedNote ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-72 md:flex-shrink-0`}>
+        <NotesList
+          notes={notes}
+          selectedId={selectedNote?.id ?? null}
+          search={search}
+          onSearchChange={setSearch}
+          onSelectNote={loadNote}
+          onCreateNote={() => createNote()}
+          onDeleteNote={deleteNote}
+          onTogglePin={togglePin}
+        />
+      </div>
 
-      {/* Rechte Spalte: Editor + Backlinks + AI */}
-      <div
-        className="flex-1 flex flex-col hud-card overflow-hidden"
-        style={{ minHeight: 0 }}
-      >
+      {/* Editor: auf Mobile nur sichtbar wenn Note ausgewaehlt */}
+      <div className={`${selectedNote ? 'flex' : 'hidden md:flex'} flex-1 flex-col hud-card overflow-hidden`}
+        style={{ minHeight: 0 }}>
         {!selectedNote ? (
           <div className="flex-1 flex items-center justify-center">
             <p style={{ color: 'var(--color-text-muted)' }}>
@@ -190,6 +169,12 @@ function NotesPage() {
           </div>
         ) : (
           <>
+            {/* Zurueck-Button nur auf Mobile */}
+            <button onClick={handleBack}
+              className="md:hidden flex items-center gap-1 px-3 py-2 text-sm"
+              style={{ color: 'var(--color-primary)' }}>
+              ← {t.common.back}
+            </button>
             <NoteEditor
               title={selectedNote.title}
               content={selectedNote.content}
@@ -199,28 +184,18 @@ function NotesPage() {
               onContentChange={handleContentChange}
               onWikiLinkClick={handleWikiLinkClick}
             />
-            <BacklinksPanel
-              noteId={selectedNote.id}
-              onNavigate={loadNote}
-            />
-            <NoteAIPanel
-              noteId={selectedNote.id}
-              onNavigate={loadNote}
-            />
-            <RelationsPanel
-              noteId={selectedNote.id}
-              onNavigate={loadNote}
-            />
+            <BacklinksPanel noteId={selectedNote.id} onNavigate={loadNote} />
+            <NoteAIPanel noteId={selectedNote.id} onNavigate={loadNote} />
+            <RelationsPanel noteId={selectedNote.id} onNavigate={loadNote} />
           </>
         )}
       </div>
 
-      {/* Quick-Switcher Modal (Cmd+K) */}
       {showSwitcher && (
         <QuickSwitcher
           notes={notes}
           onSelect={loadNote}
-          onCreate={(title) => createNote(title)}
+          onCreate={title => createNote(title)}
           onClose={() => setShowSwitcher(false)}
         />
       )}
