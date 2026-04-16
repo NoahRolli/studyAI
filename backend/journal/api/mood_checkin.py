@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from backend.journal.models.journal_database import get_journal_db
 from backend.journal.models.mood_checkin import (
-    MoodCheckIn, calculate_mood_score, MOOD_WEIGHTS,
+    MoodCheckIn, calculate_mood_score, calculate_body_score,
+    MOOD_WEIGHTS, BODY_WEIGHTS,
 )
 from backend.journal.models.mood_cache import MoodCache
 from backend.journal.services.session_service import session_manager
@@ -24,6 +25,7 @@ router = APIRouter(prefix="/api/journal/mood-checkins", tags=["mood-checkins"])
 
 class CheckInRequest(BaseModel):
     moods: list[str]
+    body_moods: list[str] | None = None
     note: str | None = None
 
 
@@ -35,12 +37,29 @@ class DayMood(BaseModel):
     checkin_count: int
 
 
+def _checkin_to_dict(c: MoodCheckIn) -> dict:
+    """Einheitliche Serialisierung eines Check-Ins."""
+    result = {
+        "id": c.id, "timestamp": c.timestamp.isoformat(),
+        "moods": json.loads(c.moods), "score": c.score,
+        "note": c.note,
+    }
+    result["body_moods"] = json.loads(c.body_moods) if c.body_moods else []
+    result["body_score"] = c.body_score
+    return result
+
+
 @router.get("/categories")
 async def get_categories():
-    """Verfuegbare Mood-Kategorien mit Gewichtung."""
+    """Verfuegbare Mood- und Body-Kategorien mit Gewichtung."""
     positive = {k: v for k, v in MOOD_WEIGHTS.items() if v > 0}
     negative = {k: v for k, v in MOOD_WEIGHTS.items() if v < 0}
-    return {"positive": positive, "negative": negative}
+    body_pos = {k: v for k, v in BODY_WEIGHTS.items() if v > 0}
+    body_neg = {k: v for k, v in BODY_WEIGHTS.items() if v < 0}
+    return {
+        "positive": positive, "negative": negative,
+        "body_positive": body_pos, "body_negative": body_neg,
+    }
 
 
 @router.post("")
@@ -49,33 +68,30 @@ async def create_checkin(
     db: Session = Depends(get_journal_db),
 ):
     """Neuen Mood Check-In erstellen."""
-    # Nur gueltige Moods akzeptieren
     valid_moods = [m for m in req.moods if m in MOOD_WEIGHTS]
-    if not valid_moods:
+    valid_body = [m for m in (req.body_moods or []) if m in BODY_WEIGHTS]
+
+    # Mindestens Moods oder Body-Moods muessen vorhanden sein
+    if not valid_moods and not valid_body:
         return {"error": "Keine gueltigen Moods ausgewaehlt"}
 
     now = datetime.now(ZoneInfo("Europe/Zurich"))
     score = calculate_mood_score(valid_moods)
+    body_score = calculate_body_score(valid_body) if valid_body else None
 
     checkin = MoodCheckIn(
         timestamp=now,
         date=now.strftime("%Y-%m-%d"),
         moods=json.dumps(valid_moods),
         score=score,
+        body_moods=json.dumps(valid_body) if valid_body else None,
+        body_score=body_score,
         note=req.note,
     )
     db.add(checkin)
     db.commit()
     db.refresh(checkin)
-
-    return {
-        "id": checkin.id,
-        "timestamp": checkin.timestamp.isoformat(),
-        "date": checkin.date,
-        "moods": valid_moods,
-        "score": score,
-        "note": checkin.note,
-    }
+    return _checkin_to_dict(checkin)
 
 
 @router.get("/today")
@@ -85,15 +101,7 @@ async def get_today_checkins(db: Session = Depends(get_journal_db)):
     checkins = db.query(MoodCheckIn).filter(
         MoodCheckIn.date == today
     ).order_by(MoodCheckIn.timestamp).all()
-
-    return [
-        {
-            "id": c.id, "timestamp": c.timestamp.isoformat(),
-            "moods": json.loads(c.moods), "score": c.score,
-            "note": c.note,
-        }
-        for c in checkins
-    ]
+    return [_checkin_to_dict(c) for c in checkins]
 
 
 @router.get("/last-checkin")
@@ -174,14 +182,7 @@ async def get_checkins_by_date(
     checkins = db.query(MoodCheckIn).filter(
         MoodCheckIn.date == date
     ).order_by(MoodCheckIn.timestamp).all()
-    return [
-        {
-            "id": c.id, "timestamp": c.timestamp.isoformat(),
-            "moods": json.loads(c.moods), "score": c.score,
-            "note": c.note,
-        }
-        for c in checkins
-    ]
+    return [_checkin_to_dict(c) for c in checkins]
 
 
 @router.delete("/{checkin_id}")
