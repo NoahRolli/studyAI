@@ -6,13 +6,14 @@ import { useState, useCallback } from 'react'
 import { useLanguage } from '../hooks/useLanguage'
 import RelationSuggestions from '../components/relations/RelationSuggestions'
 import MetisLinksTab from '../components/metis/MetisLinksTab'
+import UnlinkedMentions from '../components/relations/UnlinkedMentions'
 import OntologyOverview from '../components/relations/OntologyOverview'
 import OntologyEgoGraph from '../components/relations/OntologyEgoGraph'
 import { getMarkersVisible, setMarkersVisible } from '../utils/ontologyMarkers'
 
 export default function OntologyPage() {
   const { language } = useLanguage()
-  const [activeTab, setActiveTab] = useState<'overview' | 'suggestions' | 'metis' | 'graph'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'suggestions' | 'mentions' | 'metis' | 'graph'>('overview')
   const [showMarkers, setShowMarkers] = useState(getMarkersVisible)
   const [graphFocus, setGraphFocus] = useState<string | null>(null)
 
@@ -26,6 +27,7 @@ export default function OntologyPage() {
   const tabs = [
     { key: 'overview' as const, label: language === 'de' ? 'Übersicht' : 'Overview' },
     { key: 'suggestions' as const, label: language === 'de' ? 'Vorschläge' : 'Suggestions' },
+    { key: 'mentions' as const, label: language === 'de' ? 'Erwähnungen' : 'Mentions' },
     { key: 'metis' as const, label: 'Metis Links' },
     { key: 'graph' as const, label: 'Graph' },
   ]
@@ -66,6 +68,9 @@ export default function OntologyPage() {
       )}
       {activeTab === 'suggestions' && (
         <RelationSuggestions onChanged={() => {}} />
+      )}
+      {activeTab === 'mentions' && (
+        <UnlinkedMentions />
       )}
       {activeTab === 'metis' && (
         <MetisLinksTab />
