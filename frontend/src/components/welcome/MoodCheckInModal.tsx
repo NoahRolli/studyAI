@@ -1,5 +1,6 @@
 // MoodCheckInModal — Stimmungserfassung auf der Welcome-Page
-// Kästchen fuer Mood-Kategorien, Score wird automatisch berechnet
+// 24 Mood-Kategorien in 7 Clustern (Energie/Ruhe/Kognitiv/Emotion/Antrieb/Sozial/Stress)
+// Labels via i18n, Score wird automatisch berechnet
 // 2h Cooldown via localStorage, sanft wegklickbar
 
 import { useState, useEffect } from 'react'
@@ -11,29 +12,27 @@ const COOLDOWN_MS = 2 * 60 * 60 * 1000
 const DISMISS_KEY = 'pallas-mood-dismiss-count'
 const MAX_DISMISS_PER_DAY = 3
 
-// Labels fuer die Mood-Kategorien
-const MOOD_LABELS: Record<string, { de: string; en: string }> = {
-  energized: { de: 'Energiegeladen', en: 'Energized' },
-  calm: { de: 'Ruhig', en: 'Calm' },
-  focused: { de: 'Fokussiert', en: 'Focused' },
-  happy: { de: 'Glücklich', en: 'Happy' },
-  motivated: { de: 'Motiviert', en: 'Motivated' },
-  creative: { de: 'Kreativ', en: 'Creative' },
-  social: { de: 'Gesellig', en: 'Social' },
-  tired: { de: 'Müde', en: 'Tired' },
-  stressed: { de: 'Gestresst', en: 'Stressed' },
-  anxious: { de: 'Ängstlich', en: 'Anxious' },
-  sad: { de: 'Traurig', en: 'Sad' },
-  irritated: { de: 'Gereizt', en: 'Irritated' },
-  unfocused: { de: 'Unkonzentriert', en: 'Unfocused' },
-  lonely: { de: 'Einsam', en: 'Lonely' },
-}
+// Cluster-Definition: cluster-key + zugehoerige Mood-Keys
+// Reihenfolge bestimmt Anzeige-Reihenfolge im Modal
+type Cluster = { key: string; moods: string[] }
 
-const POSITIVE = ['energized', 'calm', 'focused', 'happy', 'motivated', 'creative', 'social']
-const NEGATIVE = ['tired', 'stressed', 'anxious', 'sad', 'irritated', 'unfocused', 'lonely']
+const POSITIVE_CLUSTERS: Cluster[] = [
+  { key: 'energy', moods: ['energized', 'refreshed'] },
+  { key: 'calm', moods: ['calm', 'grounded'] },
+  { key: 'emotion', moods: ['happy', 'grateful', 'proud'] },
+  { key: 'drive', moods: ['focused', 'motivated', 'creative'] },
+  { key: 'social', moods: ['social', 'connected'] },
+]
+
+const NEGATIVE_CLUSTERS: Cluster[] = [
+  { key: 'energy', moods: ['tired', 'exhausted', 'restless'] },
+  { key: 'stress', moods: ['stressed', 'anxious', 'overwhelmed'] },
+  { key: 'emotion', moods: ['sad', 'irritated', 'angry', 'lonely'] },
+  { key: 'cognitive', moods: ['unfocused', 'foggy'] },
+]
 
 export default function MoodCheckInModal() {
-  const { language } = useLanguage()
+  const { t } = useLanguage()
   const [visible, setVisible] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [note, setNote] = useState('')
@@ -47,14 +46,12 @@ export default function MoodCheckInModal() {
       const elapsed = Date.now() - parseInt(lastStr, 10)
       if (elapsed < COOLDOWN_MS) return
     }
-    // Dismiss-Zaehler pruefen
     const dismissData = localStorage.getItem(DISMISS_KEY)
     if (dismissData) {
       const { date, count } = JSON.parse(dismissData)
       const today = new Date().toISOString().slice(0, 10)
       if (date === today && count >= MAX_DISMISS_PER_DAY) return
     }
-    // Kurze Verzoegerung damit Welcome-Animation fertig ist
     const timer = setTimeout(() => setVisible(true), 2500)
     return () => clearTimeout(timer)
   }, [])
@@ -100,94 +97,126 @@ export default function MoodCheckInModal() {
 
   if (!visible) return null
 
+  // Mood-Button — Render-Helper, polarity bestimmt Farbe bei Auswahl
+  const moodButton = (mood: string, polarity: 'positive' | 'negative') => {
+    const isOn = selected.has(mood)
+    const onColor = polarity === 'positive' ? 'var(--color-success)' : 'var(--color-danger)'
+    const onBg = polarity === 'positive' ? 'rgba(0, 200, 100, 0.15)' : 'rgba(255, 80, 80, 0.15)'
+    return (
+      <button key={mood} onClick={() => toggleMood(mood)}
+        className="text-xs px-2 py-1 rounded border transition-all"
+        style={{
+          borderColor: isOn ? onColor : 'var(--color-border)',
+          background: isOn ? onBg : 'transparent',
+          color: isOn ? onColor : 'var(--color-text-secondary)',
+          fontSize: '0.7rem',
+        }}>
+        {t.moodCheckIn.moods[mood as keyof typeof t.moodCheckIn.moods] || mood}
+      </button>
+    )
+  }
+
+  // Cluster-Block — Header + Buttons
+  const renderCluster = (cluster: Cluster, polarity: 'positive' | 'negative') => (
+    <div key={cluster.key} className="mb-2">
+      <p className="mb-1" style={{
+        color: 'var(--color-text-muted)',
+        fontSize: '0.6rem',
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase',
+      }}>
+        {t.moodCheckIn.clusters[cluster.key as keyof typeof t.moodCheckIn.clusters]}
+      </p>
+      <div className="flex flex-wrap gap-1">
+        {cluster.moods.map(m => moodButton(m, polarity))}
+      </div>
+    </div>
+  )
+
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center"
+    <div className="fixed inset-0 z-40 flex items-center justify-center p-4"
       style={{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)' }}>
-      <div className="rounded-lg border p-5 w-full max-w-md mx-4 animate-fade-in"
+      <div className="rounded-lg border w-full max-w-2xl animate-fade-in flex flex-col"
         style={{
           background: 'var(--color-bg-elevated)',
           borderColor: 'var(--color-border-glow)',
           boxShadow: '0 0 30px rgba(0, 212, 255, 0.1)',
+          maxHeight: '90vh',
         }}>
         {saved ? (
-          <div className="text-center py-6">
+          <div className="text-center py-8 px-5">
             <p className="text-lg" style={{ color: 'var(--color-success)' }}>
-              {language === 'de' ? 'Gespeichert' : 'Saved'}
+              {t.moodCheckIn.saved}
             </p>
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="hud-title text-glow text-sm">
-                {language === 'de' ? 'WIE GEHT ES DIR?' : 'HOW ARE YOU?'}
-              </h3>
+            {/* Header (sticky) */}
+            <div className="flex items-center justify-between p-4 border-b"
+              style={{ borderColor: 'var(--color-border)' }}>
+              <div>
+                <h3 className="hud-title text-glow text-sm">
+                  {t.moodCheckIn.title}
+                </h3>
+                <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                  {t.moodCheckIn.subtitle}
+                </p>
+              </div>
               <button onClick={handleDismiss}
-                className="text-xs px-2 py-1"
+                className="text-xs px-2 py-1 flex-shrink-0 ml-2"
                 style={{ color: 'var(--color-text-muted)' }}>
-                {language === 'de' ? 'Nicht jetzt' : 'Not now'}
+                {t.moodCheckIn.dismiss}
               </button>
             </div>
 
-            {/* Positive Moods */}
-            <div className="mb-3">
-              <p className="text-xs mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
-                {language === 'de' ? 'Positiv' : 'Positive'}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {POSITIVE.map(m => (
-                  <button key={m} onClick={() => toggleMood(m)}
-                    className="text-xs px-2.5 py-1 rounded border transition-all"
-                    style={{
-                      borderColor: selected.has(m) ? 'var(--color-success)' : 'var(--color-border)',
-                      background: selected.has(m) ? 'rgba(0, 200, 100, 0.15)' : 'transparent',
-                      color: selected.has(m) ? 'var(--color-success)' : 'var(--color-text-secondary)',
-                    }}>
-                    {MOOD_LABELS[m]?.[language] || m}
-                  </button>
-                ))}
+            {/* Scrollbarer Cluster-Bereich */}
+            <div className="overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2">
+              {/* Positive Spalte */}
+              <div>
+                <p className="mb-2 font-medium" style={{
+                  color: 'var(--color-success)',
+                  fontSize: '0.7rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                }}>
+                  {t.moodCheckIn.positive}
+                </p>
+                {POSITIVE_CLUSTERS.map(c => renderCluster(c, 'positive'))}
+              </div>
+
+              {/* Negative Spalte */}
+              <div>
+                <p className="mb-2 font-medium" style={{
+                  color: 'var(--color-danger)',
+                  fontSize: '0.7rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                }}>
+                  {t.moodCheckIn.negative}
+                </p>
+                {NEGATIVE_CLUSTERS.map(c => renderCluster(c, 'negative'))}
               </div>
             </div>
 
-            {/* Negative Moods */}
-            <div className="mb-4">
-              <p className="text-xs mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
-                {language === 'de' ? 'Negativ' : 'Negative'}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {NEGATIVE.map(m => (
-                  <button key={m} onClick={() => toggleMood(m)}
-                    className="text-xs px-2.5 py-1 rounded border transition-all"
-                    style={{
-                      borderColor: selected.has(m) ? 'var(--color-danger)' : 'var(--color-border)',
-                      background: selected.has(m) ? 'rgba(255, 80, 80, 0.15)' : 'transparent',
-                      color: selected.has(m) ? 'var(--color-danger)' : 'var(--color-text-secondary)',
-                    }}>
-                    {MOOD_LABELS[m]?.[language] || m}
-                  </button>
-                ))}
-              </div>
+            {/* Footer (sticky): Notiz + Speichern */}
+            <div className="p-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+              <input type="text" value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder={t.moodCheckIn.notePlaceholder}
+                maxLength={200}
+                className="w-full text-xs px-3 py-2 rounded border mb-3"
+                style={{
+                  background: 'var(--color-bg-surface)',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text-primary)',
+                }} />
+              <button onClick={handleSave}
+                disabled={selected.size === 0 || saving}
+                className="hud-btn text-sm w-full">
+                {saving ? t.moodCheckIn.saving : t.moodCheckIn.save}
+                {selected.size > 0 && !saving && ` (${selected.size})`}
+              </button>
             </div>
-
-            {/* Optionaler Kommentar */}
-            <input type="text" value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={language === 'de' ? 'Kurzer Kommentar (optional)' : 'Short comment (optional)'}
-              maxLength={200}
-              className="w-full text-xs px-3 py-2 rounded border mb-3"
-              style={{
-                background: 'var(--color-bg-surface)',
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text-primary)',
-              }} />
-
-            {/* Speichern */}
-            <button onClick={handleSave}
-              disabled={selected.size === 0 || saving}
-              className="hud-btn text-sm w-full">
-              {saving
-                ? (language === 'de' ? 'Speichern...' : 'Saving...')
-                : (language === 'de' ? 'Speichern' : 'Save')}
-            </button>
           </>
         )}
       </div>
