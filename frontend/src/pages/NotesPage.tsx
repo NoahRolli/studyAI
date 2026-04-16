@@ -225,7 +225,7 @@ function NotesPage() {
                 ← {t.common.back}
               </button>
               <button onClick={() => setFullscreen(true)}
-                className="text-xs px-2 py-1 rounded border"
+                className="text-xs px-2 py-1 rounded border ml-auto"
                 style={{
                   color: 'var(--color-text-muted)',
                   borderColor: 'var(--color-border)',
