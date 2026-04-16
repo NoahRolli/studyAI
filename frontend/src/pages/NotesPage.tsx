@@ -1,6 +1,7 @@
 // NotesPage — Orchestrator für das Notizen-Modul
-// Mobile: Liste ODER Editor (Vollbild), Desktop: nebeneinander
-// Cmd+K: QuickSwitcher Modal für schnelle Navigation
+// Mobile: Liste ODER Editor, Desktop: nebeneinander
+// Fullscreen-Modus: Editor überdeckt alles (Sidebar, Liste)
+// Cmd+K: QuickSwitcher Modal
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -27,6 +28,7 @@ function NotesPage() {
   const [saving, setSaving] = useState(false)
   const [savedMsg, setSavedMsg] = useState(false)
   const [showSwitcher, setShowSwitcher] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -37,10 +39,14 @@ function NotesPage() {
         e.preventDefault()
         setShowSwitcher(v => !v)
       }
+      // Escape beendet Fullscreen
+      if (e.key === 'Escape' && fullscreen) {
+        setFullscreen(false)
+      }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [fullscreen])
 
   // --- API ---
   async function loadNotes() {
@@ -81,7 +87,7 @@ function NotesPage() {
     if (!confirm(t.notes.deleteConfirm)) return
     try {
       await del(`/api/notes/${id}`)
-      if (selectedNote?.id === id) setSelectedNote(null)
+      if (selectedNote?.id === id) { setSelectedNote(null); setFullscreen(false) }
       await loadNotes()
     } catch { /* ignore */ }
   }
@@ -121,12 +127,12 @@ function NotesPage() {
 
   // Zurueck zur Liste (Mobile)
   function handleBack() {
-    // Auto-Save auslösen falls pending
     if (saveTimer.current && selectedNote) {
       clearTimeout(saveTimer.current)
       saveNote(selectedNote)
     }
     setSelectedNote(null)
+    setFullscreen(false)
   }
 
   // --- Lifecycle ---
@@ -142,9 +148,50 @@ function NotesPage() {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
   }, [])
 
+  // --- Fullscreen Editor ---
+  if (fullscreen && selectedNote) {
+    return (
+      <div className="fixed inset-0 z-30 flex flex-col hud-grid-bg"
+        style={{ backgroundColor: 'var(--color-bg-deep)' }}>
+        {/* Fullscreen Header */}
+        <div className="flex items-center justify-between px-4 py-2 border-b"
+          style={{ borderColor: 'var(--color-border)' }}>
+          <button onClick={handleBack}
+            className="text-sm" style={{ color: 'var(--color-primary)' }}>
+            ← {t.common.back}
+          </button>
+          <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            {saving ? '...' : savedMsg ? '✓' : ''}
+          </span>
+          <button onClick={() => setFullscreen(false)}
+            className="text-sm px-2 py-1 rounded border"
+            style={{
+              color: 'var(--color-primary)',
+              borderColor: 'var(--color-border)',
+            }}>
+            {t.common.close}
+          </button>
+        </div>
+        {/* Editor Vollbild */}
+        <div className="flex-1 overflow-auto p-4">
+          <NoteEditor
+            title={selectedNote.title}
+            content={selectedNote.content}
+            saving={saving}
+            savedMsg={savedMsg}
+            onTitleChange={handleTitleChange}
+            onContentChange={handleContentChange}
+            onWikiLinkClick={handleWikiLinkClick}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // --- Normales Layout ---
   return (
     <div className="animate-fade-in flex gap-0 md:gap-6 h-[calc(100vh-3rem)]">
-      {/* Liste: auf Mobile nur sichtbar wenn keine Note ausgewaehlt */}
+      {/* Liste */}
       <div className={`${selectedNote ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-72 md:flex-shrink-0`}>
         <NotesList
           notes={notes}
@@ -158,7 +205,7 @@ function NotesPage() {
         />
       </div>
 
-      {/* Editor: auf Mobile nur sichtbar wenn Note ausgewaehlt */}
+      {/* Editor */}
       <div className={`${selectedNote ? 'flex' : 'hidden md:flex'} flex-1 flex-col hud-card overflow-hidden`}
         style={{ minHeight: 0 }}>
         {!selectedNote ? (
@@ -169,12 +216,23 @@ function NotesPage() {
           </div>
         ) : (
           <>
-            {/* Zurueck-Button nur auf Mobile */}
-            <button onClick={handleBack}
-              className="md:hidden flex items-center gap-1 px-3 py-2 text-sm"
-              style={{ color: 'var(--color-primary)' }}>
-              ← {t.common.back}
-            </button>
+            {/* Mobile: Zurueck + Fullscreen Buttons */}
+            <div className="flex items-center justify-between px-3 py-2 md:py-0 border-b md:border-0"
+              style={{ borderColor: 'var(--color-border)' }}>
+              <button onClick={handleBack}
+                className="md:hidden text-sm"
+                style={{ color: 'var(--color-primary)' }}>
+                ← {t.common.back}
+              </button>
+              <button onClick={() => setFullscreen(true)}
+                className="text-xs px-2 py-1 rounded border"
+                style={{
+                  color: 'var(--color-text-muted)',
+                  borderColor: 'var(--color-border)',
+                }}>
+                ⛶
+              </button>
+            </div>
             <NoteEditor
               title={selectedNote.title}
               content={selectedNote.content}
