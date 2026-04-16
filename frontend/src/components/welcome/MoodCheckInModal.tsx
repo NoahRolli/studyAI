@@ -20,7 +20,8 @@ const POSITIVE_CLUSTERS: Cluster[] = [
   { key: 'energy', moods: ['energized', 'refreshed'] },
   { key: 'calm', moods: ['calm', 'grounded'] },
   { key: 'emotion', moods: ['happy', 'grateful', 'proud'] },
-  { key: 'drive', moods: ['focused', 'motivated', 'creative'] },
+  { key: 'cognitive', moods: ['focused', 'clear', 'curious'] },
+  { key: 'drive', moods: ['motivated', 'creative'] },
   { key: 'social', moods: ['social', 'connected'] },
 ]
 
@@ -28,7 +29,7 @@ const NEGATIVE_CLUSTERS: Cluster[] = [
   { key: 'energy', moods: ['tired', 'exhausted', 'restless'] },
   { key: 'stress', moods: ['stressed', 'anxious', 'overwhelmed'] },
   { key: 'emotion', moods: ['sad', 'irritated', 'angry', 'lonely'] },
-  { key: 'cognitive', moods: ['unfocused', 'foggy'] },
+  { key: 'cognitive', moods: ['unfocused', 'foggy', 'overthinking', 'ruminating', 'scattered'] },
 ]
 
 export default function MoodCheckInModal() {

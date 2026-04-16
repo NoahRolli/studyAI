@@ -460,6 +460,11 @@ const en = {
       unfocused: 'Unfocused',
       foggy: 'Foggy',
       lonely: 'Lonely',
+      clear: 'Clear-headed',
+      curious: 'Curious',
+      overthinking: 'Overthinking',
+      ruminating: 'Ruminating',
+      scattered: 'Scattered',
     },
   },
 } as const

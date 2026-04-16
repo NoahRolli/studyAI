@@ -461,6 +461,11 @@ const de = {
       unfocused: 'Unkonzentriert',
       foggy: 'Benebelt',
       lonely: 'Einsam',
+      clear: 'Klarer Kopf',
+      curious: 'Neugierig',
+      overthinking: 'Zu viele Gedanken',
+      ruminating: 'Grübelnd',
+      scattered: 'Zerstreut',
     },
   },
 } as const

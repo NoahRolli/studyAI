@@ -9,10 +9,10 @@ from backend.journal.models.journal_database import JournalBase
 
 
 # Mood-Kategorien mit Gewichtung fuer Score-Berechnung
-# Erweitert auf 24 Kategorien (12 positiv + 12 negativ)
-# Cluster: Energie / Ruhe / Kognitiv / Emotion / Antrieb / Sozial
+# 29 Kategorien (14 positiv + 15 negativ)
+# Cluster: Energie / Ruhe / Kognitiv / Emotion / Antrieb / Sozial / Stress
 MOOD_WEIGHTS = {
-    # === POSITIV (12) ===
+    # === POSITIV (14) ===
     # Energie
     "energized": 2.0,
     "refreshed": 1.5,
@@ -21,6 +21,8 @@ MOOD_WEIGHTS = {
     "grounded": 1.5,
     # Kognitiv
     "focused": 1.5,
+    "clear": 1.0,
+    "curious": 1.0,
     # Emotion
     "happy": 2.0,
     "grateful": 1.5,
@@ -32,7 +34,7 @@ MOOD_WEIGHTS = {
     "social": 1.0,
     "connected": 1.5,
 
-    # === NEGATIV (12) ===
+    # === NEGATIV (15) ===
     # Energie
     "tired": -1.5,
     "exhausted": -2.0,
@@ -48,6 +50,9 @@ MOOD_WEIGHTS = {
     # Kognitiv
     "unfocused": -1.0,
     "foggy": -1.5,
+    "overthinking": -1.5,
+    "ruminating": -2.0,
+    "scattered": -1.0,
     # Sozial
     "lonely": -1.5,
 }
