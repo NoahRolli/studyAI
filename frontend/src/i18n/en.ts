@@ -415,7 +415,7 @@ const en = {
     pinNode: 'Pin position',
     unpinNode: 'Unpin position',
   },
-  // Mood Check-In — 24 categories grouped in clusters
+  // Mood Check-In — 29 moods + 13 body sensations
   moodCheckIn: {
     title: 'How are you feeling right now?',
     subtitle: 'Select what applies (multiple choice)',
@@ -426,6 +426,8 @@ const en = {
     dismiss: 'Not now',
     positive: 'Positive',
     negative: 'Negative',
+    tabMood: 'Mood',
+    tabBody: 'Body',
     clusters: {
       energy: 'Energy',
       calm: 'Calm',
@@ -434,6 +436,10 @@ const en = {
       drive: 'Drive',
       social: 'Social',
       stress: 'Stress',
+      sleep: 'Sleep',
+      pain: 'Pain',
+      digestion: 'Digestion',
+      general: 'General',
     },
     moods: {
       energized: 'Energized',
@@ -465,6 +471,21 @@ const en = {
       overthinking: 'Overthinking',
       ruminating: 'Ruminating',
       scattered: 'Scattered',
+    },
+    bodyMoods: {
+      well_slept: 'Well rested',
+      energetic: 'Energetic (physical)',
+      lightness: 'Lightness',
+      poorly_slept: 'Poorly slept',
+      physical_fatigue: 'Physically tired',
+      headache: 'Headache',
+      neck_tension: 'Neck tension',
+      back_pain: 'Back pain',
+      sore_muscles: 'Sore muscles',
+      no_appetite: 'No appetite',
+      nausea: 'Nausea',
+      dizziness: 'Dizziness',
+      eye_strain: 'Eye strain',
     },
   },
 } as const

@@ -416,7 +416,7 @@ const de = {
     pinNode: 'Position fixieren',
     unpinNode: 'Position freigeben',
   },
-  // Mood Check-In — 24 Kategorien in Clustern
+  // Mood Check-In — 29 Stimmungen + 13 Koerperempfindungen
   moodCheckIn: {
     title: 'Wie geht es dir gerade?',
     subtitle: 'Wähle aus was zutrifft (Mehrfachauswahl)',
@@ -427,6 +427,8 @@ const de = {
     dismiss: 'Nicht jetzt',
     positive: 'Positiv',
     negative: 'Negativ',
+    tabMood: 'Stimmung',
+    tabBody: 'Körper',
     clusters: {
       energy: 'Energie',
       calm: 'Ruhe',
@@ -435,6 +437,10 @@ const de = {
       drive: 'Antrieb',
       social: 'Sozial',
       stress: 'Stress',
+      sleep: 'Schlaf',
+      pain: 'Schmerz',
+      digestion: 'Verdauung',
+      general: 'Allgemein',
     },
     moods: {
       energized: 'Energiegeladen',
@@ -466,6 +472,21 @@ const de = {
       overthinking: 'Zu viele Gedanken',
       ruminating: 'Grübelnd',
       scattered: 'Zerstreut',
+    },
+    bodyMoods: {
+      well_slept: 'Gut geschlafen',
+      energetic: 'Energiegeladen (körperlich)',
+      lightness: 'Leichtigkeit',
+      poorly_slept: 'Schlecht geschlafen',
+      physical_fatigue: 'Körperlich müde',
+      headache: 'Kopfschmerzen',
+      neck_tension: 'Verspannung/Nacken',
+      back_pain: 'Rückenschmerzen',
+      sore_muscles: 'Muskelkater',
+      no_appetite: 'Appetitlos',
+      nausea: 'Übelkeit',
+      dizziness: 'Schwindel',
+      eye_strain: 'Augenmüdigkeit',
     },
   },
 } as const
