@@ -25,7 +25,7 @@ def _find_similar_pairs(concepts: list, threshold: float) -> list[dict]:
             c1, emb1 = with_emb[i]
             c2, emb2 = with_emb[j]
             sim = cosine_similarity(emb1, emb2)
-            if sim >= threshold:
+            if sim >= threshold and sim < 0.999:
                 pairs.append({
                     "concept_a": {"id": c1.id, "name": c1.name},
                     "concept_b": {"id": c2.id, "name": c2.name},
