@@ -100,6 +100,17 @@ function Journal() {
                 {t.journal.medTracking}
               </span>
             </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={s.weatherEnabled}
+                onChange={s.toggleWeather}
+                className="w-4 h-4 rounded accent-[var(--color-primary)]"
+              />
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                Weather
+              </span>
+            </label>
             <button onClick={s.lockJournal} className="hud-btn hud-btn-danger">
               {t.journal.lock}
             </button>

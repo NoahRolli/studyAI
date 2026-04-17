@@ -53,6 +53,9 @@ export default function useJournalState() {
 
   // Medikamenten-State
   const [medEnabled, setMedEnabled] = useState(false)
+  const [weatherEnabled, setWeatherEnabled] = useState(
+    () => localStorage.getItem('pallas-weather-enabled') === 'true'
+  )
   const [medications, setMedications] = useState<Medication[]>([])
 
   // Medikamenten-Erinnerung — wird nach Unlock getriggert
@@ -229,6 +232,14 @@ export default function useJournalState() {
     setShowMedReminder(false)
   }
 
+  function toggleWeather() {
+    setWeatherEnabled(prev => {
+      const next = !prev
+      localStorage.setItem('pallas-weather-enabled', String(next))
+      return next
+    })
+  }
+
   // --- Init ---
   useEffect(() => { loadStatus() }, [])
 
@@ -237,11 +248,12 @@ export default function useJournalState() {
     status, password, setPassword, entries, loading, error, message,
     activeTab, setActiveTab, showForm, setShowForm, autoTitle, setAutoTitle,
     editingId, editEntry, setEditEntry, medEnabled, medications, showMedReminder,
+    weatherEnabled,
     // Analytics (durchgereicht)
     analytics,
     // Aktionen
     setupJournal, unlockJournal, lockJournal, resetState,
     createEntry, deleteEntry, startEdit, cancelEdit, saveEdit,
-    loadMedications, toggleMedTracker, dismissMedReminder,
+    loadMedications, toggleMedTracker, dismissMedReminder, toggleWeather,
   }
 }
