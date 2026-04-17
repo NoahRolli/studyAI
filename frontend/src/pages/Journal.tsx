@@ -232,6 +232,7 @@ function Journal() {
               onAutoTitleChange={s.setAutoTitle}
               medEnabled={s.medEnabled}
               medications={s.medications}
+              weatherEnabled={s.weatherEnabled}
             />
           )}
 
@@ -275,6 +276,7 @@ function Journal() {
           {s.activeTab === 'medications' && s.medEnabled && (
             <MedicationTracker
               medications={s.medications}
+              weatherEnabled={s.weatherEnabled}
               onReload={s.loadMedications}
             />
           )}

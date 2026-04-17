@@ -3,6 +3,8 @@
 // Zeigt Tage mit Entry-Dots (Mood-Glow) und Medikamenten-Pillen
 
 import { useLanguage } from '../../hooks/useLanguage'
+import type { WeatherDay } from '../../hooks/useWeather'
+import { getWeatherIcon } from '../../hooks/useWeather'
 
 // Typen für Kalender-Daten
 interface CalendarEntry {
@@ -28,6 +30,7 @@ interface CalendarGridProps {
   selectedDate: string | null
   onDayClick: (dateStr: string) => void
   onDayDoubleClick: (dateStr: string) => void
+  weatherByDate: Record<string, WeatherDay>
 }
 
 // Tage im Monat berechnen
@@ -54,6 +57,7 @@ function getMoodStyle(score: number | undefined, active: boolean) {
 function CalendarGrid({
   year, month, calByDate, intakeByDate, moodById,
   moodActive, selectedDate, onDayClick, onDayDoubleClick,
+  weatherByDate,
 }: CalendarGridProps) {
   const { t } = useLanguage()
   const todayStr = new Date().toISOString().split('T')[0]
@@ -88,6 +92,7 @@ function CalendarGrid({
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
           const dayEntries = calByDate[dateStr] || []
           const dayIntakes = intakeByDate[dateStr] || []
+          const weather = weatherByDate[dateStr]
           const isToday = dateStr === todayStr
           const isFuture = dateStr > todayStr
           const isSelected = dateStr === selectedDate
@@ -178,6 +183,29 @@ function CalendarGrid({
                       }}
                     />
                   ))}
+                </div>
+              )}
+
+              {/* Wetter + Mond */}
+              {weather && (
+                <div className="absolute bottom-1 left-1 flex items-center gap-0.5"
+                  title={weather.moon ? weather.moon.name_de : ''}>
+                  {weather.weather_key && (
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.55rem' }}>
+                      {getWeatherIcon(weather.weather_key)}
+                    </span>
+                  )}
+                  {weather.temp_max !== null && (
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.5rem' }}>
+                      {Math.round(weather.temp_max)}°
+                    </span>
+                  )}
+                  {weather.moon && (
+                    <span style={{ fontSize: '0.5rem' }}
+                      title={weather.moon.name_de}>
+                      {weather.moon.symbol}
+                    </span>
+                  )}
                 </div>
               )}
             </div>

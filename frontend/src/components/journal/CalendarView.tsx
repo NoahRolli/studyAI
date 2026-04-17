@@ -8,6 +8,7 @@ import { get } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { MoodResult, JournalEntry, JournalEntryCreate, Medication } from '../../types/models'
 import CalendarGrid from './CalendarGrid'
+import useWeather from '../../hooks/useWeather'
 import CalendarDayModal from './CalendarDayModal'
 
 // Kalender-Eintrag vom Backend (kein Content!)
@@ -42,6 +43,7 @@ interface CalendarViewProps {
   onAutoTitleChange: (val: boolean) => void
   medEnabled: boolean
   medications: Medication[]
+  weatherEnabled: boolean
 }
 
 // Ref-Handle für externe Steuerung
@@ -54,7 +56,7 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
     moods, moodsLoaded, onLoadMoods,
     entries, editingId, editEntry,
     onStartEdit, onSaveEdit, onCancelEdit, onDelete, onCreateEntry,
-    autoTitle, onAutoTitleChange, medEnabled, medications,
+    autoTitle, onAutoTitleChange, medEnabled, medications, weatherEnabled,
   }, ref) {
 
   const { t } = useLanguage()
@@ -69,6 +71,7 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
   const [modalOpen, setModalOpen] = useState(false)
 
   const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`
+  const { weatherByDate } = useWeather(monthStr, weatherEnabled)
   const todayStr = today.toISOString().split('T')[0]
 
   // Externe Steuerung: Suche kann einen Tag öffnen
@@ -187,6 +190,7 @@ const CalendarView = forwardRef<CalendarViewHandle, CalendarViewProps>(
         selectedDate={selectedDate}
         onDayClick={handleDayClick}
         onDayDoubleClick={handleDayDoubleClick}
+        weatherByDate={weatherByDate}
       />
 
       {loading && (
