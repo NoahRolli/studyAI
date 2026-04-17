@@ -6,8 +6,9 @@
 import { useState, useEffect } from 'react'
 import { post } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
+import type { Cluster } from './MoodClusterData'
 import {
-  Cluster, POSITIVE_CLUSTERS, NEGATIVE_CLUSTERS,
+  POSITIVE_CLUSTERS, NEGATIVE_CLUSTERS,
   BODY_POSITIVE_CLUSTERS, BODY_NEGATIVE_CLUSTERS,
 } from './MoodClusterData'
 
