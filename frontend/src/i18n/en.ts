@@ -419,6 +419,7 @@ const en = {
     autoClustering: 'Grouping...',
     view3D: '3D Sphere',
     viewList: 'List',
+    viewGraph: 'Graph',
     viewConcepts: 'Concepts',
     noConcepts: 'No concepts. Start a sync.',
     noNodes: 'No data yet. Sync first.',

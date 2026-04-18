@@ -420,6 +420,7 @@ const de = {
     autoClustering: 'Gruppiert...',
     view3D: '3D Sphäre',
     viewList: 'Liste',
+    viewGraph: 'Graph',
     viewConcepts: 'Konzepte',
     noConcepts: 'Keine Konzepte. Starte einen Sync.',
     noNodes: 'Noch keine Daten. Synchronisiere zuerst.',

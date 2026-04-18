@@ -30,6 +30,7 @@ export default function MetisToolbar({
   const views: { key: MetisViewMode; label: string }[] = [
     { key: '3d', label: t.metis.view3D },
     { key: 'list', label: t.metis.viewList },
+    { key: 'graph', label: t.metis.viewGraph },
   ]
 
   const anyLoading = syncing || linking || clustering

@@ -14,6 +14,7 @@ import MetisMiniMap3D from '../metis/MetisMiniMap3D'
 import { adaptGraph } from '../metis/journalMetisAdapter'
 import type { MetisViewMode, MetisNode } from '../../types/metis'
 import type { JournalMetisGraph } from '../../types/metis'
+import JournalEgoGraph from './JournalEgoGraph'
 
 const MetisSphere3D = lazy(() => import('../metis/MetisSphere3D'))
 
@@ -142,6 +143,8 @@ export default function JournalMetisContent() {
               {t.metis?.noNodes || 'Keine Nodes'}
             </p>
           </div>
+        ) : view === 'graph' ? (
+          <JournalEgoGraph graph={graph} selectedNode={selectedNode} onNodeClick={handleNodeClick} />
         ) : view === 'list' ? (
           <MetisListView graph={graph} />
         ) : (

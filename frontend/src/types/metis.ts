@@ -46,7 +46,7 @@ export interface MetisGraph {
 }
 
 // Ansichts-Modi
-export type MetisViewMode = '3d' | 'list' | 'concepts'
+export type MetisViewMode = '3d' | 'list' | 'concepts' | 'graph'
 
 
 // --- Konzept-Graph ---
