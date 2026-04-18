@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from backend.models.database import get_db
 from backend.models.sport_entry import SportEntry
 from backend.journal.models.journal_database import get_journal_db
-from backend.journal.models.mood_checkin import MoodCheckin
+from backend.journal.models.mood_checkin import MoodCheckIn
 from backend.services.sport_correlation_service import compute_correlation
 
 router = APIRouter(prefix="/api/insights", tags=["insights"])
@@ -39,8 +39,8 @@ def _load_scores(db: Session, start: date, end: date) -> tuple[dict[date, float]
     start_str = start.isoformat()
     end_str = end.isoformat()
     rows = (
-        db.query(MoodCheckin)
-        .filter(MoodCheckin.date >= start_str, MoodCheckin.date <= end_str)
+        db.query(MoodCheckIn)
+        .filter(MoodCheckIn.date >= start_str, MoodCheckIn.date <= end_str)
         .all()
     )
     mood_acc: dict[date, list[float]] = {}
