@@ -4,6 +4,7 @@
 
 import { useLanguage } from '../../hooks/useLanguage'
 import FuzzyBar from './FuzzyBar'
+import SportCorrelationCard from './SportCorrelationCard'
 import type {
   MedMoodResult,
   WeekdayMoodResult,
@@ -31,6 +32,11 @@ function moodWidth(score: number): number {
 
 function InsightCard({ type, data }: InsightCardProps) {
   const { t, language } = useLanguage()
+
+  // --- Sport-Korrelation (eigene Card) ---
+  if (type === 'sport-correlation') {
+    return <SportCorrelationCard data={data} />
+  }
 
   // --- Medikament ↔ Stimmung ---
   if (type === 'medication-mood') {

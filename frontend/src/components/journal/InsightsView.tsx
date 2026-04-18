@@ -50,6 +50,12 @@ function InsightsView({ results, loading, errors, onLoadInsight }: InsightsViewP
       title: t.insights.aiSummary,
       desc: t.insights.aiSummaryDesc,
     },
+    {
+      key: 'sport-correlation',
+      icon: '◐',
+      title: t.insights.sportCorr.title,
+      desc: t.insights.sportCorr.desc,
+    },
   ]
 
   return (

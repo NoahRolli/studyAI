@@ -20,6 +20,7 @@ export type InsightKey =
   | 'writing-patterns'
   | 'keyword-mood'
   | 'ai-summary'
+  | 'sport-correlation'
 
 export default function useJournalAnalytics() {
   const { language } = useLanguage()
@@ -98,6 +99,14 @@ export default function useJournalAnalytics() {
     }
   }
 
+  // --- Pfad-Mapping: Default ist Journal-Insights, Overrides für Cross-Module-Endpoints ---
+  function _insightPath(key: InsightKey): string {
+    if (key === 'sport-correlation') {
+      return `/api/insights/sport-correlation?days=30`
+    }
+    return `/api/journal/insights/${key}?language=${language}`
+  }
+
   // --- Insight laden (Toggle: laden oder zuklappen) ---
   async function loadInsight(key: InsightKey) {
     if (insightResults[key] !== undefined) {
@@ -116,9 +125,7 @@ export default function useJournalAnalytics() {
         delete next[key]
         return next
       })
-      const data = await post(
-        `/api/journal/insights/${key}?language=${language}`
-      )
+      const data = await post(_insightPath(key))
       setInsightResults((prev) => ({ ...prev, [key]: data }))
     } catch (err) {
       setInsightErrors((prev) => ({
