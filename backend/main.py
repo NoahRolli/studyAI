@@ -70,6 +70,9 @@ from backend.models.concept import ConceptSource  # noqa: F401
 from backend.models.concept import ConceptEdge  # noqa: F401
 from backend.models.concept import ConceptCluster  # noqa: F401
 from backend.models.concept import ConceptClusterMember  # noqa: F401
+from backend.models.llm import LLMProvider  # noqa: F401
+from backend.models.llm import LLMConversation  # noqa: F401
+from backend.models.llm import LLMMessage  # noqa: F401
 from backend.journal.models.journal_entry import JournalEntry  # noqa: F401
 from backend.journal.models.medication import Medication  # noqa: F401
 from backend.journal.models.medication import IntakeLog  # noqa: F401
