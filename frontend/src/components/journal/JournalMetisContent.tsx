@@ -27,7 +27,6 @@ export default function JournalMetisContent() {
   const [loading, setLoading] = useState(true)
   const [selectedNode, setSelectedNode] = useState<MetisNode | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
-  const [showPublic, setShowPublic] = useState(true)
   const [showLabels, setShowLabels] = useState(false)
   const [selectedCluster, setSelectedCluster] = useState<number | null>(null)
   const [selectedFolder, setSelectedFolder] = useState<number | null>(null)
@@ -78,7 +77,7 @@ export default function JournalMetisContent() {
     })
   }, [runTask, loadGraph])
 
-  const graph = adaptGraph(rawGraph, showPublic)
+  const graph = adaptGraph(rawGraph, false)  // V1 dauerhaft ausgeblendet — Toggle entfernt
 
   const handleNodeClick = useCallback((nodeId: number) => {
     setSelectedCluster(null); setSelectedFolder(null);
@@ -162,14 +161,6 @@ export default function JournalMetisContent() {
         {view !== 'list' && graph.nodes.length > 0 && (
           <>
             <div className="absolute top-2 left-2 z-20 flex flex-col gap-1">
-              <button className="hud-btn text-xs px-2 py-1"
-                style={{
-                  opacity: showPublic ? 1 : 0.4,
-                  borderColor: showPublic
-                    ? 'var(--color-primary)' : 'var(--color-border)',
-                }}
-                onClick={() => setShowPublic(!showPublic)} title="V1"
-              >V1</button>
               <button className="hud-btn text-xs px-2 py-1"
                 onClick={() => setShowLabels(!showLabels)}
                 style={{ opacity: showLabels ? 1 : 0.4 }}
