@@ -373,6 +373,8 @@ const en = {
       intensity_mid: 'Intensity 3 (medium)',
       intensity_high: 'Intensity 4–5 (hard)',
       note: 'Cohen\'s d: 0.2 small · 0.5 medium · 0.8 large. Requires at least 5 days per group.',
+      hintNoOverlap: 'No days with both sport AND mood data — track both in parallel for analysis.',
+      hintLowN: 'Small sample — effect size is computed starting at 5 days per group.',
     },
   },
   login: {

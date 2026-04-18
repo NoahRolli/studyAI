@@ -49,6 +49,7 @@ function SportCorrelationCard({ data }: Props) {
         <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
           {s.coverage}: {data.coverage.sport_days} {s.sportDays} · {data.coverage.mood_days} {s.moodDays} · {data.coverage.body_days} {s.bodyDays}
         </div>
+        {_thinDataHint(data, s)}
       </div>
 
       {/* Block 1: Same Day — Sport vs Ruhe */}
@@ -166,6 +167,35 @@ function IntensityBlock({ title, mood, body, s }: { title: string; mood: Record<
       </div>
     </div>
   )
+}
+
+
+// Zeigt einen Hinweis wenn die Datenlage für eine stabile Analyse zu dünn ist
+function _thinDataHint(data: SportCorrelationData, s: Record<string, string>) {
+  const sameDayNSport = data.same_day.mood.group_a.n
+  const sameDayNRest = data.same_day.mood.group_b.n
+  const hasOverlap = sameDayNSport > 0 && sameDayNRest > 0
+  const isStable = sameDayNSport >= 5 && sameDayNRest >= 5
+  if (!hasOverlap) {
+    return (
+      <div className="text-xs mt-2 px-2 py-1 rounded border"
+        style={{
+          color: 'var(--color-warning)',
+          borderColor: 'var(--color-warning)',
+          background: 'rgba(255, 191, 0, 0.08)',
+        }}>
+        {s.hintNoOverlap}
+      </div>
+    )
+  }
+  if (!isStable) {
+    return (
+      <div className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>
+        {s.hintLowN}
+      </div>
+    )
+  }
+  return null
 }
 
 export default SportCorrelationCard

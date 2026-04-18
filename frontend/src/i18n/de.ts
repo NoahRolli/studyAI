@@ -374,6 +374,8 @@ const de = {
       intensity_mid: 'Intensität 3 (mittel)',
       intensity_high: 'Intensität 4–5 (hart)',
       note: 'Cohen\'s d: 0.2 klein · 0.5 mittel · 0.8 gross. Benötigt mindestens 5 Tage pro Gruppe.',
+      hintNoOverlap: 'Keine Tage mit Sport UND Mood-Daten gefunden — dokumentiere beides parallel für eine Analyse.',
+      hintLowN: 'Stichprobe klein — Effektstärke wird erst ab 5 Tagen pro Gruppe berechnet.',
     },
   },
   login: {
