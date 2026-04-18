@@ -276,7 +276,6 @@ function Journal() {
           {s.activeTab === 'medications' && s.medEnabled && (
             <MedicationTracker
               medications={s.medications}
-              weatherEnabled={s.weatherEnabled}
               onReload={s.loadMedications}
             />
           )}

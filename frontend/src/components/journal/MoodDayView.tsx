@@ -125,7 +125,7 @@ export default function MoodDayView({ date, journalScore, onClose }: Props) {
                       border: '1px solid var(--color-border-glow)',
                       borderRadius: '6px', fontSize: '12px',
                     }}
-                    formatter={(v: number) => [v.toFixed(1), 'Score']} />
+                    formatter={(v: any) => [Number(v).toFixed(1), 'Score']} />
                   <Line type="monotone" dataKey="score"
                     stroke="var(--color-primary)" strokeWidth={2}
                     dot={{ r: 4, fill: 'var(--color-primary)', stroke: 'var(--color-primary)' }} />
