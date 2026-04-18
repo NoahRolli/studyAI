@@ -55,36 +55,9 @@ from backend.api.concepts_gaps import router as concepts_gaps_router
 from backend.api.concepts_merge import router as concepts_merge_router
 from backend.api.settings import router as settings_router
 from backend.api.weather import router as weather_router
-from backend.models.module import Module  # noqa: F401
-from backend.models.document import Document  # noqa: F401
-from backend.models.summary import Summary  # noqa: F401
-from backend.models.mindmap_node import MindmapNode  # noqa: F401
-from backend.models.folder import Folder  # noqa: F401
-from backend.models.calendar_event import CalendarEvent  # noqa: F401
-from backend.models.sport_entry import SportEntry  # noqa: F401
-from backend.models.note import Note  # noqa: F401
-from backend.models.relation import RelationType  # noqa: F401
-from backend.models.git_commit import GitCommit  # noqa: F401
-from backend.models.concept import Concept  # noqa: F401
-from backend.models.concept import ConceptSource  # noqa: F401
-from backend.models.concept import ConceptEdge  # noqa: F401
-from backend.models.concept import ConceptCluster  # noqa: F401
-from backend.models.concept import ConceptClusterMember  # noqa: F401
-from backend.models.llm import LLMProvider  # noqa: F401
-from backend.models.llm import LLMConversation  # noqa: F401
-from backend.models.llm import LLMMessage  # noqa: F401
-from backend.journal.models.journal_entry import JournalEntry  # noqa: F401
-from backend.journal.models.medication import Medication  # noqa: F401
-from backend.journal.models.medication import IntakeLog  # noqa: F401
-from backend.journal.models.medication import MedicationSettings  # noqa: F401
-from backend.journal.models.medication import DoseChange  # noqa: F401
-from backend.journal.models.mood_cache import MoodCache  # noqa: F401
-from backend.journal.models.storyline import StorylineCache  # noqa: F401
-from backend.journal.models.mood_checkin import MoodCheckIn  # noqa: F401
-from backend.journal.models.journal_metis_node import JournalMetisNode  # noqa: F401
-from backend.journal.models.journal_metis_edge import JournalMetisEdge  # noqa: F401
-from backend.journal.models.journal_metis_cluster import JournalMetisCluster  # noqa: F401
-from backend.journal.models.journal_metis_cluster import JournalMetisClusterMember  # noqa: F401
+# Alle Models importieren, damit SQLAlchemy-Relationships auflösen
+import backend.models.registry  # noqa: F401
+
 
 # Erstellt alle Tabellen in beiden Datenbanken beim Server-Start
 Base.metadata.create_all(bind=engine)
