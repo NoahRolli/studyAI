@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import WikiLink from '../notes/WikiLinkExtension'
 import { put } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 
@@ -13,9 +14,10 @@ interface Props {
   content: string
   onClose: () => void
   onSaved: () => void
+  onWikiLinkClick: (title: string) => void
 }
 
-export default function SummaryEditor({ summaryId, content, onClose, onSaved }: Props) {
+export default function SummaryEditor({ summaryId, content, onClose, onSaved, onWikiLinkClick }: Props) {
   const { t } = useLanguage()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -39,6 +41,7 @@ export default function SummaryEditor({ summaryId, content, onClose, onSaved }: 
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+      WikiLink.configure({ onWikiLinkClick }),
     ],
     content: content || '',
     onUpdate: ({ editor: ed }) => {

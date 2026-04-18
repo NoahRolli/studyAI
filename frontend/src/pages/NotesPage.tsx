@@ -142,8 +142,15 @@ function NotesPage() {
     if (openId) {
       loadNote(Number(openId))
       setSearchParams({}, { replace: true })
+      return
     }
-  }, [searchParams])
+    // ?search=Titel — WikiLink-Einstieg von anderen Modulen (z.B. Archiv)
+    const searchTitle = searchParams.get("search")
+    if (searchTitle && notes.length > 0) {
+      handleWikiLinkClick(searchTitle)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, notes])
   useEffect(() => {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
   }, [])

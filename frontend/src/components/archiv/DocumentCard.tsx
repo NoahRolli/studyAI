@@ -4,6 +4,7 @@
 // Key terms editierbar: loeschen (X) + hinzufuegen (Input)
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { put } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { Document, Summary } from '../../types/models'
@@ -33,6 +34,10 @@ export default function DocumentCard({
   onSummarize, onMindmap, onDelete, onReload,
 }: Props) {
   const { t } = useLanguage()
+  const navigate = useNavigate()
+  const handleWikiLinkClick = (title: string) => {
+    navigate('/notes?search=' + encodeURIComponent(title))
+  }
   const [editingDoc, setEditingDoc] = useState(false)
   const [docTitle, setDocTitle] = useState(doc.display_name || doc.filename)
   const [editingSummary, setEditingSummary] = useState(false)
@@ -176,6 +181,7 @@ export default function DocumentCard({
               content={summary.summary}
               onClose={() => setEditingContent(false)}
               onSaved={() => onReload?.()}
+              onWikiLinkClick={handleWikiLinkClick}
             />
           ) : (
             <p className="text-sm leading-relaxed cursor-pointer hover:opacity-80"
