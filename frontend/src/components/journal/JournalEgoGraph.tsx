@@ -1,6 +1,6 @@
 // JournalEgoGraph — Ego-zentrierte 2D-Ansicht des Journal-Metis-Graphen
 // Zeigt Fokus-Node zentral + alle direkt verbundenen Nachbarn radial
-// Klick auf Nachbar wechselt den Fokus + propagiert über onNodeClick
+// Klick auf Nachbar wechselt den Fokus + propagiert über onNodeClick (nur ID)
 // Reine Visualisierung — Daten kommen via Props vom übergeordneten Tab
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
@@ -19,14 +19,14 @@ const STATUS_COLORS: Record<string, string> = {
 interface Props {
   graph: MetisGraph
   selectedNode: MetisNode | null
-  onNodeClick: (node: MetisNode) => void
+  onNodeClick: (nodeId: number) => void
 }
 
 export default function JournalEgoGraph({ graph, selectedNode, onNodeClick }: Props) {
   const { language } = useLanguage()
 
   // Lokaler Fokus — initialisiert mit selectedNode oder erstem verfügbaren Node
-  const [focusId, setFocusId] = useState<string | null>(
+  const [focusId, setFocusId] = useState<number | null>(
     selectedNode?.id ?? graph.nodes[0]?.id ?? null
   )
 
@@ -46,21 +46,21 @@ export default function JournalEgoGraph({ graph, selectedNode, onNodeClick }: Pr
   // Nachbar-Nodes via Edges sammeln (rejected wird ignoriert)
   const neighbors = useMemo(() => {
     if (!focusNode) return []
-    const ids = new Set<string>()
+    const ids = new Set<number>()
     for (const e of graph.edges) {
       if (e.status === 'rejected') continue
-      if (e.source === focusNode.id) ids.add(e.target)
-      else if (e.target === focusNode.id) ids.add(e.source)
+      if (e.source_node_id === focusNode.id) ids.add(e.target_node_id)
+      else if (e.target_node_id === focusNode.id) ids.add(e.source_node_id)
     }
     return graph.nodes.filter(n => ids.has(n.id))
   }, [focusNode, graph.edges, graph.nodes])
 
-  // ReactFlow-Nodes: Zentrum + Kreis um Zentrum
+  // ReactFlow-Nodes: Zentrum + Kreis um Zentrum (IDs werden für RF zu String)
   const rfNodes: RFNode[] = useMemo(() => {
     if (!focusNode) return []
     const out: RFNode[] = [{
-      id: focusNode.id,
-      data: { label: focusNode.label },
+      id: String(focusNode.id),
+      data: { label: focusNode.title },
       position: { x: 0, y: 0 },
       style: {
         background: 'var(--color-primary)',
@@ -77,8 +77,8 @@ export default function JournalEgoGraph({ graph, selectedNode, onNodeClick }: Pr
     neighbors.forEach((n, i) => {
       const angle = (2 * Math.PI * i) / count - Math.PI / 2
       out.push({
-        id: n.id,
-        data: { label: n.label },
+        id: String(n.id),
+        data: { label: n.title },
         position: { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius },
         style: {
           background: 'var(--color-bg-secondary)',
@@ -93,30 +93,31 @@ export default function JournalEgoGraph({ graph, selectedNode, onNodeClick }: Pr
     return out
   }, [focusNode, neighbors])
 
-  // ReactFlow-Edges: nur Edges die Fokus betreffen
+  // ReactFlow-Edges: nur Edges die Fokus betreffen (IDs als String für RF)
   const rfEdges: RFEdge[] = useMemo(() => {
     if (!focusNode) return []
     return graph.edges
-      .filter(e => e.status !== 'rejected' && (e.source === focusNode.id || e.target === focusNode.id))
+      .filter(e => e.status !== 'rejected' && (e.source_node_id === focusNode.id || e.target_node_id === focusNode.id))
       .map(e => {
         const status = e.status || 'suggested'
         const color = STATUS_COLORS[status] || 'var(--color-text-muted)'
         return {
-          id: e.id,
-          source: e.source,
-          target: e.target,
+          id: String(e.id),
+          source: String(e.source_node_id),
+          target: String(e.target_node_id),
           style: { stroke: color, strokeWidth: 1 + (e.strength ?? 0.5) * 2 },
           animated: status === 'suggested',
         }
       })
   }, [focusNode, graph.edges])
 
-  // Klick auf Node — Fokus wechseln + nach oben propagieren
+  // Klick auf Node — Fokus wechseln + ID nach oben propagieren
   const handleClick = useCallback((_: unknown, node: RFNode) => {
-    const target = graph.nodes.find(n => n.id === node.id)
+    const numId = Number(node.id)
+    const target = graph.nodes.find(n => n.id === numId)
     if (!target) return
     setFocusId(target.id)
-    onNodeClick(target)
+    onNodeClick(target.id)
   }, [graph.nodes, onNodeClick])
 
   if (!focusNode) {
@@ -138,11 +139,11 @@ export default function JournalEgoGraph({ graph, selectedNode, onNodeClick }: Pr
         </span>
         <select
           value={focusNode.id}
-          onChange={(e) => setFocusId(e.target.value)}
+          onChange={(e) => setFocusId(Number(e.target.value))}
           className="hud-input text-xs flex-1 max-w-xs"
         >
           {graph.nodes.map(n => (
-            <option key={n.id} value={n.id}>{n.label}</option>
+            <option key={n.id} value={n.id}>{n.title}</option>
           ))}
         </select>
         <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
