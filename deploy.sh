@@ -27,6 +27,10 @@ rsync -az --delete -e "ssh -p 2222" frontend/dist/ prometheus@192.168.0.10:~/pal
 rsync -az --delete --exclude='__pycache__' --exclude='*.pyc' \
   -e "ssh -p 2222" backend/ prometheus@192.168.0.10:~/pallas/backend/
 
+# CLI-Scripts (z.B. import_claude_export.py)
+rsync -az --delete --exclude='__pycache__' --exclude='*.pyc' \
+  -e "ssh -p 2222" scripts/ prometheus@192.168.0.10:~/pallas/scripts/
+
 # Docker-Dateien
 rsync -az -e "ssh -p 2222" Dockerfile docker-compose.yml \
   prometheus@192.168.0.10:~/pallas/
