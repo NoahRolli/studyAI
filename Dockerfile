@@ -19,6 +19,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Backend-Code kopieren
 COPY backend/ ./backend/
 
+# CLI-Scripts (z.B. import_claude_export.py)
+COPY scripts/ ./scripts/
+
 # Gebautes Frontend kopieren (wird vor docker build vom MacBook reinkopiert)
 COPY frontend-dist/ ./frontend/
 
