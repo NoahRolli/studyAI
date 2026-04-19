@@ -27,4 +27,4 @@ backup.sh
 docker-compose.override.yml
 
 # LLM import backups (Slice 1a)
-pallas.db.pre-llm-import*
+pallas.db.pre-*
