@@ -55,6 +55,7 @@ from backend.api.concepts_gaps import router as concepts_gaps_router
 from backend.api.concepts_merge import router as concepts_merge_router
 from backend.api.settings import router as settings_router
 from backend.api.weather import router as weather_router
+from backend.api.llm import router as llm_router
 # Alle Models importieren, damit SQLAlchemy-Relationships auflösen
 import backend.models.registry  # noqa: F401
 
@@ -161,6 +162,7 @@ app.include_router(concepts_ai_router)
 app.include_router(concepts_embedding_router)
 app.include_router(concepts_link_stream_router)
 app.include_router(concepts_link_router)
+app.include_router(llm_router)
 app.include_router(weather_router)
 
 # Static Files — gebautes Frontend servieren (nur in Production)
