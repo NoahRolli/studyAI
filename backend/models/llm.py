@@ -143,6 +143,11 @@ class LLMMessage(Base):
     # Timestamp aus dem Export
     created_at = Column(DateTime, nullable=False)
 
+    # P5.1 Slice 1c — Konzept-Extraktion via LLM
+    # NULL = noch nicht verarbeitet, Resume-fähig per Query
+    # Wird auch bei 0 extrahierten Konzepten gesetzt (verhindert Re-Runs)
+    extracted_at = Column(DateTime, nullable=True)
+
     # Index für schnellen Zugriff auf Messages einer Conversation in Reihenfolge
     __table_args__ = (
         Index("ix_llm_messages_convo_turn", "conversation_id", "turn_index"),
