@@ -27,6 +27,7 @@ import MindmapPage from './pages/MindmapPage'
 import JournalMindmapPage from './pages/JournalMindmapPage'
 import Journal from './pages/Journal'
 import LoginPage from './pages/LoginPage'
+import LLMChatPage from './components/archiv/LLMChatPage'
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
             <Route path="/" element={<Layout />}>
               <Route index element={<WelcomePage />} />
               <Route path="archiv" element={<Archiv />} />
+              <Route path="archiv/llm-chat/:id" element={<LLMChatPage />} />
               <Route path="modules/:id" element={<ModuleDetail />} />
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="notes" element={<NotesPage />} />

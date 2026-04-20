@@ -258,3 +258,42 @@ export interface KeywordMoodResult {
   fuzzy?: FuzzyMembership
   dominant?: string
 }
+
+
+// ---------------------------------------------------------------------
+// LLM-Archiv (P5.1 Slice 1b)
+// Antwort von GET /api/llm/conversations/{document_id}
+// ---------------------------------------------------------------------
+
+// Eine einzelne Message innerhalb einer LLM-Conversation
+export interface LLMMessage {
+  id: number
+  turn_index: number
+  role: string              // "human" | "assistant"
+  text: string
+  thinking: string | null
+  has_tools: boolean
+  created_at: string | null
+  attachments_info: unknown // JSON, nicht strikt typisiert
+}
+
+// Meta-Daten zu einer LLM-Conversation (ohne Messages)
+export interface LLMConversation {
+  id: number
+  document_id: number
+  external_uuid: string
+  title: string | null
+  summary_from_provider: string | null
+  provider_created_at: string | null
+  provider_updated_at: string | null
+  project_name_guess: string | null
+  message_count: number
+  has_thinking: boolean
+  has_tools: boolean
+}
+
+// Kombinierte Antwort (Conversation + Messages)
+export interface LLMConversationDetail {
+  conversation: LLMConversation
+  messages: LLMMessage[]
+}
