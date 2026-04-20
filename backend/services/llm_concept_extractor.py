@@ -1,22 +1,21 @@
-# Konzept-Extraktion aus LLM-Chat-Messages (P5.1 Slice 1c)
+# Konzept-Extraktion aus LLM-Chat-Messages (P5.1 Slice 1c).
 # Iteriert über llm_messages, schreibt ConceptSource(source_type="chat_message").
 # Resume-fähig via extracted_at (Option A: bei Parse-Error trotzdem markiert).
-# Semaphore(4) für parallele LLM-Calls, eigene DB-Session pro Message.
+# Semaphore drosselt GESAMTE Pipeline — DB-Sessions liegen in llm_concept_db,
+# werden via asyncio.to_thread() aufgerufen, sind je nur ms offen.
 
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from backend.models.database import SessionLocal
 from backend.models.llm import LLMMessage
-from backend.api.concepts_ai import (
-    ai_chat_with_provider,
-    parse_json_response,
-    get_or_create_concept,
-    link_source,
+from backend.api.concepts_ai import ai_chat_with_provider, parse_json_response
+from backend.services.llm_concept_db import (
+    load_message_text,
+    mark_extracted,
+    persist_concepts,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,13 +53,13 @@ EXTRACTION_PROMPT = (
 @dataclass
 class ExtractStats:
     """Akkumulierte Statistik eines Batch-Runs."""
-    processed: int = 0           # Messages durchgegangen
-    skipped_short: int = 0       # zu kurz, direkt extracted_at
-    skipped_empty: int = 0       # text leer
-    concepts_created: int = 0    # neue Konzepte (best-effort)
-    sources_linked: int = 0      # ConceptSources angelegt
-    parse_errors: int = 0        # LLM-Output kein valides JSON
-    llm_errors: int = 0          # LLM-Call selbst fehlgeschlagen
+    processed: int = 0
+    skipped_short: int = 0
+    skipped_empty: int = 0
+    concepts_created: int = 0
+    sources_linked: int = 0
+    parse_errors: int = 0
+    llm_errors: int = 0
     providers_used: dict = field(default_factory=dict)
 
     def summary(self) -> str:
@@ -72,22 +71,19 @@ class ExtractStats:
 
 async def extract_concepts_for_message(
     text: str,
-    semaphore: asyncio.Semaphore,
 ) -> tuple[list[dict], str | None, str | None]:
     """
-    Reine Extraktion ohne DB-Zugriff.
+    Reine Extraktion ohne DB-Zugriff und ohne Semaphore.
+    Drosselung passiert im aufrufenden process_message().
     Returns: (concepts, provider_name, error_kind)
-      concepts:      Liste {"name": str, "relevance": float}
-      provider_name: z.B. "groq" oder "ollama_local:gemma4:e2b" oder None
-      error_kind:    None | "llm" | "parse"
+      error_kind: None | "llm" | "parse"
     """
     prompt = EXTRACTION_PROMPT.format(text=text[:3000])
-    async with semaphore:
-        try:
-            response, provider = await ai_chat_with_provider(prompt, page="metis")
-        except Exception as exc:
-            logger.warning(f"LLM-Call fehlgeschlagen: {exc}")
-            return [], None, "llm"
+    try:
+        response, provider = await ai_chat_with_provider(prompt, page="metis")
+    except Exception as exc:
+        logger.warning(f"LLM-Call fehlgeschlagen: {exc}")
+        return [], None, "llm"
 
     parsed = parse_json_response(response)
     if not isinstance(parsed, list):
@@ -118,88 +114,62 @@ async def process_message(
     dry_run: bool,
 ) -> None:
     """
-    Verarbeitet eine einzelne Message in eigener DB-Session.
-    Atomar: entweder alles committet oder Rollback bei Crash.
+    Verarbeitet eine Message in 3 Phasen, jede mit eigener kurzer Session.
+    Semaphore umschließt ALLES — nie mehr als concurrency Tasks aktiv.
     """
-    db: Session = SessionLocal()
-    try:
-        msg = db.query(LLMMessage).filter(LLMMessage.id == msg_id).first()
-        if msg is None:
-            logger.warning(f"Message {msg_id} nicht gefunden")
-            return
+    async with semaphore:
+        try:
+            # Phase 1: Text laden
+            text, exists = await asyncio.to_thread(load_message_text, msg_id)
+            if not exists:
+                logger.warning(f"Message {msg_id} nicht gefunden")
+                return
 
-        text = (msg.text or "").strip()
+            if not text:
+                stats.skipped_empty += 1
+                await asyncio.to_thread(mark_extracted, msg_id, dry_run)
+                stats.processed += 1
+                return
 
-        # Leere Messages: extracted_at setzen, raus
-        if not text:
-            stats.skipped_empty += 1
-            if not dry_run:
-                msg.extracted_at = datetime.now(timezone.utc)
-                db.commit()
-            stats.processed += 1
-            return
+            if len(text) < MIN_TEXT_LENGTH:
+                stats.skipped_short += 1
+                await asyncio.to_thread(mark_extracted, msg_id, dry_run)
+                stats.processed += 1
+                return
 
-        # Sehr kurze Messages: nicht extrahieren, aber als erledigt markieren
-        if len(text) < MIN_TEXT_LENGTH:
-            stats.skipped_short += 1
-            if not dry_run:
-                msg.extracted_at = datetime.now(timezone.utc)
-                db.commit()
-            stats.processed += 1
-            return
+            # Phase 2: LLM-Call OHNE offene DB-Verbindung
+            concepts, provider, error_kind = await extract_concepts_for_message(text)
 
-        # LLM-Call (außerhalb der DB-Session-kritischen Region)
-        concepts, provider, error_kind = await extract_concepts_for_message(
-            text, semaphore
-        )
+            if provider:
+                stats.providers_used[provider] = (
+                    stats.providers_used.get(provider, 0) + 1
+                )
 
-        if provider:
-            stats.providers_used[provider] = (
-                stats.providers_used.get(provider, 0) + 1
+            if error_kind == "llm":
+                stats.llm_errors += 1
+                # extracted_at NICHT setzen — bei nächstem --resume retry
+                stats.processed += 1
+                return
+
+            if error_kind == "parse":
+                stats.parse_errors += 1
+                # Option A: markieren, kein Endlos-Retry
+                await asyncio.to_thread(mark_extracted, msg_id, dry_run)
+                stats.processed += 1
+                return
+
+            # Phase 3: Persistieren
+            linked, created = await asyncio.to_thread(
+                persist_concepts, msg_id, concepts, dry_run
             )
-
-        if error_kind == "llm":
-            stats.llm_errors += 1
-            # extracted_at NICHT setzen — bei nächstem --resume retry
+            stats.sources_linked += linked
+            stats.concepts_created += created
             stats.processed += 1
-            return
 
-        if error_kind == "parse":
-            stats.parse_errors += 1
-            if not dry_run:  # Option A: markieren, kein Endlos-Retry
-                msg.extracted_at = datetime.now(timezone.utc)
-                db.commit()
-            stats.processed += 1
-            return
-
-        # Konzepte verlinken — was_new VOR get_or_create bestimmen
-        from backend.models.concept import Concept
-        for c in concepts:
-            normalized = c["name"].strip().lower()
-            existed = db.query(Concept.id).filter(
-                Concept.name == normalized
-            ).first() is not None
-            concept = get_or_create_concept(db, c["name"])
-            if concept is None:
-                continue
-            link_source(db, concept, "chat_message", msg.id, c["relevance"])
-            stats.sources_linked += 1
-            if not existed:
-                stats.concepts_created += 1
-
-        if not dry_run:
-            msg.extracted_at = datetime.now(timezone.utc)
-            db.commit()
-        else:
-            db.rollback()
-
-        stats.processed += 1
-
-    except Exception as exc:
-        logger.error(f"Unerwarteter Fehler bei msg {msg_id}: {exc}", exc_info=True)
-        db.rollback()
-    finally:
-        db.close()
+        except Exception as exc:
+            logger.error(
+                f"Unerwarteter Fehler bei msg {msg_id}: {exc}", exc_info=True
+            )
 
 
 def get_pending_message_ids(
@@ -226,8 +196,8 @@ async def batch_extract(
     dry_run: bool = False,
 ) -> ExtractStats:
     """
-    Orchestrator: parallel über alle message_ids,
-    eigene DB-Session pro Message.
+    Orchestrator: parallel über alle message_ids.
+    Drosselung über Semaphore in process_message.
     """
     stats = ExtractStats()
     semaphore = asyncio.Semaphore(concurrency)
@@ -237,7 +207,6 @@ async def batch_extract(
         for mid in message_ids
     ]
 
-    # Progress-Logging alle 50 abgeschlossene Messages
     completed = 0
     for coro in asyncio.as_completed(tasks):
         await coro
