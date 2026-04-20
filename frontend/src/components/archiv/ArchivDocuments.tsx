@@ -1,7 +1,14 @@
 // ArchivDocuments — Upload-Zone + lose Dokumente in einem Ordner
 // Drag & Drop oder Button-Upload direkt in den aktuellen Ordner
+//
+// File-Type-Dispatch:
+//   chat            → Link auf /archiv/llm-chat/:id
+//   llm_memory      → Klickbar, Expand zeigt raw_text als <pre>
+//   llm_project_doc → wie llm_memory
+//   alles andere    → Standard-Card (Icon + Name + Delete)
 
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { del } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { Document } from '../../types/models'
@@ -11,12 +18,98 @@ const FILE_ICONS: Record<string, string> = {
   pdf: 'PDF', docx: 'DOC', doc: 'DOC', pptx: 'PPT', ppt: 'PPT',
   xlsx: 'XLS', xls: 'XLS', md: 'MD', txt: 'TXT',
   png: 'IMG', jpg: 'IMG', jpeg: 'IMG', csv: 'CSV',
+  chat: 'CHAT', llm_memory: 'MEM', llm_project_doc: 'PDOC',
 }
 
 interface Props {
   folderId: number | null
   documents: Document[]
   onReload: () => void
+}
+
+// Eine einzelne Doc-Card — interner Sub-Component
+function DocRow({ doc, onDelete, tDelete }: {
+  doc: Document
+  onDelete: (id: number) => void
+  tDelete: string
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const icon = FILE_ICONS[doc.file_type] || 'FILE'
+  const name = doc.display_name || doc.filename
+
+  const isChat = doc.file_type === 'chat'
+  const isMarkdownDoc = doc.file_type === 'llm_memory' || doc.file_type === 'llm_project_doc'
+
+  // Badge + Name + Meta (gemeinsam für alle Varianten)
+  const header = (
+    <>
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0"
+          style={{ color: 'var(--color-primary)',
+            background: 'var(--color-hover-bg)',
+            border: '1px solid var(--color-border)' }}>
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm truncate"
+            style={{ color: 'var(--color-text-primary)' }}>{name}</p>
+          <span className="text-xs"
+            style={{ color: 'var(--color-text-muted)' }}>
+            {doc.file_type.toUpperCase()}
+            {doc.uploaded_at && ` · ${new Date(doc.uploaded_at).toLocaleDateString('de-CH')}`}
+          </span>
+        </div>
+      </div>
+      <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(doc.id) }}
+        className="text-xs transition-colors shrink-0"
+        style={{ color: 'rgba(255,59,92,0.4)' }}
+        onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-danger)')}
+        onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,59,92,0.4)')}>
+        {tDelete}
+      </button>
+    </>
+  )
+
+  // Chat → Link auf Vollseiten-Viewer
+  if (isChat) {
+    return (
+      <Link to={`/archiv/llm-chat/${doc.id}`}
+        className="hud-card px-4 py-3 flex items-center justify-between
+          hover:border-[var(--color-primary)] transition-colors">
+        {header}
+      </Link>
+    )
+  }
+
+  // Markdown-Doc → klickbar, klappt raw_text inline aus
+  if (isMarkdownDoc) {
+    return (
+      <div className="hud-card">
+        <div className="px-4 py-3 flex items-center justify-between cursor-pointer
+            hover:bg-[var(--color-hover-bg)] transition-colors"
+          onClick={() => setExpanded(!expanded)}>
+          {header}
+        </div>
+        {expanded && (
+          <div className="px-4 pb-4">
+            <pre className="text-xs font-mono p-3 rounded overflow-auto max-h-[600px]"
+              style={{ color: 'var(--color-text-secondary)',
+                background: 'var(--color-hover-bg)',
+                whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {doc.raw_text || '(leer)'}
+            </pre>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Default: normale Doc-Card
+  return (
+    <div className="hud-card px-4 py-3 flex items-center justify-between">
+      {header}
+    </div>
+  )
 }
 
 export default function ArchivDocuments({ folderId, documents, onReload }: Props) {
@@ -127,39 +220,10 @@ export default function ArchivDocuments({ folderId, documents, onReload }: Props
             {t.archiv.looseDocuments || 'Dokumente'} ({documents.length})
           </h3>
           <div className="space-y-2">
-            {documents.map((doc) => {
-              const icon = FILE_ICONS[doc.file_type] || 'FILE'
-              const name = doc.display_name || doc.filename
-              return (
-                <div key={doc.id}
-                  className="hud-card px-4 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0"
-                      style={{ color: 'var(--color-primary)',
-                        background: 'var(--color-hover-bg)',
-                        border: '1px solid var(--color-border)' }}>
-                      {icon}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm truncate"
-                        style={{ color: 'var(--color-text-primary)' }}>{name}</p>
-                      <span className="text-xs"
-                        style={{ color: 'var(--color-text-muted)' }}>
-                        {doc.file_type.toUpperCase()}
-                        {doc.uploaded_at && ` · ${new Date(doc.uploaded_at).toLocaleDateString('de-CH')}`}
-                      </span>
-                    </div>
-                  </div>
-                  <button onClick={() => handleDelete(doc.id)}
-                    className="text-xs transition-colors shrink-0"
-                    style={{ color: 'rgba(255,59,92,0.4)' }}
-                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-danger)')}
-                    onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,59,92,0.4)')}>
-                    {t.common.delete}
-                  </button>
-                </div>
-              )
-            })}
+            {documents.map((doc) => (
+              <DocRow key={doc.id} doc={doc} onDelete={handleDelete}
+                tDelete={t.common.delete} />
+            ))}
           </div>
         </div>
       )}
