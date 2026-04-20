@@ -80,6 +80,15 @@ def upload_to_folder(
                           storage_sub=f"folders/{folder_id}")
 
 
+# GET /api/documents/{id} — Volles Document inkl. raw_text
+@router.get("/documents/{document_id}")
+def get_document(document_id: int, db: Session = Depends(get_db)):
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Dokument nicht gefunden")
+    return document
+
+
 # PUT /api/documents/{id} — Dokument umbenennen
 @router.put("/documents/{document_id}")
 def rename_document(
