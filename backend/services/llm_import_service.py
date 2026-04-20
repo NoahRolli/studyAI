@@ -59,24 +59,26 @@ def _ensure_folder(db, name, parent_id, metis_enabled=False):
 
 def ensure_folder_structure(db, provider_slug):
     """
-    Legt LLM-Archiv/{Provider}/_Memory/ und /_ProjectDocs/ an.
+    Legt LLM-Archiv/{Provider}/_Chats/, /_Memory/, /_ProjectDocs/ an.
 
     LLM-Archiv sitzt auf Root-Ebene (parent_id=NULL), gleichberechtigt
     neben anderen Top-Level-Foldern wie "Business AI" oder "Archiv".
 
     Returns:
         Tuple (chats_folder, memory_folder, projectdocs_folder)
+        chats_folder = _Chats (enthält die importierten Conversations)
     """
     # Provider-Name in Title-Case für Folder ("Claude" statt "claude")
     provider_folder_name = provider_slug.capitalize()
 
     llm_archiv = _ensure_folder(db, "LLM-Archiv", parent_id=None)
-    chats = _ensure_folder(
+    provider_folder = _ensure_folder(
         db, provider_folder_name, parent_id=llm_archiv.id,
         metis_enabled=True,  # Plan §6.2: Konzepte aus Chats in Metis
     )
-    memory = _ensure_folder(db, "_Memory", parent_id=chats.id)
-    projectdocs = _ensure_folder(db, "_ProjectDocs", parent_id=chats.id)
+    chats = _ensure_folder(db, "_Chats", parent_id=provider_folder.id)
+    memory = _ensure_folder(db, "_Memory", parent_id=provider_folder.id)
+    projectdocs = _ensure_folder(db, "_ProjectDocs", parent_id=provider_folder.id)
     return chats, memory, projectdocs
 
 
