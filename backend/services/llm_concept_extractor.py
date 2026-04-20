@@ -172,16 +172,19 @@ async def process_message(
             stats.processed += 1
             return
 
-        # Konzepte verlinken
+        # Konzepte verlinken — was_new VOR get_or_create bestimmen
+        from backend.models.concept import Concept
         for c in concepts:
+            normalized = c["name"].strip().lower()
+            existed = db.query(Concept.id).filter(
+                Concept.name == normalized
+            ).first() is not None
             concept = get_or_create_concept(db, c["name"])
             if concept is None:
                 continue
-            # Tracking ob neu (best-effort: Concept.id war vor flush None)
-            was_new = concept.embedding_stale and concept.id is not None
             link_source(db, concept, "chat_message", msg.id, c["relevance"])
             stats.sources_linked += 1
-            if was_new:
+            if not existed:
                 stats.concepts_created += 1
 
         if not dry_run:
