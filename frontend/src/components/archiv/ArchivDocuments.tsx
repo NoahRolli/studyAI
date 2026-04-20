@@ -7,9 +7,9 @@
 //   llm_project_doc → wie llm_memory
 //   alles andere    → Standard-Card (Icon + Name + Delete)
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { del } from '../../hooks/useAPI'
+import { del, get } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { Document } from '../../types/models'
 
@@ -26,6 +26,48 @@ interface Props {
   documents: Document[]
   onReload: () => void
 }
+
+// Markdown-Doc-Card mit lazy-loaded raw_text
+function MarkdownDocRow({ doc, header, expanded, setExpanded }: {
+  doc: Document
+  header: React.ReactNode
+  expanded: boolean
+  setExpanded: (v: boolean) => void
+}) {
+  const [fullText, setFullText] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  // Beim ersten Expand: raw_text nachladen
+  useEffect(() => {
+    if (!expanded || fullText !== null || loading) return
+    setLoading(true)
+    get<Document>(`/api/documents/${doc.id}`)
+      .then((full) => setFullText(full.raw_text || ''))
+      .catch(() => setFullText('(Fehler beim Laden)'))
+      .finally(() => setLoading(false))
+  }, [expanded, fullText, loading, doc.id])
+
+  return (
+    <div className="hud-card">
+      <div className="px-4 py-3 flex items-center justify-between cursor-pointer
+          hover:bg-[var(--color-hover-bg)] transition-colors"
+        onClick={() => setExpanded(!expanded)}>
+        {header}
+      </div>
+      {expanded && (
+        <div className="px-4 pb-4">
+          <pre className="text-xs font-mono p-3 rounded overflow-auto max-h-[600px]"
+            style={{ color: 'var(--color-text-secondary)',
+              background: 'var(--color-hover-bg)',
+              whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {loading ? 'Lade...' : (fullText || '(leer)')}
+          </pre>
+        </div>
+      )}
+    </div>
+  )
+}
+
 
 // Eine einzelne Doc-Card — interner Sub-Component
 function DocRow({ doc, onDelete, tDelete }: {
@@ -81,27 +123,10 @@ function DocRow({ doc, onDelete, tDelete }: {
     )
   }
 
-  // Markdown-Doc → klickbar, klappt raw_text inline aus
+  // Markdown-Doc → klickbar, klappt raw_text inline aus (lazy-load)
   if (isMarkdownDoc) {
-    return (
-      <div className="hud-card">
-        <div className="px-4 py-3 flex items-center justify-between cursor-pointer
-            hover:bg-[var(--color-hover-bg)] transition-colors"
-          onClick={() => setExpanded(!expanded)}>
-          {header}
-        </div>
-        {expanded && (
-          <div className="px-4 pb-4">
-            <pre className="text-xs font-mono p-3 rounded overflow-auto max-h-[600px]"
-              style={{ color: 'var(--color-text-secondary)',
-                background: 'var(--color-hover-bg)',
-                whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {doc.raw_text || '(leer)'}
-            </pre>
-          </div>
-        )}
-      </div>
-    )
+    return <MarkdownDocRow doc={doc} header={header}
+      expanded={expanded} setExpanded={setExpanded} />
   }
 
   // Default: normale Doc-Card
