@@ -17,6 +17,7 @@ from backend.models.concept import (
 from backend.models.relation import RelationType
 from backend.models.note import Note
 from backend.models.summary import Summary
+from backend.models.llm import LLMMessage, LLMConversation
 
 router = APIRouter(prefix="/api/concepts", tags=["concepts"])
 
@@ -102,6 +103,60 @@ def list_concepts(db: Session = Depends(get_db)):
     return [_concept_to_dict(c, sc) for c, sc in results]
 
 
+
+
+@router.get("/{concept_id}/chat-sources")
+def get_concept_chat_sources(concept_id: int, db: Session = Depends(get_db)):
+    """Chat-Message Quellen eines Konzepts, mit Preview+Doc-ID für Navigation.
+
+    Separater Endpoint weil pro Konzept schnell 200+ Messages existieren können —
+    /api/concepts/{id} würde sonst aufgebläht. Lazy-loaded im Frontend.
+    """
+    # Konzept muss existieren
+    exists = db.query(Concept.id).filter(Concept.id == concept_id).first()
+    if not exists:
+        raise HTTPException(status_code=404, detail="Konzept nicht gefunden")
+
+    # Join: concept_sources → llm_messages → llm_conversations → documents
+    # source_id in concept_sources ist llm_messages.id bei source_type='chat_message'
+    rows = (
+        db.query(
+            LLMMessage.id.label("message_id"),
+            LLMMessage.turn_index,
+            LLMMessage.role,
+            LLMMessage.text,
+            LLMConversation.document_id,
+            LLMConversation.title.label("conversation_title"),
+            LLMConversation.provider_created_at,
+            ConceptSource.relevance,
+        )
+        .join(ConceptSource, ConceptSource.source_id == LLMMessage.id)
+        .join(LLMConversation, LLMMessage.conversation_id == LLMConversation.id)
+        .filter(
+            ConceptSource.concept_id == concept_id,
+            ConceptSource.source_type == "chat_message",
+        )
+        .order_by(ConceptSource.relevance.desc(), LLMConversation.provider_created_at.desc())
+        .all()
+    )
+
+    return {
+        "concept_id": concept_id,
+        "count": len(rows),
+        "sources": [
+            {
+                "message_id": r.message_id,
+                "document_id": r.document_id,
+                "turn_index": r.turn_index,
+                "role": r.role,
+                "text_preview": (r.text or "")[:140],
+                "conversation_title": r.conversation_title or "(ohne Titel)",
+                "created_at": r.provider_created_at.isoformat() if r.provider_created_at else None,
+                "relevance": r.relevance,
+            }
+            for r in rows
+        ],
+    }
 
 
 @router.get("/{concept_id}")
