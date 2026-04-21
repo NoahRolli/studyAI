@@ -10,7 +10,7 @@ from sqlalchemy import event
 
 engine = create_engine(
     DATABASE_URL,
-    echo=True,
+    echo=False,  # auf True fuer SQL-Debug
     connect_args={"timeout": 30},
 )
 
