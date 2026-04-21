@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { get } from '../../hooks/useAPI'
-import type { ConceptDetail } from '../../types/metis'
+import type { ConceptDetail, ChatSource, ChatSourcesResponse } from '../../types/metis'
 
 interface Props {
   conceptId: number
@@ -18,6 +18,7 @@ export default function ConceptDetailPanel({
   const navigate = useNavigate()
   const [detail, setDetail] = useState<ConceptDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [chatSources, setChatSources] = useState<ChatSource[] | null>(null)
 
   const loadDetail = useCallback(async () => {
     setLoading(true)
@@ -33,10 +34,34 @@ export default function ConceptDetailPanel({
 
   useEffect(() => { loadDetail() }, [loadDetail])
 
+  // Chat-Messages lazy laden — separater Endpoint weil pro Konzept
+  // hunderte Messages möglich sind und /api/concepts/{id} sonst aufbläht
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const data = await get<ChatSourcesResponse>(`/api/concepts/${conceptId}/chat-sources`)
+        if (!cancelled) setChatSources(data.sources)
+      } catch (err) {
+        console.error('Chat-sources load failed:', err)
+        if (!cancelled) setChatSources([])
+      }
+    })()
+    return () => { cancelled = true }
+  }, [conceptId])
+
+  // Klick auf Chat-Message → LLMChatPage mit Anchor in neuem Tab
+  const openChatMessage = (doc_id: number, turn_index: number) => {
+    window.open(`/archiv/llm-chat/${doc_id}#msg-${turn_index}`, '_blank')
+  }
+
   // Navigation zur Quelle
   const navigateToSource = (type: string, id: number) => {
     if (type === 'note') navigate(`/notes?open=${id}`)
     else if (type === 'summary') navigate('/archiv')
+    else if (type === 'entry') navigate(`/journal?entry=${id}`)
+    // chat_message wird separat in der ChatSources-Section behandelt,
+    // da es document_id + turn_index braucht (nicht nur source_id)
   }
 
 
@@ -91,6 +116,38 @@ export default function ConceptDetailPanel({
                       {s.type}
                     </span>
                     <span className="truncate">{s.title}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Chat-Messages (lazy-loaded) */}
+          {chatSources && chatSources.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-[var(--color-text-secondary)] mb-2">
+                Chat-Messages ({chatSources.length})
+              </p>
+              <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                {chatSources.map((c) => (
+                  <button key={c.message_id}
+                    onClick={() => openChatMessage(c.document_id, c.turn_index)}
+                    className="block w-full text-left p-2 rounded border border-[var(--color-border)] hover:border-[var(--color-accent-cyan)] transition-colors">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] uppercase"
+                        style={{
+                          background: c.role === 'user' ? 'rgba(100, 200, 255, 0.15)' : 'rgba(168, 85, 247, 0.15)',
+                          color: c.role === 'user' ? '#64c8ff' : '#a855f7'
+                        }}>
+                        {c.role}
+                      </span>
+                      <span className="text-[10px] text-[var(--color-text-muted)] truncate">
+                        {c.conversation_title}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2">
+                      {c.text_preview}
+                    </p>
                   </button>
                 ))}
               </div>
