@@ -344,7 +344,7 @@ export default function MetisSphere3D({ graph, onNodeClick, onClusterClick, onFo
   const handleCameraMove = useCallback((a: number, e: number, d: number) => { onCameraMove?.(a, e, d) }, [onCameraMove])
   return (
     <div className="w-full h-full relative" style={{ background: 'transparent' }}>
-      <Canvas camera={{ position: [0, 0, 50], fov: 36 }}
+      <Canvas camera={{ position: [0, 0, 120], fov: 36 }}
         style={{ background: 'transparent' }} gl={{ antialias: true, alpha: true }}>
         <MetisScene graph={graph} onNodeClick={onNodeClick} onClusterClick={onClusterClick} onFolderClick={onFolderClick}
           transparent={transparent} onCameraMove={handleCameraMove}
