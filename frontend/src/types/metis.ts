@@ -87,6 +87,23 @@ export interface ConceptSource {
   relevance: number
 }
 
+export interface ChatSource {
+  message_id: number
+  document_id: number
+  turn_index: number
+  role: string
+  text_preview: string
+  conversation_title: string
+  created_at: string | null
+  relevance: number
+}
+
+export interface ChatSourcesResponse {
+  concept_id: number
+  count: number
+  sources: ChatSource[]
+}
+
 export interface ConceptDetail extends ConceptNode {
   sources: ConceptSource[]
   related: { id: number; name: string; relation: string; direction: string }[]
