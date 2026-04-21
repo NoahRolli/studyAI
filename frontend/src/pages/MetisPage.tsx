@@ -119,6 +119,12 @@ export default function MetisPage() {
           </div>
         ) : view === 'list' ? (
           <ConceptListView graph={conceptGraph} onRefresh={loadGraph} />
+        ) : view === 'graph' ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-[var(--color-text-muted)]">
+              Graph-View kommt bald
+            </p>
+          </div>
         ) : (
           <Suspense fallback={
             <div className="flex items-center justify-center h-full">
