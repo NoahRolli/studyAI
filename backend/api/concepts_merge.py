@@ -2,8 +2,10 @@
 # Embedding-Similarity findet Kandidaten, AI liefert Begruendung
 # Merge selbst nutzt bestehenden POST /api/concepts/merge
 
+import asyncio
 import json
 import logging
+import numpy as np
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from backend.models.database import get_db
@@ -16,36 +18,64 @@ router = APIRouter(prefix="/api/concepts/merge-suggestions", tags=["concepts-mer
 
 
 def _find_similar_pairs(concepts: list, threshold: float) -> list[dict]:
-    """Findet Konzeptpaare mit Embedding-Similarity ueber Schwellwert."""
-    pairs = []
-    with_emb = [(c, json.loads(c.embedding)) for c in concepts if c.embedding]
+    """Findet Konzeptpaare mit Embedding-Similarity ueber Schwellwert.
+    Numpy-vektorisiert: Cosine = normalisierte Matrix @ Matrix.T.
+    Bei 6k+ Konzepten ~1-2s statt 30-60s Python-Loop.
+    """
+    # Embeddings laden + filtern
+    vectors, ids, names = [], [], []
+    for c in concepts:
+        if not c.embedding:
+            continue
+        try:
+            vec = json.loads(c.embedding)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        vectors.append(vec)
+        ids.append(c.id)
+        names.append(c.name)
 
-    for i in range(len(with_emb)):
-        for j in range(i + 1, len(with_emb)):
-            c1, emb1 = with_emb[i]
-            c2, emb2 = with_emb[j]
-            sim = cosine_similarity(emb1, emb2)
-            if sim >= threshold and sim < 0.999:
-                pairs.append({
-                    "concept_a": {"id": c1.id, "name": c1.name},
-                    "concept_b": {"id": c2.id, "name": c2.name},
-                    "similarity": round(sim, 4),
-                    "reason": None,
-                })
-    # Absteigend nach Similarity sortieren
+    n = len(vectors)
+    if n < 2:
+        return []
+
+    # L2-normalisieren, dann Cosine = M @ M.T
+    M = np.array(vectors, dtype=np.float32)
+    norms = np.linalg.norm(M, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    Mn = M / norms
+    sim = Mn @ Mn.T  # (N, N)
+
+    # Oberes Dreieck (i < j), Threshold-Mask
+    iu_i, iu_j = np.triu_indices(n, k=1)
+    sim_flat = sim[iu_i, iu_j]
+    mask = (sim_flat >= threshold) & (sim_flat < 0.999)
+    idx = np.where(mask)[0]
+
+    pairs = [
+        {
+            "concept_a": {"id": ids[iu_i[k]], "name": names[iu_i[k]]},
+            "concept_b": {"id": ids[iu_j[k]], "name": names[iu_j[k]]},
+            "similarity": round(float(sim_flat[k]), 4),
+            "reason": None,
+        }
+        for k in idx
+    ]
     pairs.sort(key=lambda p: p["similarity"], reverse=True)
     return pairs[:50]
 
 
 @router.get("")
 async def get_merge_suggestions(
-    threshold: float = Query(default=0.82, ge=0.5, le=0.99),
+    threshold: float = Query(default=0.90, ge=0.5, le=0.99),
     ai_reason: bool = Query(default=False),
     db: Session = Depends(get_db),
 ):
-    """Merge-Kandidaten via Embedding-Similarity, optional mit AI-Begruendung."""
-    concepts = db.query(Concept).all()
-    pairs = _find_similar_pairs(concepts, threshold)
+    """Merge-Kandidaten via Embedding-Similarity, optional mit AI-Begruendung.
+    Numpy + to_thread: blockiert den async event loop nicht bei 6k+ Konzepten.
+    """
+    concepts = db.query(Concept).filter(Concept.embedding.isnot(None)).all()
+    pairs = await asyncio.to_thread(_find_similar_pairs, concepts, threshold)
 
     if not pairs:
         return {"pairs": [], "total": 0}
