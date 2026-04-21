@@ -21,6 +21,7 @@ router = APIRouter(prefix="/api/folders", tags=["folders"])
 class FolderCreate(BaseModel):
     name: str
     parent_id: Optional[int] = None
+    description: Optional[str] = None
 
 class FolderUpdate(BaseModel):
     description: Optional[str] = None
@@ -121,14 +122,15 @@ def get_breadcrumbs(folder_id: int, db: Session = Depends(get_db)):
 @router.post("/")
 def create_folder(data: FolderCreate, db: Session = Depends(get_db)):
     """Neuen Ordner erstellen."""
-    if data.description is not None:
-        folder.description = data.description
+    # Parent-Check zuerst — vermeidet unnötigen Insert bei falschem parent_id
     if data.parent_id is not None:
         parent = db.query(Folder).filter(Folder.id == data.parent_id).first()
         if not parent:
             raise HTTPException(status_code=404, detail="Eltern-Ordner nicht gefunden")
     count = db.query(Folder).filter(Folder.parent_id == data.parent_id).count()
     folder = Folder(name=data.name, parent_id=data.parent_id, sort_order=count)
+    if data.description is not None:
+        folder.description = data.description
     db.add(folder)
     db.commit()
     db.refresh(folder)
