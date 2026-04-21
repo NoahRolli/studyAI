@@ -25,7 +25,7 @@ def _sse_event(event: str, data: dict) -> str:
 
 @router.get("/embeddings/stream")
 async def update_embeddings_stream(
-    threshold: float = Query(default=0.75, ge=0.3, le=0.95),
+    threshold: float = Query(default=0.82, ge=0.3, le=0.95),
     db: Session = Depends(get_db),
 ):
     """SSE-Stream: Embeddings generieren + Similarity-Edges erstellen."""
