@@ -2,6 +2,11 @@
 # Serviert im Production-Modus auch das gebaute Frontend als Static Files
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# .env laden bevor andere Module os.getenv() aufrufen.
+# Docker-Env hat Vorrang — lokal .env, auf Olymp override.yml.
+load_dotenv()
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles

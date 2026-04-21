@@ -12,6 +12,10 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+# .env laden bevor Provider-Module importiert werden
+load_dotenv()
 
 # Projekt-Root in sys.path (falls Script direkt aufgerufen wird)
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
