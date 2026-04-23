@@ -154,11 +154,17 @@ def get_concept_graph(db: Session = Depends(get_db)):
         node_ids.add(c.id)
 
     # Edges zwischen sichtbaren Nodes
-    edges = db.query(ConceptEdge).filter(
-        ConceptEdge.status != "rejected",
-        ConceptEdge.source_concept_id.in_(node_ids),
-        ConceptEdge.target_concept_id.in_(node_ids),
-    ).all() if node_ids else []
+    # Performance: IN mit 6k+ IDs ist in SQLite extrem langsam (O(N*M))
+    # Stattdessen alle nicht-rejected Edges laden, dann in Python filtern (O(1) Set-Lookup)
+    if node_ids:
+        all_edges = db.query(ConceptEdge).filter(
+            ConceptEdge.status != "rejected"
+        ).all()
+        edges = [e for e in all_edges
+                 if e.source_concept_id in node_ids
+                 and e.target_concept_id in node_ids]
+    else:
+        edges = []
     type_map = {t.id: t for t in db.query(RelationType).all()}
     edge_list = [_edge_to_dict(e, type_map) for e in edges]
 
