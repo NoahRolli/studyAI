@@ -48,7 +48,7 @@ function connectSSE(
   return es
 }
 
-export function useMetisGraph() {
+export function useMetisGraph(minSourceCount: number = 2) {
   const [conceptGraph, setConceptGraph] = useState<ConceptGraph>({
     nodes: [], edges: [], clusters: [],
   })
@@ -63,14 +63,35 @@ export function useMetisGraph() {
   // Cleanup bei Unmount
   useEffect(() => () => { esRef.current?.close() }, [])
 
+  // Filter nach source_count — blendet Rauschen aus
+  // (Konzepte mit wenig Quellen sind oft Einmal-Nennungen)
+  const filteredGraph = useMemo<ConceptGraph>(() => {
+    const visibleNodes = conceptGraph.nodes.filter(
+      n => (n.source_count || 0) >= minSourceCount,
+    )
+    const visibleIds = new Set(visibleNodes.map(n => n.id))
+    const visibleEdges = conceptGraph.edges.filter(
+      e => visibleIds.has(e.source) && visibleIds.has(e.target),
+    )
+    const visibleClusters = conceptGraph.clusters
+      .map(cl => ({ ...cl, node_ids: cl.node_ids.filter(id => visibleIds.has(id)) }))
+      .filter(cl => cl.node_ids.length > 0)
+    return {
+      nodes: visibleNodes,
+      edges: visibleEdges,
+      clusters: visibleClusters,
+      folders: conceptGraph.folders,
+    }
+  }, [conceptGraph, minSourceCount])
+
   const sphereGraph = useMemo<MetisGraph>(() => ({
-    nodes: conceptGraph.nodes.map(c => ({
+    nodes: filteredGraph.nodes.map(c => ({
       id: c.id, type: 'note' as const, source_id: c.id,
       title: c.name, pos_x: null, pos_y: null,
       embedding_stale: false, cluster_ids: [], source_count: c.source_count,
       folder_id: c.folder_id, folder_name: c.folder_name,
     })),
-    edges: conceptGraph.edges.map(e => ({
+    edges: filteredGraph.edges.map(e => ({
       id: e.id, source_node_id: e.source,
       target_node_id: e.target,
       relation_type: e.relation_type,
@@ -78,13 +99,13 @@ export function useMetisGraph() {
       status: e.status || 'suggested',
       reason: e.reason,
     })),
-    clusters: conceptGraph.clusters.map(cl => ({
+    clusters: filteredGraph.clusters.map(cl => ({
       id: cl.id, label: cl.label,
       description: cl.description,
       color: null, node_ids: cl.node_ids,
     })),
-    folders: (conceptGraph.folders || []).map(f => ({ id: f.id, name: f.name })),
-  }), [conceptGraph])
+    folders: (filteredGraph.folders || []).map(f => ({ id: f.id, name: f.name })),
+  }), [filteredGraph])
 
   const loadGraph = useCallback(async () => {
     try {
@@ -140,7 +161,7 @@ export function useMetisGraph() {
   }, [runTask, updateDetail, loadGraph])
 
   return {
-    conceptGraph, sphereGraph, loading, loadGraph,
+    conceptGraph, filteredGraph, sphereGraph, loading, loadGraph,
     syncing, linking, clustering,
     handleSync, handleAutoLink, handleAutoCluster,
   }

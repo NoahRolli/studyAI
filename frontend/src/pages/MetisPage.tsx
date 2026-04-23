@@ -18,11 +18,13 @@ const MetisSphere3D = lazy(
 
 export default function MetisPage() {
   const { t } = useLanguage()
+  // Noise-Filter: nur Konzepte mit mindestens N Sources zeigen
+  const [minSources, setMinSources] = useState(2)
   const {
-    conceptGraph, sphereGraph, loading, loadGraph,
+    conceptGraph, filteredGraph, sphereGraph, loading, loadGraph,
     syncing, linking, clustering,
     handleSync, handleAutoLink, handleAutoCluster,
-  } = useMetisGraph()
+  } = useMetisGraph(minSources)
 
   const [view, setView] = useState<MetisViewMode>('3d')
   const [selectedConceptId, setSelectedConceptId] = useState<number | null>(null)
@@ -103,9 +105,9 @@ export default function MetisPage() {
           syncing={syncing}
           linking={linking}
           clustering={clustering}
-          nodeCount={conceptGraph.nodes.length}
-          edgeCount={conceptGraph.edges.length}
-          clusterCount={conceptGraph.clusters.length}
+          nodeCount={filteredGraph.nodes.length}
+          edgeCount={filteredGraph.edges.length}
+          clusterCount={filteredGraph.clusters.length}
         />
       </div>
 
@@ -146,13 +148,23 @@ export default function MetisPage() {
         {/* Overlay Controls — nur bei 3D */}
         {view === '3d' && conceptGraph.nodes.length > 0 && (
           <>
-            <div className="absolute top-2 left-2 z-20">
+            <div className="absolute top-2 left-2 z-20 flex items-center gap-2">
               <button
                 className="hud-btn text-xs px-2 py-1"
                 onClick={() => setShowLabels(!showLabels)}
                 style={{ opacity: showLabels ? 1 : 0.4 }}
                 title="Labels ein/aus"
               >Aa</button>
+              <div className="flex items-center gap-2 px-2 py-1 rounded border border-[var(--color-border)] bg-[var(--color-bg-deep)]/60">
+                <span className="text-xs text-[var(--color-text-muted)]">min sources</span>
+                <input type="range" min={1} max={10} step={1}
+                  value={minSources}
+                  onChange={e => setMinSources(parseInt(e.target.value))}
+                  className="hud-slider w-20" />
+                <span className="text-xs font-mono text-[var(--color-primary)] w-4 text-center">
+                  {minSources}
+                </span>
+              </div>
             </div>
             <div className="absolute top-2 right-2 z-20">
               <button
