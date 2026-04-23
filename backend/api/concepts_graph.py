@@ -15,6 +15,7 @@ from backend.models.folder import Folder
 from backend.models.document import Document
 from backend.models.module import Module
 from backend.models.summary import Summary
+from backend.models.llm import LLMMessage, LLMConversation
 
 router = APIRouter(prefix="/api/concepts", tags=["concepts-graph"])
 
@@ -40,7 +41,26 @@ def _build_concept_folder_map(db: Session) -> dict[int, tuple[int, str]]:
         for f in db.query(Folder).filter(Folder.id.in_(all_fids)).all():
             folder_labels[f.id] = f.name
 
-    # Konzept -> (folder_id, folder_name)
+    # Chat-Message-ID -> Folder-ID
+    # Pfad: LLMMessage -> LLMConversation -> Document -> Folder
+    msg_folder: dict[int, int] = {}
+    msg_rows = db.query(
+        LLMMessage.id, Document.folder_id, Module.folder_id
+    ).join(LLMConversation, LLMMessage.conversation_id == LLMConversation.id
+    ).join(Document, LLMConversation.document_id == Document.id
+    ).outerjoin(Module, Document.module_id == Module.id).all()
+    for msg_id, doc_fid, mod_fid in msg_rows:
+        fid = doc_fid or mod_fid
+        if fid:
+            msg_folder[msg_id] = fid
+
+    # Folder-Labels auch fuer chat_message-Folder laden
+    msg_fids = set(msg_folder.values()) - all_fids
+    if msg_fids:
+        for f in db.query(Folder).filter(Folder.id.in_(msg_fids)).all():
+            folder_labels[f.id] = f.name
+
+    # Konzept -> (folder_id, folder_name) — Summary zuerst, dann Chat
     sources = db.query(ConceptSource).filter(
         ConceptSource.source_type == "summary"
     ).all()
@@ -49,6 +69,15 @@ def _build_concept_folder_map(db: Session) -> dict[int, tuple[int, str]]:
         if s.concept_id not in result and s.source_id in sum_folder:
             fid = sum_folder[s.source_id]
             result[s.concept_id] = (fid, folder_labels.get(fid, ""))
+
+    # Chat-Message-Sources: nur wenn Konzept noch nicht gemappt ist
+    chat_sources = db.query(ConceptSource).filter(
+        ConceptSource.source_type == "chat_message"
+    ).all()
+    for cs in chat_sources:
+        if cs.concept_id not in result and cs.source_id in msg_folder:
+            fid = msg_folder[cs.source_id]
+            result[cs.concept_id] = (fid, folder_labels.get(fid, ""))
     return result
 
 
@@ -84,13 +113,23 @@ def get_concept_graph(db: Session = Depends(get_db)):
         Summary.document_id.in_(enabled_doc_ids)).all()
     } if enabled_doc_ids else set()
 
+    # Chat-Messages: via LLMConversation.document_id
+    enabled_msg_ids = {r[0] for r in db.query(LLMMessage.id).join(
+        LLMConversation, LLMMessage.conversation_id == LLMConversation.id
+    ).filter(LLMConversation.document_id.in_(enabled_doc_ids)).all()
+    } if enabled_doc_ids else set()
+
     note_cids = {r[0] for r in db.query(ConceptSource.concept_id).filter(
         ConceptSource.source_type == "note").all()}
     sum_cids = {r[0] for r in db.query(ConceptSource.concept_id).filter(
         ConceptSource.source_type == "summary",
         ConceptSource.source_id.in_(enabled_sum_ids)).all()
     } if enabled_sum_ids else set()
-    visible_ids = note_cids | sum_cids
+    chat_cids = {r[0] for r in db.query(ConceptSource.concept_id).filter(
+        ConceptSource.source_type == "chat_message",
+        ConceptSource.source_id.in_(enabled_msg_ids)).all()
+    } if enabled_msg_ids else set()
+    visible_ids = note_cids | sum_cids | chat_cids
 
     concepts = db.query(
         Concept, func.count(ConceptSource.id).label("sc")
