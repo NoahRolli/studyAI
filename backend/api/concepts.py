@@ -266,16 +266,34 @@ def merge_concepts(data: MergeRequest, db: Session = Depends(get_db)):
         else:
             db.delete(cs)
 
-    for edge in source.edges_out:
-        if edge.target_concept_id != target.id:
+    # Edges umhaengen — Duplikate vermeiden (UNIQUE constraint)
+    for edge in list(source.edges_out):
+        if edge.target_concept_id == target.id:
+            db.delete(edge)
+            continue
+        # Pruefen ob (target.id -> edge.target) bereits existiert
+        existing = db.query(ConceptEdge).filter(
+            ConceptEdge.source_concept_id == target.id,
+            ConceptEdge.target_concept_id == edge.target_concept_id,
+        ).first()
+        if existing:
+            db.delete(edge)
+        else:
             edge.source_concept_id = target.id
-        else:
+
+    for edge in list(source.edges_in):
+        if edge.source_concept_id == target.id:
             db.delete(edge)
-    for edge in source.edges_in:
-        if edge.source_concept_id != target.id:
+            continue
+        # Pruefen ob (edge.source -> target.id) bereits existiert
+        existing = db.query(ConceptEdge).filter(
+            ConceptEdge.source_concept_id == edge.source_concept_id,
+            ConceptEdge.target_concept_id == target.id,
+        ).first()
+        if existing:
+            db.delete(edge)
+        else:
             edge.target_concept_id = target.id
-        else:
-            db.delete(edge)
 
     db.delete(source)
     db.commit()
