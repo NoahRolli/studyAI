@@ -52,12 +52,23 @@ export default function MergeSuggestions() {
         source_id: sourceId,
         target_id: targetId,
       })
-      // Paar aus Liste entfernen
+      // Alle Paare entfernen die die gemergte Source-ID referenzieren
+      // (Source existiert nach Merge nicht mehr in der DB)
       setPairs(prev => prev.filter(
-        p => !(p.concept_a.id === sourceId && p.concept_b.id === targetId)
-          && !(p.concept_a.id === targetId && p.concept_b.id === sourceId)
+        p => p.concept_a.id !== sourceId && p.concept_b.id !== sourceId
       ))
-    } catch (err) { console.error(err) }
+    } catch (err) {
+      console.error(err)
+      // Bei 404: Konzept wurde durch frueheren Merge bereits konsumiert
+      // → Paar aus Liste entfernen damit UI nicht haengen bleibt
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('404') || msg.includes('nicht gefunden')) {
+        setPairs(prev => prev.filter(
+          p => p.concept_a.id !== sourceId && p.concept_a.id !== targetId
+            && p.concept_b.id !== sourceId && p.concept_b.id !== targetId
+        ))
+      }
+    }
   }
 
   const handleDismiss = (a: number, b: number) => {
