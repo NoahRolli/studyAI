@@ -57,7 +57,7 @@ def _ensure_folder(db, name, parent_id, metis_enabled=False):
     return folder
 
 
-def ensure_folder_structure(db, provider_slug):
+def ensure_folder_structure(db, provider_slug, display_name=None):
     """
     Legt LLM-Archiv/{Provider}/_Chats/, /_Memory/, /_ProjectDocs/ an.
 
@@ -69,7 +69,7 @@ def ensure_folder_structure(db, provider_slug):
         chats_folder = _Chats (enthält die importierten Conversations)
     """
     # Provider-Name in Title-Case für Folder ("Claude" statt "claude")
-    provider_folder_name = provider_slug.capitalize()
+    provider_folder_name = display_name or provider_slug.capitalize()
 
     llm_archiv = _ensure_folder(db, "LLM-Archiv", parent_id=None)
     provider_folder = _ensure_folder(
