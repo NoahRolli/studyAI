@@ -1,13 +1,17 @@
 """
-LLM Memory Service — Import von memories.json aus dem Claude-Export.
+LLM Memory Service — Provider-agnostischer Memory-Import.
 
-Liest conversations_memory (global) und project_memories (pro Projekt) aus
-und legt je ein Document pro Memory-Eintrag im _Memory/-Folder an.
+Unterstützt aktuell:
+- Claude (memories.json: globaler Block + Project-Memories)
+- ChatGPT (memory.md als ein Block)
+- Gemini (custom_instructions.md als ein Block — Saved Info optional analog)
 
 Idempotent: Re-Import aktualisiert bestehende Documents anhand des Filenames
-(Dedup-Key). Keine Duplikate.
+(Dedup-Key per (folder_id, filename)). Keine Duplikate.
 
 File-Type: "llm_memory" (diskriminiert gegen "chat" aus llm_import_service).
+Custom Instructions teilen denselben file_type, sind aber per Filename und
+display_name eindeutig identifizierbar (z.B. "ChatGPT_CustomInstructions.md").
 """
 
 from __future__ import annotations
@@ -29,26 +33,83 @@ from backend.services.llm_project_index import (
     project_name_to_filename_segment,
 )
 
-# Fake-URI-Präfix analog zu Conversations (llm://claude/{uuid})
-MEMORY_FILE_PATH_PREFIX = "llm://claude/memory"
+# ----------------------------------------------------------------------
+# Provider-Display-Mapping (für non-capitalize-Provider wie ChatGPT)
+# ----------------------------------------------------------------------
+
+PROVIDER_DISPLAY_NAMES = {
+    "claude": "Claude",
+    "chatgpt": "ChatGPT",
+    "gemini": "Gemini",
+}
+
+PROVIDER_IS_ONGOING = {
+    "claude": True,
+    "chatgpt": False,
+    "gemini": False,
+}
+
 MEMORY_FILE_TYPE = "llm_memory"
-GLOBAL_MEMORY_FILENAME = "Claude_Memory_Global.md"
-GLOBAL_MEMORY_DISPLAY = "Claude Memory — Global"
 
 
-def _parse_memories_json(export_dir: str | Path) -> tuple[str, dict[str, str]]:
+# ----------------------------------------------------------------------
+# Naming-Helper (provider-agnostisch)
+# ----------------------------------------------------------------------
+
+def _memory_file_path(provider_slug: str, suffix: str) -> str:
+    """Erzeugt fake-URI: llm://{slug}/memory/{suffix}"""
+    return f"llm://{provider_slug}/memory/{suffix}"
+
+
+def _global_memory_filename(provider_slug: str) -> str:
+    """Filename für Global-Memory: {Display}_Memory_Global.md"""
+    display = PROVIDER_DISPLAY_NAMES.get(provider_slug, provider_slug.capitalize())
+    return f"{display}_Memory_Global.md"
+
+
+def _global_memory_display(provider_slug: str) -> str:
+    """Display-Name für Global-Memory: {Display} Memory — Global"""
+    display = PROVIDER_DISPLAY_NAMES.get(provider_slug, provider_slug.capitalize())
+    return f"{display} Memory — Global"
+
+
+def _custom_instructions_filename(provider_slug: str) -> str:
+    """Filename für Custom Instructions: {Display}_CustomInstructions.md"""
+    display = PROVIDER_DISPLAY_NAMES.get(provider_slug, provider_slug.capitalize())
+    return f"{display}_CustomInstructions.md"
+
+
+def _custom_instructions_display(provider_slug: str) -> str:
+    """Display-Name für Custom Instructions: {Display} — Custom Instructions"""
+    display = PROVIDER_DISPLAY_NAMES.get(provider_slug, provider_slug.capitalize())
+    return f"{display} — Custom Instructions"
+
+
+def _project_memory_filename(provider_slug: str, project_name: str) -> str:
+    """Filename für Project-Memory (nur Claude): {Display}_Memory_{name}.md"""
+    display = PROVIDER_DISPLAY_NAMES.get(provider_slug, provider_slug.capitalize())
+    segment = project_name_to_filename_segment(project_name)
+    return f"{display}_Memory_{segment}.md"
+
+
+# ----------------------------------------------------------------------
+# Format-Parser pro Provider (Strategy-Pattern)
+# ----------------------------------------------------------------------
+
+def _parse_claude_memories(source_dir: str | Path) -> tuple[str, dict[str, str]]:
     """
-    Lädt memories.json und gibt (global_memory, project_memories) zurück.
+    Lädt memories.json aus dem Claude-Export.
 
-    memories.json ist eine Liste mit genau einem Element, das drei Keys hat:
-    conversations_memory (str), project_memories (dict), account_uuid (str).
+    Format: Liste mit einem Element. Keys:
+    - conversations_memory (str) — globaler Block
+    - project_memories (dict {uuid: text})
+    - account_uuid (str)
 
     Returns:
         Tuple (global_str, project_dict). global_str ist "" wenn nicht vorhanden.
-        project_dict ist {uuid: memory_text}.
     """
-    export_path = Path(export_dir)
-    memories_file = export_path / "memories.json"
+    src = Path(source_dir)
+    memories_file = src / "memories.json"
 
     if not memories_file.exists():
         raise FileNotFoundError(f"memories.json nicht gefunden: {memories_file}")
@@ -74,11 +135,25 @@ def _parse_memories_json(export_dir: str | Path) -> tuple[str, dict[str, str]]:
     return global_memory, project_memories
 
 
-def _memory_filename_for_project(project_name: str) -> str:
-    """Erzeugt Filename für Project-Memory: Claude_Memory_{name}.md"""
-    segment = project_name_to_filename_segment(project_name)
-    return f"Claude_Memory_{segment}.md"
+def _parse_markdown_block(source_path: str | Path) -> str:
+    """
+    Lädt eine Markdown-Datei als einen Block.
+    Genutzt für ChatGPT-Memory und Gemini-Custom-Instructions.
 
+    Returns:
+        Inhalt der Datei als String. Leer wenn Datei fehlt oder leer.
+    """
+    src = Path(source_path)
+    if not src.exists():
+        raise FileNotFoundError(f"Markdown-Datei nicht gefunden: {src}")
+
+    content = src.read_text(encoding="utf-8")
+    return content.strip()
+
+
+# ----------------------------------------------------------------------
+# DB-Layer (provider-agnostisch — unverändert vom Original)
+# ----------------------------------------------------------------------
 
 def _upsert_memory_document(
     db: Session,
@@ -134,80 +209,172 @@ def _upsert_memory_document(
     return doc, "created"
 
 
+# ----------------------------------------------------------------------
+# Orchestrator: Memory-Import
+# ----------------------------------------------------------------------
+
 def import_memories(
     db: Session,
-    export_dir: str | Path,
+    provider_slug: str,
+    source_dir: str | Path,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """
-    Haupt-Einstiegspunkt: Importiert alle Memories aus dem Export.
+    Provider-agnostischer Memory-Import.
 
     Args:
         db: SQLAlchemy Session.
-        export_dir: Pfad zum Claude-Export-Ordner.
+        provider_slug: "claude", "chatgpt" oder "gemini".
+        source_dir: Pfad zum Export-Ordner (Claude) ODER zur memory.md (andere).
+                    Bei "claude" wird memories.json drin erwartet.
+                    Bei "chatgpt" wird memory.md drin erwartet.
+                    Bei "gemini" — analog (Saved Info, optional).
         dry_run: Wenn True, nichts committen.
 
     Returns:
-        Stats-Dict mit Counts: created, updated, unchanged, skipped_no_name.
+        Stats-Dict mit Counts: created, updated, unchanged, skipped_no_name, details.
     """
+    display = PROVIDER_DISPLAY_NAMES.get(provider_slug, provider_slug.capitalize())
+    is_ongoing = PROVIDER_IS_ONGOING.get(provider_slug, False)
+
     # Provider + Folder-Struktur sicherstellen (idempotent)
-    ensure_provider(db, "Claude", "claude", is_ongoing=True)
-    _chats, memory_folder, _pd = ensure_folder_structure(db, "claude")
+    ensure_provider(db, display, provider_slug, is_ongoing=is_ongoing)
+    _chats, memory_folder, _pd = ensure_folder_structure(
+        db, provider_slug, display_name=display,
+    )
 
-    # Project-Index laden (UUID → Name)
-    project_index = load_project_index(export_dir)
-
-    # Memories laden
-    global_memory, project_memories = _parse_memories_json(export_dir)
-
-    stats = {
+    stats: dict[str, Any] = {
         "created": 0, "updated": 0, "unchanged": 0, "skipped_no_name": 0,
         "details": [],
     }
 
-    # Global-Memory — immer genau ein Document
-    if global_memory.strip():
-        _doc, action = _upsert_memory_document(
-            db,
-            folder_id=memory_folder.id,
-            filename=GLOBAL_MEMORY_FILENAME,
-            display_name=GLOBAL_MEMORY_DISPLAY,
-            file_path=f"{MEMORY_FILE_PATH_PREFIX}/global",
-            content=global_memory,
-            dry_run=dry_run,
-        )
-        stats[action] = stats.get(action, 0) + 1
-        stats["details"].append(("global", action))
+    # ----- Claude-Pfad: globaler Block + Project-Memories aus memories.json
+    if provider_slug == "claude":
+        project_index = load_project_index(source_dir)
+        global_memory, project_memories = _parse_claude_memories(source_dir)
 
-    # Project-Memories — ein Document pro UUID
-    for uuid, memory_text in project_memories.items():
-        if not isinstance(memory_text, str) or not memory_text.strip():
-            continue
+        # Global-Memory — immer genau ein Document
+        if global_memory.strip():
+            _doc, action = _upsert_memory_document(
+                db,
+                folder_id=memory_folder.id,
+                filename=_global_memory_filename(provider_slug),
+                display_name=_global_memory_display(provider_slug),
+                file_path=_memory_file_path(provider_slug, "global"),
+                content=global_memory,
+                dry_run=dry_run,
+            )
+            stats[action] = stats.get(action, 0) + 1
+            stats["details"].append(("global", action))
 
-        project_info = project_index.get(uuid)
-        if not project_info:
-            # UUID existiert in memories.json aber nicht in projects.json
-            # (z.B. gelöschtes Project) — skip mit Warnung im Stats-Dict
-            stats["skipped_no_name"] += 1
-            stats["details"].append((uuid, "skipped_no_name"))
-            continue
+        # Project-Memories
+        for uuid, memory_text in project_memories.items():
+            if not isinstance(memory_text, str) or not memory_text.strip():
+                continue
 
-        name = project_info["name"]
-        filename = _memory_filename_for_project(name)
-        display = f"Claude Memory — {name}"
-        file_path = f"{MEMORY_FILE_PATH_PREFIX}/project/{uuid}"
+            project_info = project_index.get(uuid)
+            if not project_info:
+                stats["skipped_no_name"] += 1
+                stats["details"].append((uuid, "skipped_no_name"))
+                continue
 
-        _doc, action = _upsert_memory_document(
-            db,
-            folder_id=memory_folder.id,
-            filename=filename,
-            display_name=display,
-            file_path=file_path,
-            content=memory_text,
-            dry_run=dry_run,
-        )
-        stats[action] = stats.get(action, 0) + 1
-        stats["details"].append((name, action))
+            name = project_info["name"]
+            _doc, action = _upsert_memory_document(
+                db,
+                folder_id=memory_folder.id,
+                filename=_project_memory_filename(provider_slug, name),
+                display_name=f"{display} Memory — {name}",
+                file_path=_memory_file_path(provider_slug, f"project/{uuid}"),
+                content=memory_text,
+                dry_run=dry_run,
+            )
+            stats[action] = stats.get(action, 0) + 1
+            stats["details"].append((name, action))
+
+    # ----- ChatGPT/Gemini-Pfad: ein Markdown-Block als Global-Memory
+    elif provider_slug in ("chatgpt", "gemini"):
+        # source_dir kann ein Pfad zur Datei oder zum Ordner sein
+        src = Path(source_dir)
+        if src.is_dir():
+            md_file = src / "memory.md"
+        else:
+            md_file = src
+
+        content = _parse_markdown_block(md_file)
+        if content:
+            _doc, action = _upsert_memory_document(
+                db,
+                folder_id=memory_folder.id,
+                filename=_global_memory_filename(provider_slug),
+                display_name=_global_memory_display(provider_slug),
+                file_path=_memory_file_path(provider_slug, "global"),
+                content=content,
+                dry_run=dry_run,
+            )
+            stats[action] = stats.get(action, 0) + 1
+            stats["details"].append(("global", action))
+
+    else:
+        raise ValueError(f"Unbekannter provider_slug: {provider_slug}")
+
+    if not dry_run:
+        db.commit()
+
+    return stats
+
+
+# ----------------------------------------------------------------------
+# Orchestrator: Custom-Instructions-Import
+# ----------------------------------------------------------------------
+
+def import_custom_instructions(
+    db: Session,
+    provider_slug: str,
+    source_path: str | Path,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """
+    Importiert ein Custom-Instructions-Markdown als separates Document.
+
+    Liegt im selben _Memory/-Folder wie die regulären Memories,
+    wird aber per Filename ({Display}_CustomInstructions.md) abgegrenzt.
+
+    Args:
+        db: SQLAlchemy Session.
+        provider_slug: "chatgpt" oder "gemini" (Claude hat kein CI-Konzept).
+        source_path: Pfad zur custom_instructions.md.
+        dry_run: Wenn True, nichts committen.
+
+    Returns:
+        Stats-Dict mit Counts: created, updated, unchanged.
+    """
+    display = PROVIDER_DISPLAY_NAMES.get(provider_slug, provider_slug.capitalize())
+    is_ongoing = PROVIDER_IS_ONGOING.get(provider_slug, False)
+
+    ensure_provider(db, display, provider_slug, is_ongoing=is_ongoing)
+    _chats, memory_folder, _pd = ensure_folder_structure(
+        db, provider_slug, display_name=display,
+    )
+
+    content = _parse_markdown_block(source_path)
+    stats: dict[str, Any] = {
+        "created": 0, "updated": 0, "unchanged": 0, "details": [],
+    }
+
+    if not content:
+        return stats
+
+    _doc, action = _upsert_memory_document(
+        db,
+        folder_id=memory_folder.id,
+        filename=_custom_instructions_filename(provider_slug),
+        display_name=_custom_instructions_display(provider_slug),
+        file_path=_memory_file_path(provider_slug, "custom-instructions"),
+        content=content,
+        dry_run=dry_run,
+    )
+    stats[action] = stats.get(action, 0) + 1
+    stats["details"].append(("custom_instructions", action))
 
     if not dry_run:
         db.commit()

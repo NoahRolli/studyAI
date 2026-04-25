@@ -135,14 +135,13 @@ def main():
         if do_mem:
             print("\n[Memories] Starte Memory-Import …")
             all_stats["Memories"] = import_memories(
-                db=db, export_dir=args.export_dir, dry_run=args.dry_run,
+                db=db, provider_slug="claude", source_dir=args.export_dir, dry_run=args.dry_run,
             )
             _print_stats_block("Memory Import", all_stats["Memories"])
 
         if do_docs:
             print("\n[ProjectDocs] Starte Project-Docs-Import …")
             all_stats["ProjectDocs"] = import_project_docs(
-                db=db, export_dir=args.export_dir, dry_run=args.dry_run,
             )
             _print_stats_block("Project-Docs Import", all_stats["ProjectDocs"])
 
