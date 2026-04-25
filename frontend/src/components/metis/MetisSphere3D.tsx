@@ -2,9 +2,9 @@
 // Hierarchische Positionierung: Ordner -> Cluster -> Konzepte
 // Quaternion-basierte Trackball-Rotation (kein Gimbal Lock)
 //
-// Stand: Phase 1a (Edge-Memoisierung) + 1b (InstancedNodes) ohne Phase 2
-// Edges via klassischem GlowEdge fuer schoene Optik
-// Nodes via InstancedMesh fuer Performance bei vielen Konzepten
+// Phase 2.1: Edges via Custom RGBA-Shader (1 Draw-Call)
+// Optik soll funktional identisch zu GlowEdge bleiben — nur konsolidiert
+// Glow + Pixel-Breite kommen in Phase 2.2
 
 import { useRef, useMemo, useCallback, useState, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
@@ -13,8 +13,8 @@ import type { MetisGraph } from '../../types/metis'
 import {
   ClusterHub, BackgroundGrid, CameraTracker,
 } from './MetisSphereNodes'
-import { GlowEdge } from './MetisSphereEdge'
 import InstancedNodes from './InstancedNodes'
+import InstancedEdges, { type InstancedEdge } from './InstancedEdges'
 import MetisSphereSettings from './MetisSphereSettings'
 import { useSphereSettings } from '../../hooks/useSphereSettings'
 import { computeHierarchicalLayout } from './MetisSphereLayout'
@@ -41,10 +41,19 @@ const HUB_FALLBACK = [
   "#2dd4bf", "#e879f9", "#a3e635", "#f59e0b", "#ec4899",
   "#14b8a6", "#8b5cf6", "#84cc16", "#ef4444", "#06b6d4",
 ]
-const EDGE_DEFAULT = new THREE.Color('#00d4ff')
+const EDGE_DEFAULT = new THREE.Color('#c0eaf5')
 const FOLDER_COLORS = ['#00d4ff', '#ff6b9d', '#4ade80', '#fb923c', '#c084fc', '#67e8f9']
 const CLICK_THRESHOLD = 5
 const WHITE = new THREE.Color('#ffffff')
+
+// Edge-Alpha-Werte: bewusst klein gehalten weil viele Edges sich ueberlappen
+// Bei 12k Edges + 1800 Nodes ist die Sphaere visuell dicht — wir wollen Hierarchie
+const EDGE_ALPHA_IDLE = 0.15           // Standard: leise leuchtend
+const EDGE_ALPHA_HIGHLIGHT = 0.85      // Highlighted: deutlich da
+const EDGE_ALPHA_HUB_IDLE = 0.05       // Hub-Strahlen idle: sehr dezent
+const EDGE_ALPHA_HUB_HIGHLIGHT = 0.7   // Hub-Strahlen highlighted
+const EDGE_ALPHA_FOLDER_IDLE = 0.08    // Folder-Hub-Verbindungen idle
+const EDGE_ALPHA_FOLDER_HIGHLIGHT = 0.6
 
 function TrackballControls({ groupRef, onInteract, isDraggingRef }: {
   groupRef: React.RefObject<THREE.Group | null>
@@ -215,52 +224,9 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
     setActiveHub(null); setActiveFolder(null); onNodeClick?.(nodeId)
   }, [onNodeClick, isDraggingRef])
 
-  const isEdgeHighlighted = useCallback((srcId: number, tgtId: number) => {
-    if (highlightSet.size === 0) return false
-    return highlightSet.has(srcId) || highlightSet.has(tgtId)
-  }, [highlightSet])
-
   const { nodePositions, hubPositions, folderPositions, maxRadius } = useMemo(
     () => computeHierarchicalLayout(graph), [graph],
   )
-
-  // Phase 1a: Hub-to-Node Edges pre-computed
-  const hubToNodeEdges = useMemo(() => {
-    const edges: Array<{
-      key: string; hubId: string; nodeId: number
-      start: [number, number, number]; end: [number, number, number]; color: THREE.Color
-    }> = []
-    for (const hub of hubData) {
-      const hp = hubPositions.get(hub.id)
-      if (!hp) continue
-      for (const nid of hub.memberNodeIds) {
-        const np = nodePositions.get(nid)
-        if (!np) continue
-        edges.push({ key: `${hub.id}-${nid}`, hubId: hub.id, nodeId: nid, start: hp, end: np, color: hub.color })
-      }
-    }
-    return edges
-  }, [hubData, hubPositions, nodePositions])
-
-  // Phase 1a: Folder-to-Hub Edges pre-computed
-  const folderToHubEdges = useMemo(() => {
-    const edges: Array<{
-      key: string; folderId: number; hubId: string
-      start: [number, number, number]; end: [number, number, number]; color: THREE.Color
-    }> = []
-    const folderColorMap = new Map<number, THREE.Color>()
-    for (const fd of folderData) folderColorMap.set(fd.id, fd.color)
-    for (const hub of hubData) {
-      if (hub.dominantFolderId === null) continue
-      const fPos = folderPositions.get(hub.dominantFolderId)
-      const hp = hubPositions.get(hub.id)
-      if (!fPos || !hp) continue
-      const color = folderColorMap.get(hub.dominantFolderId)
-      if (!color) continue
-      edges.push({ key: `folder-${hub.dominantFolderId}-${hub.id}`, folderId: hub.dominantFolderId, hubId: hub.id, start: fPos, end: hp, color })
-    }
-    return edges
-  }, [hubData, folderData, hubPositions, folderPositions])
 
   const instancedNodeData = useMemo(() => {
     const data: Array<{ id: number; position: [number, number, number]; color: THREE.Color }> = []
@@ -273,6 +239,73 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
     }
     return data
   }, [graph.nodes, nodePositions, nodeToHubColor, settings.showNodeColors])
+
+  // === Phase 2.1: Konsolidierte Edge-Liste fuer Custom-Shader ===
+  // Drei Edge-Quellen werden in ein einziges Array gepackt
+  // Alpha steuert Sichtbarkeit, Color bleibt voll
+  const instancedEdgeData = useMemo<InstancedEdge[]>(() => {
+    const result: InstancedEdge[] = []
+    const hasHighlight = highlightSet.size > 0
+
+    // 1. Node-to-Node Edges (Konzept-Beziehungen)
+    for (const edge of graph.edges) {
+      const s = nodePositions.get(edge.source_node_id)
+      const e = nodePositions.get(edge.target_node_id)
+      if (!s || !e) continue
+      const hl = hasHighlight
+        && (highlightSet.has(edge.source_node_id) || highlightSet.has(edge.target_node_id))
+      const rt = typeof edge.relation_type === 'object' && edge.relation_type
+        ? edge.relation_type.name : (edge.relation_type || '')
+      const isOnt = edge.id < 0
+      const color = settings.showEdgeColors
+        ? (COLORS[rt] || COLORS.ai)
+        : EDGE_DEFAULT
+      const alpha = hl
+        ? EDGE_ALPHA_HIGHLIGHT
+        : isOnt
+          ? Math.min(1.0, EDGE_ALPHA_IDLE * settings.edgeOntology * 1.5)
+          : Math.min(1.0, EDGE_ALPHA_IDLE * settings.edgeSimilarity)
+      result.push({ start: s, end: e, color, alpha })
+    }
+
+    // 2. Hub-to-Node Edges (sehr viele, idle dezent halten)
+    for (const hub of hubData) {
+      const hp = hubPositions.get(hub.id)
+      if (!hp) continue
+      for (const nid of hub.memberNodeIds) {
+        const np = nodePositions.get(nid)
+        if (!np) continue
+        const hl = activeHub === hub.id || highlightSet.has(nid)
+        const color = settings.showEdgeColors ? hub.color : EDGE_DEFAULT
+        const alpha = hl ? EDGE_ALPHA_HUB_HIGHLIGHT : EDGE_ALPHA_HUB_IDLE
+        result.push({ start: hp, end: np, color, alpha })
+      }
+    }
+
+    // 3. Folder-to-Hub Edges
+    const folderColorMap = new Map<number, THREE.Color>()
+    for (const fd of folderData) folderColorMap.set(fd.id, fd.color)
+    for (const hub of hubData) {
+      if (hub.dominantFolderId === null) continue
+      const fPos = folderPositions.get(hub.dominantFolderId)
+      const hp = hubPositions.get(hub.id)
+      if (!fPos || !hp) continue
+      const color = folderColorMap.get(hub.dominantFolderId)
+      if (!color) continue
+      const hl = activeFolder === hub.dominantFolderId
+      const alpha = hl ? EDGE_ALPHA_FOLDER_HIGHLIGHT : EDGE_ALPHA_FOLDER_IDLE
+      result.push({
+        start: fPos,
+        end: hp,
+        color: settings.showEdgeColors ? color : EDGE_DEFAULT,
+        alpha,
+      })
+    }
+
+    return result
+  }, [graph.edges, nodePositions, hubData, hubPositions, folderData, folderPositions,
+      activeHub, activeFolder, highlightSet,
+      settings.showEdgeColors, settings.edgeOntology, settings.edgeSimilarity])
 
   const { camera } = useThree()
   useEffect(() => {
@@ -300,38 +333,9 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
       <CameraTracker onCameraMove={onCameraMove} />
       {!transparent && <BackgroundGrid />}
       <group ref={groupRef}>
-        {/* Edges (Node-to-Node) — klassisches GlowEdge */}
-        {graph.edges.map(edge => {
-          const s = nodePositions.get(edge.source_node_id)
-          const e = nodePositions.get(edge.target_node_id)
-          if (!s || !e) return null
-          const hl = isEdgeHighlighted(edge.source_node_id, edge.target_node_id)
-          const rt = typeof edge.relation_type === 'object' && edge.relation_type ? edge.relation_type.name : (edge.relation_type || '')
-          const c = COLORS[rt] || COLORS.ai
-          const isOnt = edge.id < 0
-          return <GlowEdge key={edge.id} start={s} end={e} status={edge.status}
-            relationType={typeof edge.relation_type === "object" && edge.relation_type ? edge.relation_type.name : (edge.relation_type || undefined)}
-            showMarker={isOnt && settings.showOntologyMarkers}
-            showLabel={isOnt && settings.showEdgeLabels}
-            thickness={isOnt ? settings.ontologyThickness : 1}
-            color={settings.showEdgeColors ? c : EDGE_DEFAULT}
-            strength={hl ? 5.0 : (isOnt ? settings.edgeOntology : edge.strength * settings.edgeSimilarity)} />
-        })}
-        {/* Cluster-Hub zu Node Verbindungen — pre-computed (Phase 1a) */}
-        {hubToNodeEdges.map(e => {
-          const hl = activeHub === e.hubId || highlightSet.has(e.nodeId)
-          return <GlowEdge key={e.key} start={e.start} end={e.end}
-            color={settings.showEdgeColors ? e.color : EDGE_DEFAULT}
-            strength={hl ? 5.0 : 0.1} dashed={!hl} />
-        })}
-        {/* Folder-Hub zu Cluster-Hub Verbindungen — pre-computed (Phase 1a) */}
-        {folderToHubEdges.map(e => (
-          <GlowEdge key={e.key} start={e.start} end={e.end}
-            color={settings.showEdgeColors ? e.color : EDGE_DEFAULT}
-            strength={activeFolder === e.folderId ? 3.0 : 0.15}
-            dashed={activeFolder !== e.folderId} />
-        ))}
-        {/* Folder-Hubs (grosse leuchtende Anker) */}
+        {/* === Phase 2.1: Alle Edges in einem Custom-Shader-Draw === */}
+        <InstancedEdges edges={instancedEdgeData} />
+
         {folderData.map(fd => {
           const pos = folderPositions.get(fd.id)
           if (!pos) return null
@@ -342,7 +346,6 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
             sizeMul={settings.nebulaSize * 1.2}
             colorMul={settings.colorIntensity} pulse={settings.clusterPulse} />
         })}
-        {/* Cluster-Hubs (mittlere Nebel) */}
         {hubData.map(hub => {
           const pos = hubPositions.get(hub.id)
           if (!pos) return null
@@ -355,7 +358,6 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
             sizeMul={settings.nebulaSize}
             colorMul={settings.colorIntensity} pulse={settings.clusterPulse} />
         })}
-        {/* Phase 1b: Konzept-Nodes als InstancedMesh */}
         <InstancedNodes
           nodes={instancedNodeData}
           highlightSet={highlightSet}
