@@ -29,3 +29,6 @@ docker-compose.override.yml
 
 # LLM import backups (Slice 1a)
 pallas.db.pre-*
+
+# Sphinx build artifacts
+docs/build/
