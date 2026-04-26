@@ -247,14 +247,21 @@
           <h1>Source code for backend.services.parser_service</h1><div class="highlight"><pre>
 <span></span><span class="c1"># Parser-Service: Liest Text aus verschiedenen Dateiformaten</span>
 <span class="c1"># Unterstützt PDF, Word, PowerPoint, Excel, Bilder (OCR), Markdown und Text</span>
+<span class="c1"># PyMuPDF ist optional — wenn nicht installiert, werden PDFs mit Fallback gelesen</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">fitz</span>  <span class="c1"># PyMuPDF — Library zum PDF-Lesen</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">docx</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span> <span class="k">as</span> <span class="n">DocxDocument</span>  <span class="c1"># python-docx — Library zum Word-Lesen</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pptx</span><span class="w"> </span><span class="kn">import</span> <span class="n">Presentation</span>  <span class="c1"># python-pptx — Library zum PowerPoint-Lesen</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openpyxl</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_workbook</span>  <span class="c1"># openpyxl — Library zum Excel-Lesen</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pytesseract</span>  <span class="c1"># OCR — Text aus Bildern extrahieren</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>  <span class="c1"># Pillow — Bildverarbeitung</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="c1"># PyMuPDF optional importieren (Build-Probleme auf manchen Systemen)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">fitz</span>
+    <span class="n">HAS_PYMUPDF</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">HAS_PYMUPDF</span> <span class="o">=</span> <span class="kc">False</span>
 
 
 <span class="c1"># Unterstützte Dateiformate</span>
@@ -298,17 +305,63 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_parse_pdf</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Extrahiert Text aus einer PDF-Datei.</span>
-<span class="sd">    Geht Seite für Seite durch und sammelt den Text.</span>
+<span class="sd">    Nutzt PyMuPDF wenn verfügbar, sonst einfachen Textextrakt-Fallback.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-    <span class="n">doc</span> <span class="o">=</span> <span class="n">fitz</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">HAS_PYMUPDF</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">doc</span> <span class="o">=</span> <span class="n">fitz</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="n">doc</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="n">page</span><span class="o">.</span><span class="n">get_text</span><span class="p">()</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+        <span class="n">doc</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
-    <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="n">doc</span><span class="p">:</span>
-        <span class="n">text</span> <span class="o">+=</span> <span class="n">page</span><span class="o">.</span><span class="n">get_text</span><span class="p">()</span>
-        <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span>  <span class="c1"># Seitenumbruch als Trennung</span>
-
-    <span class="n">doc</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="c1"># Fallback: PDF als Binär lesen und Text extrahieren</span>
+    <span class="c1"># Einfacher Extrakt — funktioniert für Text-PDFs, nicht für gescannte</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
+        <span class="n">text_parts</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Suche nach Text-Streams im PDF</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">raw</span><span class="p">):</span>
+            <span class="c1"># PDF Text-Objekte beginnen mit BT und enden mit ET</span>
+            <span class="n">bt</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;BT&#39;</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">bt</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">et</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;ET&#39;</span><span class="p">,</span> <span class="n">bt</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">et</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="c1"># Text zwischen Klammern extrahieren</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="n">raw</span><span class="p">[</span><span class="n">bt</span><span class="p">:</span><span class="n">et</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">match_start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">block</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">block</span><span class="p">[</span><span class="n">match_start</span><span class="p">:</span><span class="n">match_start</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s1">&#39;(&#39;</span><span class="p">:</span>
+                    <span class="n">depth</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="n">match_end</span> <span class="o">=</span> <span class="n">match_start</span> <span class="o">+</span> <span class="mi">1</span>
+                    <span class="k">while</span> <span class="n">match_end</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">block</span><span class="p">)</span> <span class="ow">and</span> <span class="n">depth</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">block</span><span class="p">[</span><span class="n">match_end</span><span class="p">:</span><span class="n">match_end</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s1">&#39;(&#39;</span> <span class="ow">and</span> <span class="n">block</span><span class="p">[</span><span class="n">match_end</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span><span class="n">match_end</span><span class="p">]</span> <span class="o">!=</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">:</span>
+                            <span class="n">depth</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="k">elif</span> <span class="n">block</span><span class="p">[</span><span class="n">match_end</span><span class="p">:</span><span class="n">match_end</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s1">&#39;)&#39;</span> <span class="ow">and</span> <span class="n">block</span><span class="p">[</span><span class="n">match_end</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span><span class="n">match_end</span><span class="p">]</span> <span class="o">!=</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">:</span>
+                            <span class="n">depth</span> <span class="o">-=</span> <span class="mi">1</span>
+                        <span class="n">match_end</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">text_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">block</span><span class="p">[</span><span class="n">match_start</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span><span class="n">match_end</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;latin-1&#39;</span><span class="p">))</span>
+                    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                        <span class="k">pass</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">et</span> <span class="o">+</span> <span class="mi">2</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">text_parts</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;PDF-Text konnte nicht extrahiert werden. &quot;</span>
+            <span class="s2">&quot;Installiere PyMuPDF für bessere PDF-Unterstützung: pip3 install PyMuPDF&quot;</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">raise</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;PDF-Parsing fehlgeschlagen: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. &quot;</span>
+            <span class="s2">&quot;Installiere PyMuPDF: pip3 install PyMuPDF&quot;</span>
+        <span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_parse_docx</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -320,7 +373,7 @@
     <span class="n">paragraphs</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="k">for</span> <span class="n">paragraph</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">paragraphs</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">paragraph</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>  <span class="c1"># Leere Absätze überspringen</span>
+        <span class="k">if</span> <span class="n">paragraph</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
             <span class="n">paragraphs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">paragraph</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">paragraphs</span><span class="p">)</span>
@@ -338,7 +391,6 @@
         <span class="n">slide_content</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;--- Folie </span><span class="si">{</span><span class="n">slide_num</span><span class="si">}</span><span class="s2"> ---&quot;</span><span class="p">]</span>
 
         <span class="k">for</span> <span class="n">shape</span> <span class="ow">in</span> <span class="n">slide</span><span class="o">.</span><span class="n">shapes</span><span class="p">:</span>
-            <span class="c1"># Nur Shapes mit Text verarbeiten</span>
             <span class="k">if</span> <span class="n">shape</span><span class="o">.</span><span class="n">has_text_frame</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">paragraph</span> <span class="ow">in</span> <span class="n">shape</span><span class="o">.</span><span class="n">text_frame</span><span class="o">.</span><span class="n">paragraphs</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">paragraph</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
@@ -362,7 +414,6 @@
         <span class="n">sheet_content</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;--- Blatt: </span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2"> ---&quot;</span><span class="p">]</span>
 
         <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">ws</span><span class="o">.</span><span class="n">iter_rows</span><span class="p">(</span><span class="n">values_only</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-            <span class="c1"># Zellen zu Text umwandeln, leere Zellen überspringen</span>
             <span class="n">cells</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span> <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">row</span> <span class="k">if</span> <span class="n">cell</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">cells</span><span class="p">:</span>
                 <span class="n">sheet_content</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot; | &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cells</span><span class="p">))</span>
@@ -389,12 +440,10 @@
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_parse_markdown</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Liest eine Markdown-Datei und entfernt die Formatierung.</span>
-<span class="sd">    Gibt den reinen Text zurück.</span>
+<span class="sd">    Liest eine Markdown-Datei und gibt den Rohtext zurück.</span>
+<span class="sd">    Struktur bleibt erhalten, da sie für AI nützlich ist.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">raw</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
-    <span class="c1"># Markdown-Tags entfernen für reinen Text</span>
-    <span class="c1"># Wir behalten den Rohtext, da die Struktur für AI nützlich ist</span>
     <span class="k">return</span> <span class="n">raw</span>
 
 
