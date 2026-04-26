@@ -6,6 +6,7 @@
 #   1. Forbidden-Filenames in Staging blockieren (.env, *.db, *.key, etc.)
 #   2. Secret-Pattern in Datei-Inhalten erkennen (API-Keys, JWTs, etc.)
 #   3. Personal-Pfade und Server-Hostnames warnen/blockieren
+#      (Markdown-Files werden für Layer 3 geskippt — Doku darf Beispiele enthalten)
 #
 # Installation (einmalig):
 #   chmod +x scripts/pre-commit-hook.sh
@@ -28,7 +29,6 @@ NC='\033[0m'
 errors=0
 warnings=0
 
-# Liste aller staged Files (added/modified/copied/renamed)
 staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
 
 if [ -z "$staged_files" ]; then
@@ -136,6 +136,8 @@ fi
 
 # ----------------------------------------------------------------------
 # Layer 3: Personal-Pfade und Server-Hostnames
+# Skip Markdown — Doku darf Beispiele enthalten.
+# Skip Hook-File selbst — enthält die Patterns als Strings.
 # ----------------------------------------------------------------------
 
 forbidden_in_content=(
@@ -155,8 +157,10 @@ if [ -n "$text_files" ]; then
     while IFS= read -r file; do
         [ -z "$file" ] && continue
 
+        # Skip docs (.md), the hook itself, and the legacy hook in .git/hooks/
         case "$file" in
             scripts/pre-commit-hook.sh|.git/hooks/pre-commit) continue ;;
+            *.md|*.MD|*.markdown) continue ;;
         esac
 
         added_lines=$(git diff --cached "$file" 2>/dev/null | grep -E '^\+[^+]' || true)
