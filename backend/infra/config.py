@@ -52,7 +52,7 @@ OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma4:e2b")
 OLLAMA_MODEL_LOCAL = os.environ.get("OLLAMA_MODEL_LOCAL", "gemma4:e2b")
 OLLAMA_MODEL_SERVER = os.environ.get("OLLAMA_MODEL_SERVER", "gemma4:e4b")
-OLLAMA_EMBED_MODEL = "mxbai-embed-large"
+OLLAMA_EMBED_MODEL = "bge-m3"
 
 # Groq Cloud API (kostenlos, LPU-Hardware, grosses Modell)
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
