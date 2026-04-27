@@ -1,6 +1,6 @@
 # Embedding Service — Shared Embeddings via nomic-embed-text
 # Wird von Konzept-Graph und Journal-Metis genutzt
-# Ollama /api/embeddings Endpoint, Cosine Similarity
+# Ollama /api/embed Endpoint (neue API), Cosine Similarity
 
 import numpy as np
 import httpx
@@ -12,18 +12,28 @@ logger = logging.getLogger(__name__)
 
 
 async def generate_embedding(text: str) -> list[float]:
-    """Generiert Embedding-Vektor via nomic-embed-text auf Ollama."""
+    """Generiert Embedding-Vektor via nomic-embed-text auf Ollama.
+
+    Nutzt /api/embed (neue API ab Ollama 0.2+); die alte /api/embeddings
+    liefert für nomic-embed-text fehlerhafte (konstante) Vektoren.
+    """
     base_url = await get_ollama_url()
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.post(
-            f"{base_url}/api/embeddings",
-            json={"model": OLLAMA_EMBED_MODEL, "prompt": text[:2000]},
+            f"{base_url}/api/embed",
+            json={"model": OLLAMA_EMBED_MODEL, "input": text[:2000]},
         )
         if resp.status_code != 200:
             raise ConnectionError(
                 f"Embedding fehlgeschlagen: {resp.status_code} auf {base_url}"
             )
-        return resp.json()["embedding"]
+        data = resp.json()
+        embeddings = data.get("embeddings")
+        if not embeddings or not isinstance(embeddings, list):
+            raise ValueError(
+                f"Ungueltige Embedding-Antwort von {base_url}: {data}"
+            )
+        return embeddings[0]
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
