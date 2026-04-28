@@ -38,6 +38,7 @@ from backend.auth.auth_middleware import router as auth_router
 from backend.auth.auth_middleware import require_auth
 from backend.api.ollama_status import router as ollama_status_router
 from backend.api.notes_ai import router as notes_ai_router# WICHTIG: Alle Models importieren, damit SQLAlchemy sie kennt
+from backend.api.delphi import router as delphi_router
 from backend.api.metis import router as metis_router
 from backend.api.metis_ai import router as metis_ai_router
 from backend.api.relations import router as relations_router
@@ -148,6 +149,7 @@ app.include_router(journal_metis_router)
 app.include_router(journal_metis_ai_router)
 app.include_router(ollama_status_router)
 app.include_router(notes_ai_router)
+app.include_router(delphi_router)
 app.include_router(metis_router)
 app.include_router(metis_ai_router)
 app.include_router(relations_router)
