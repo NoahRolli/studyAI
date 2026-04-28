@@ -18,6 +18,7 @@ import InstancedEdges, { type InstancedEdge } from './InstancedEdges'
 import MetisSphereSettings from './MetisSphereSettings'
 import { useSphereSettings } from '../../hooks/useSphereSettings'
 import { computeHierarchicalLayout } from './MetisSphereLayout'
+import { computeSemanticLayout } from './MetisSphereSemanticLayout'
 
 const COLORS: Record<string, THREE.Color> = {
   note: new THREE.Color('#90edb8'),
@@ -225,7 +226,12 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
   }, [onNodeClick, isDraggingRef])
 
   const { nodePositions, hubPositions, folderPositions, maxRadius } = useMemo(
-    () => computeHierarchicalLayout(graph), [graph],
+    () => {
+      if (settings.layoutMode === 'semantic') return computeSemanticLayout(graph, 'semantic')
+      if (settings.layoutMode === 'hybrid') return computeSemanticLayout(graph, 'hybrid')
+      return computeHierarchicalLayout(graph)
+    },
+    [graph, settings.layoutMode],
   )
 
   const instancedNodeData = useMemo(() => {
