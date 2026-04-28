@@ -349,9 +349,9 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
   useEffect(() => {
     if (maxRadius > 0) {
       const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180)
-      // Folder-Layout ist breit aufgespannt -> 1.1x reicht
-      // Hybrid ist eine Sphere -> 2.5x fuer Aussenansicht
-      const factor = settings.layoutMode === 'hybrid' ? 2.5 : 1.1
+      // Folder-Layout ist breit aufgespannt -> naeher fuer mehr Detail
+      // Hybrid (UI: "Semantisch") ist eine Sphere -> weit weg fuer Gesamtansicht
+      const factor = settings.layoutMode === 'hybrid' ? 3.5 : 0.85
       const dist = (maxRadius * factor) / Math.sin(fov / 2)
       camera.position.set(0, 0, Math.max(20, Math.min(800, dist)))
     }
