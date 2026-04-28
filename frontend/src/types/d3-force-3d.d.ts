@@ -46,7 +46,7 @@ declare module 'd3-force-3d' {
   export function forceLink<L extends SimulationLink = SimulationLink>(
     links?: L[],
   ): {
-    id(accessor: (n: any) => any): any
+    id(accessor: (n: any, i?: number) => any): any
     distance(d: number | ((l: L) => number)): any
     strength(s: number | ((l: L) => number)): any
     links(links?: L[]): any

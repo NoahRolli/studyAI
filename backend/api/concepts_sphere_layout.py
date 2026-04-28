@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from backend.models.database import get_db
 from backend.models.concept import (
-    ConceptCluster, ConceptClusterMember, ConceptSource,
+    ConceptCluster, ConceptClusterMember, ConceptSource, ConceptEdge,
 )
 from backend.models.summary import Summary
 from backend.models.document import Document
@@ -106,6 +106,55 @@ def _scale_to_shell(coords: np.ndarray, target_radius: float) -> np.ndarray:
     return coords * factors[:, None]
 
 
+def _compute_cluster_edges(
+    db: Session,
+    cluster_member_ids: dict[int, list[int]],
+    min_strength: float = 0.85,
+) -> tuple[list[tuple[int, int, float]], dict[int, float]]:
+    """Aggregiert Concept-Edges auf Cluster-Ebene.
+
+    Returns:
+        cluster_edges: List of (cluster_a, cluster_b, weight) — sortiert, undirected
+        connectivity: cluster_id -> total weight (sum over all its edges)
+    """
+    # Concept -> Cluster Lookup (1:N moeglich, wir nehmen erstes Cluster pro Concept)
+    concept_to_cluster: dict[int, int] = {}
+    for cl_id, members in cluster_member_ids.items():
+        for cid in members:
+            if cid not in concept_to_cluster:
+                concept_to_cluster[cid] = cl_id
+
+    # Aggregate
+    pair_weights: dict[tuple[int, int], float] = {}
+    edges = db.query(
+        ConceptEdge.source_concept_id,
+        ConceptEdge.target_concept_id,
+        ConceptEdge.strength,
+        ConceptEdge.status,
+    ).filter(
+        ConceptEdge.status != "rejected",
+        ConceptEdge.strength >= min_strength,
+    ).all()
+
+    for src, tgt, strength, _status in edges:
+        cl_a = concept_to_cluster.get(src)
+        cl_b = concept_to_cluster.get(tgt)
+        if cl_a is None or cl_b is None or cl_a == cl_b:
+            continue
+        # Undirected: kanonisch sortieren
+        key = (cl_a, cl_b) if cl_a < cl_b else (cl_b, cl_a)
+        pair_weights[key] = pair_weights.get(key, 0.0) + float(strength or 0.0)
+
+    cluster_edges = [(a, b, w) for (a, b), w in pair_weights.items()]
+    # Connectivity = Summe aller Edge-Gewichte pro Cluster
+    connectivity: dict[int, float] = {}
+    for a, b, w in cluster_edges:
+        connectivity[a] = connectivity.get(a, 0.0) + w
+        connectivity[b] = connectivity.get(b, 0.0) + w
+
+    return cluster_edges, connectivity
+
+
 @router.get("/sphere-layout")
 def get_sphere_layout(db: Session = Depends(get_db)):
     """Liefert pre-computed Cluster-Positionen (PCA auf Centroide).
@@ -177,8 +226,26 @@ def get_sphere_layout(db: Session = Depends(get_db)):
         cluster_positions[str(cl.id)] = [float(pos[0]), float(pos[1]), float(pos[2])]
         cluster_folders[str(cl.id)] = best_fid
 
+    # Cluster-Edges (Konzept-Edges aggregiert auf Cluster-Ebene)
+    cluster_member_ids: dict[int, list[int]] = {}
+    for cl in valid_clusters:
+        members = db.query(ConceptClusterMember.concept_id).filter(
+            ConceptClusterMember.cluster_id == cl.id,
+        ).all()
+        cluster_member_ids[cl.id] = [m[0] for m in members]
+
+    cluster_edges, connectivity = _compute_cluster_edges(
+        db, cluster_member_ids, min_strength=0.85,
+    )
+
     return {
         "cluster_positions": cluster_positions,
         "cluster_folders": cluster_folders,
         "shell_radius": float(target_radius),
+        "cluster_edges": [
+            {"a": a, "b": b, "weight": w} for a, b, w in cluster_edges
+        ],
+        "cluster_connectivity": {
+            str(cid): w for cid, w in connectivity.items()
+        },
     }

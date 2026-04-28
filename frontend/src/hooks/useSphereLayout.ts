@@ -7,10 +7,18 @@
 import { useState, useEffect, useCallback } from 'react'
 import { get } from './useAPI'
 
+export interface ClusterEdge {
+  a: number
+  b: number
+  weight: number
+}
+
 export interface SphereLayoutData {
   cluster_positions: Record<string, [number, number, number]>
   cluster_folders: Record<string, number | null>
   shell_radius: number
+  cluster_edges: ClusterEdge[]
+  cluster_connectivity: Record<string, number>
 }
 
 export function useSphereLayout(enabled: boolean = true) {
@@ -43,6 +51,8 @@ export function useSphereLayout(enabled: boolean = true) {
     positions: data?.cluster_positions ?? null,
     folders: data?.cluster_folders ?? null,
     shellRadius: data?.shell_radius ?? null,
+    edges: data?.cluster_edges ?? null,
+    connectivity: data?.cluster_connectivity ?? null,
     loading,
     error,
     refresh: fetchLayout,

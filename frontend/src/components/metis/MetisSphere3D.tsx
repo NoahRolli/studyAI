@@ -393,7 +393,12 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
           const isHybrid = settings.layoutMode === 'hybrid'
           // Im Hybrid-Mode Hubs deutlich groesser/heller — sonst gehen sie im Concept-Punkte-Meer unter
           const hybridIntensityBoost = isHybrid ? 2.5 : 1.0
-          const hybridSizeBoost = isHybrid ? 2.0 : 1.0
+          // Im Hybrid-Mode: Cluster mit hoher Connectivity (Familie-Knoten) werden zusaetzlich groesser
+          // log-Skalierung damit Mega-Cluster nicht den Bildschirm fuellen
+          const clusterIdNum = parseInt(hub.id.replace('hub-', ''))
+          const conn = sphereLayoutInput?.connectivity[String(clusterIdNum)] ?? 0
+          const connBoost = isHybrid ? (1 + Math.log(1 + conn / 10) * 0.4) : 1.0
+          const hybridSizeBoost = isHybrid ? 2.0 * connBoost : 1.0
           const size = 0.35 + hub.memberCount * 0.08
           return <ClusterHub key={hub.id} position={pos}
             color={hub.color} size={Math.min(size, 1.1) * hybridSizeBoost}
@@ -432,7 +437,15 @@ export default function MetisSphere3D({ graph, onNodeClick, onClusterClick, onFo
   const sphereLayoutInput: SphereLayoutInput | null = sphereLayout.positions
     && sphereLayout.folders
     && sphereLayout.shellRadius != null
-    ? { positions: sphereLayout.positions, folders: sphereLayout.folders, shellRadius: sphereLayout.shellRadius }
+    && sphereLayout.edges != null
+    && sphereLayout.connectivity != null
+    ? {
+        positions: sphereLayout.positions,
+        folders: sphereLayout.folders,
+        shellRadius: sphereLayout.shellRadius,
+        edges: sphereLayout.edges,
+        connectivity: sphereLayout.connectivity,
+      }
     : null
   const handleCameraMove = useCallback((a: number, e: number, d: number) => { onCameraMove?.(a, e, d) }, [onCameraMove])
   return (

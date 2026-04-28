@@ -11,16 +11,19 @@
 // Cache-friendly: bei reinem Folder-Anker-Wechsel wird PCA nicht neu gerechnet.
 
 import {
-  forceSimulation, forceManyBody, forceRadial,
+  forceSimulation, forceManyBody, forceLink, forceRadial,
   forceX, forceY, forceZ,
   type SimulationNode,
 } from 'd3-force-3d'
 import type { MetisGraph } from '../../types/metis'
 
-const SIM_ITERATIONS = 60
-const HUB_REPULSION = -120        // Cluster-Hubs stossen sich kraeftig ab
-const SHELL_STRENGTH = 0.05       // dezenter Sphere-Constraint
-const FOLDER_ANCHOR_STRENGTH = 0.15 // Hybrid: Folder-Centroid Anker
+const SIM_ITERATIONS = 200
+const HUB_REPULSION_BASE = -60      // Basis-Repulsion zwischen Clustern
+const HUB_REPULSION_MASS = -8       // Multiplikator pro Connectivity-Einheit
+const SHELL_STRENGTH = 0.03         // dezenter Sphere-Constraint
+const FOLDER_ANCHOR_STRENGTH = 0.04 // Hybrid: Folder-Centroid sehr leicht
+const LINK_DISTANCE = 12            // Ziel-Distanz fuer verbundene Cluster
+const LINK_STRENGTH_MAX = 0.6       // Max Pull-Faktor pro Edge
 
 interface LayoutResult {
   nodePositions: Map<number, [number, number, number]>
@@ -29,15 +32,31 @@ interface LayoutResult {
   maxRadius: number
 }
 
+export interface ClusterEdgeInput {
+  a: number
+  b: number
+  weight: number
+}
+
 export interface SphereLayoutInput {
   positions: Record<string, [number, number, number]>
   folders: Record<string, number | null>
   shellRadius: number
+  edges: ClusterEdgeInput[]
+  connectivity: Record<string, number>
 }
 
 interface ClusterSimNode extends SimulationNode {
   clusterId: number
   folderAnchor: [number, number, number] | null
+  connectivity: number
+  index?: number  // d3 setzt das selber
+}
+
+interface SimLinkInternal {
+  source: number  // Index in simNodes
+  target: number
+  weight: number
 }
 
 // Determinstisch um Centroid verteilen (Fibonacci-Sphaere)
@@ -91,24 +110,58 @@ export function computeSemanticLayout(
   })()
 
   const simNodes: ClusterSimNode[] = []
+  const clusterIdToIndex = new Map<number, number>()
   for (const cl of graph.clusters || []) {
     const pcaPos = pcaPositions[String(cl.id)]
     if (!pcaPos) continue
     const fid = clusterFolders.get(cl.id) ?? null
     const folderAnchor = fid !== null ? folderCentroids0.get(fid) ?? null : null
+    const conn = input.connectivity[String(cl.id)] ?? 0
+    clusterIdToIndex.set(cl.id, simNodes.length)
     simNodes.push({
       clusterId: cl.id,
       folderAnchor,
+      connectivity: conn,
       x: pcaPos[0], y: pcaPos[1], z: pcaPos[2],
     })
   }
 
-  // --- Force-Sim auf Cluster-Ebene (60 Iter, leichter als alter Plan) ---
+  // Cluster-Edges -> SimLinks (auf Indizes mappen)
+  const simLinks: SimLinkInternal[] = []
+  let maxWeight = 0
+  for (const e of input.edges) {
+    const si = clusterIdToIndex.get(e.a)
+    const ti = clusterIdToIndex.get(e.b)
+    if (si === undefined || ti === undefined) continue
+    if (e.weight > maxWeight) maxWeight = e.weight
+    simLinks.push({ source: si, target: ti, weight: e.weight })
+  }
+
+  // --- Force-Sim auf Cluster-Ebene mit Familienbildung ---
+  // Repulsion-Mass: Cluster mit hoher Connectivity stossen weniger ab
+  // (sie sind "schwer" und werden von ihren Nachbarn naeher gehalten)
   const sim = forceSimulation<ClusterSimNode>(simNodes, 3)
-    .force('charge', forceManyBody().strength(HUB_REPULSION).distanceMax(shellRadius * 1.5))
+    .force('charge', forceManyBody()
+      .strength((d: any) => {
+        const c = (d as ClusterSimNode).connectivity
+        // Mehr Connectivity = weniger Repulsion (Familie zieht zusammen)
+        return HUB_REPULSION_BASE - HUB_REPULSION_MASS * Math.log(1 + c / 10)
+      })
+      .distanceMax(shellRadius * 1.5)
+    )
+    .force('link', forceLink<SimLinkInternal>(simLinks)
+      .id((_d: any, i?: number) => i ?? 0)
+      .distance(LINK_DISTANCE)
+      .strength((l: any) => {
+        const w = (l as SimLinkInternal).weight
+        // Normiert auf [0, LINK_STRENGTH_MAX] via tanh-Saturation
+        // Vermeidet dass eine Mega-Edge alles zerreisst
+        return LINK_STRENGTH_MAX * Math.tanh(w / Math.max(maxWeight * 0.1, 1))
+      })
+    )
     .force('radial', forceRadial(shellRadius * 0.85, 0, 0, 0).strength(SHELL_STRENGTH))
-    .alphaDecay(0.1)
-    .velocityDecay(0.5)
+    .alphaDecay(0.04)
+    .velocityDecay(0.4)
 
   if (mode === 'hybrid') {
     sim.force('folderX', forceX((d: any) => (d as ClusterSimNode).folderAnchor?.[0] ?? 0).strength(
