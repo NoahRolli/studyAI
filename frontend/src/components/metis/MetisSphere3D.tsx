@@ -323,8 +323,8 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
   useEffect(() => {
     if (maxRadius > 0) {
       const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180)
-      // Beide Modi nutzen selbe Auto-Fit-Distanz
-      const factor = 0.85
+      // Auto-Fit: 1.3x gibt einen entspannten Aussenblick
+      const factor = 1.3
       const dist = (maxRadius * factor) / Math.sin(fov / 2)
       camera.position.set(0, 0, Math.max(20, Math.min(800, dist)))
     }

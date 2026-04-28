@@ -24,11 +24,11 @@ log = logging.getLogger("cluster_layout")
 class LayoutParams:
     """Tuning-Parameter fuer die Force-Sim."""
     iterations: int = 200
-    repulsion_strength: float = 30.0      # Pair-Repulsion (Coulomb-artig)
-    repulsion_max_dist: float = 80.0      # ueber dieser Distanz wirkt's nicht mehr
-    link_distance: float = 12.0           # Ziel-Distanz fuer verbundene Cluster
-    link_strength_max: float = 0.4        # Max Pull-Faktor pro Edge (nach tanh)
-    boundary_radius: float = 70.0         # Soft-Boundary-Start
+    repulsion_strength: float = 80.0      # Pair-Repulsion (Coulomb-artig)
+    repulsion_max_dist: float = 120.0     # ueber dieser Distanz wirkt's nicht mehr
+    link_distance: float = 25.0           # Ziel-Distanz fuer verbundene Cluster
+    link_strength_max: float = 0.15       # Max Pull-Faktor pro Edge (nach tanh)
+    boundary_radius: float = 100.0        # Soft-Boundary-Start
     boundary_strength: float = 0.05       # wie stark gegen Boundary gedrueckt wird
     initial_step: float = 1.0             # Anfangs-Schritt-Groesse
     cooldown: float = 0.985               # Schritt-Reduktion pro Iter (200 Iter -> 0.05x)
