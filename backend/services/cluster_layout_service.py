@@ -102,22 +102,38 @@ def compute_layout(
     for it in range(params.iterations):
         forces = np.zeros_like(pos)
 
-        # === Repulsion: vektorisiertes all-pairs ===
-        # Achtung Speicher: 2372 x 2372 x 3 = ~135MB fuer Diff-Tensor
-        # Bei n > 4000 muesste man chunking. Fuer 2372 ok.
-        diff = pos[:, None, :] - pos[None, :, :]      # (n, n, 3)
-        dist_sq = np.einsum('ijk,ijk->ij', diff, diff)
-        dist_sq = np.maximum(dist_sq, 1e-6)            # 0-Division verhindern
-        # Cutoff
-        mask = dist_sq < params.repulsion_max_dist ** 2
-        # Coulomb: F = strength / r^2 * unit_dir
-        inv_dist_cubed = 1.0 / (dist_sq * np.sqrt(dist_sq))
-        # Diag auf 0 (sich-selbst-abstossen vermeiden)
-        np.fill_diagonal(inv_dist_cubed, 0.0)
-        # Mask anwenden
-        inv_dist_cubed = np.where(mask, inv_dist_cubed, 0.0)
-        repulsion = (diff * inv_dist_cubed[..., None]).sum(axis=1)
+        # === Repulsion: chunked all-pairs mit numerischem Schutz ===
+        # Distance-Floor verhindert Explosion bei nahen Paaren
+        # Force-Cap verhindert dass ein Cluster ins Nirgendwo fliegt
+        DIST_FLOOR_SQ = 4.0     # Mindestabstand 2.0 in Sim-Einheiten
+        FORCE_CAP = 5.0         # Max Force-Magnitude pro Cluster pro Iter
+        max_dist_sq = params.repulsion_max_dist ** 2
+
+        # Chunked, damit der (n, n, 3) Tensor nicht den RAM auffrisst
+        # und CPU-Cache effizienter wird
+        chunk_size = 256
+        repulsion = np.zeros_like(pos)
+        for i in range(0, n, chunk_size):
+            j = min(i + chunk_size, n)
+            diff = pos[i:j, None, :] - pos[None, :, :]            # (chunk, n, 3)
+            dist_sq = np.einsum('ijk,ijk->ij', diff, diff)
+            dist_sq = np.maximum(dist_sq, DIST_FLOOR_SQ)           # WICHTIG
+            # Eigene Diagonale ausnullen
+            for k in range(i, j):
+                dist_sq[k - i, k] = np.inf
+            # Cutoff
+            within = dist_sq < max_dist_sq
+            inv_r3 = np.where(within, dist_sq ** (-1.5), 0.0)
+            # Force-Vektor pro Pair
+            chunk_force = (diff * inv_r3[..., None]).sum(axis=1)
+            repulsion[i:j] = chunk_force
+
         forces += repulsion * params.repulsion_strength
+
+        # Force-Cap: keine Komponente darf zu gross werden
+        force_norms = np.linalg.norm(forces, axis=1, keepdims=True)
+        scale = np.where(force_norms > FORCE_CAP, FORCE_CAP / force_norms, 1.0)
+        forces = forces * scale
 
         # === Edge-Attraktion: spring-like ===
         if len(edges) > 0:
@@ -154,4 +170,24 @@ def compute_layout(
 
     elapsed = time.time() - start
     log.info(f"Force-Sim done in {elapsed:.1f}s")
+
+    # Sanity: NaN/Inf -> auf Sphere-Rand projizieren
+    bad = ~np.isfinite(pos).all(axis=1)
+    if bad.any():
+        log.warning(f"  {int(bad.sum())} cluster mit NaN/Inf — auf Boundary projiziert")
+        # Random Punkte auf der Boundary
+        rng = np.random.default_rng(seed=42)
+        for idx in np.where(bad)[0]:
+            v = rng.normal(size=3)
+            v = v / np.linalg.norm(v) * params.boundary_radius
+            pos[idx] = v
+
+    # Hard-Clip falls noch krasse Outlier dabei sind
+    norms = np.linalg.norm(pos, axis=1, keepdims=True)
+    too_far = norms > params.boundary_radius * 1.5
+    if too_far.any():
+        log.warning(f"  {int(too_far.sum())} cluster ueber 1.5x boundary — clamped")
+        scale = np.where(too_far, params.boundary_radius * 1.2 / np.maximum(norms, 1e-6), 1.0)
+        pos = pos * scale
+
     return pos.astype(np.float32)
