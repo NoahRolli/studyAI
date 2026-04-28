@@ -324,7 +324,7 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
     if (maxRadius > 0) {
       const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180)
       // Folder kompakter, Semantic etwas weiter weg
-      const factor = settings.layoutMode === 'hybrid' ? 1.2 : 0.8
+      const factor = settings.layoutMode === 'hybrid' ? 1.1 : 0.9
       const dist = (maxRadius * factor) / Math.sin(fov / 2)
       camera.position.set(0, 0, Math.max(20, Math.min(800, dist)))
     }
