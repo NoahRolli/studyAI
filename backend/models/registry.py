@@ -29,6 +29,11 @@ from backend.models.llm import (  # noqa: F401
     LLMProvider, LLMConversation, LLMMessage,
 )
 
+# Delphi-Models (Knowledge-Chat-Modul)
+from backend.models.delphi_models import (  # noqa: F401
+    DelphiConversation, DelphiMessage, DelphiCitation,
+)
+
 # Journal-Models (separate DB, aber gleicher Import-Mechanismus)
 from backend.journal.models.journal_entry import JournalEntry  # noqa: F401
 from backend.journal.models.medication import (  # noqa: F401
