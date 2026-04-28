@@ -1,11 +1,11 @@
 // useSphereSettings — Persistente Sphäre-Einstellungen via localStorage
 // Slider für Nebel, Edges, Nodes + Toggles für visuelle Features
 // Boolean-Werte für Ontologie-Symbole, Edge-Labels, Node-Farben
-// layoutMode: folder (hierarchisch) | semantic (force-directed) | hybrid (folder + force)
+// layoutMode: folder (hierarchisch) | hybrid (folder-anker + cluster-pca)
 
 import { useState, useCallback } from 'react'
 
-export type LayoutMode = 'folder' | 'semantic' | 'hybrid'
+export type LayoutMode = 'folder' | 'hybrid'
 
 export interface SphereSettings {
   layoutMode: LayoutMode

@@ -94,12 +94,11 @@ export default function MetisSphereSettings({ settings, onUpdate, onSave, onRese
       {/* Layout-Mode Pill-Switch */}
       <div className="flex gap-1 mb-3 p-1 rounded"
         style={{ background: 'var(--color-hover-bg)', border: '1px solid var(--color-border)' }}>
-        {(['folder', 'semantic', 'hybrid'] as LayoutMode[]).map(mode => {
+        {(['folder', 'hybrid'] as LayoutMode[]).map(mode => {
           const active = settings.layoutMode === mode
           const labels: Record<LayoutMode, { de: string; en: string }> = {
             folder: { de: 'Ordner', en: 'Folder' },
-            semantic: { de: 'Semantisch', en: 'Semantic' },
-            hybrid: { de: 'Hybrid', en: 'Hybrid' },
+            hybrid: { de: 'Semantisch', en: 'Semantic' },
           }
           return (
             <button key={mode} onClick={() => onUpdate('layoutMode', mode)}

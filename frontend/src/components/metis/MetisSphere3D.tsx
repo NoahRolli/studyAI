@@ -229,9 +229,8 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
 
   const { nodePositions, hubPositions, folderPositions, maxRadius } = useMemo(
     () => {
-      if (settings.layoutMode !== 'folder' && sphereLayoutInput) {
-        const mode = settings.layoutMode === 'hybrid' ? 'hybrid' : 'semantic'
-        const result = computeSemanticLayout(graph, mode, sphereLayoutInput)
+      if (settings.layoutMode === 'hybrid' && sphereLayoutInput) {
+        const result = computeSemanticLayout(graph, 'hybrid', sphereLayoutInput)
         // shellRadius vom Backend ist die echte Sphere-Groesse, robuster als maxRadius
         return { ...result, maxRadius: sphereLayoutInput.shellRadius }
       }
@@ -241,17 +240,40 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
     [graph, settings.layoutMode, sphereLayoutInput],
   )
 
+  // Concept-ID -> Folder-Farbe (fuer Hybrid-Mode)
+  const nodeToFolderColor = useMemo(() => {
+    const colorByFolder = new Map<number, THREE.Color>()
+    for (const fd of folderData) colorByFolder.set(fd.id, fd.color)
+    const m = new Map<number, THREE.Color>()
+    for (const node of graph.nodes) {
+      if (node.folder_id) {
+        const c = colorByFolder.get(node.folder_id)
+        if (c) m.set(node.id, c)
+      }
+    }
+    return m
+  }, [graph.nodes, folderData])
+
   const instancedNodeData = useMemo(() => {
     const data: Array<{ id: number; position: [number, number, number]; color: THREE.Color }> = []
+    const isHybrid = settings.layoutMode === 'hybrid'
     for (const node of graph.nodes) {
       const pos = nodePositions.get(node.id)
       if (!pos) continue
-      const hubColor = nodeToHubColor.get(node.id)
-      const color = settings.showNodeColors && hubColor ? hubColor : WHITE
+      let color: THREE.Color
+      if (!settings.showNodeColors) {
+        color = WHITE
+      } else if (isHybrid) {
+        // Hybrid: Folder-Farbe dominiert -> Regionen sichtbar
+        color = nodeToFolderColor.get(node.id) || nodeToHubColor.get(node.id) || WHITE
+      } else {
+        // Folder-Layout: Cluster-Farbe (wie bisher)
+        color = nodeToHubColor.get(node.id) || WHITE
+      }
       data.push({ id: node.id, position: pos, color })
     }
     return data
-  }, [graph.nodes, nodePositions, nodeToHubColor, settings.showNodeColors])
+  }, [graph.nodes, nodePositions, nodeToHubColor, nodeToFolderColor, settings.showNodeColors, settings.layoutMode])
 
   // === Phase 2.1: Konsolidierte Edge-Liste fuer Custom-Shader ===
   // Drei Edge-Quellen werden in ein einziges Array gepackt
@@ -261,7 +283,10 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
     const hasHighlight = highlightSet.size > 0
 
     // 1. Node-to-Node Edges (Konzept-Beziehungen)
+    // Hybrid: nur sehr starke Edges (>= 0.92), sonst wird's unleserlich
+    const edgeMinStrength = settings.layoutMode === 'hybrid' ? 0.92 : 0
     for (const edge of graph.edges) {
+      if ((edge.strength ?? 0) < edgeMinStrength && edge.id >= 0) continue
       const s = nodePositions.get(edge.source_node_id)
       const e = nodePositions.get(edge.target_node_id)
       if (!s || !e) continue
@@ -318,17 +343,19 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
     return result
   }, [graph.edges, nodePositions, hubData, hubPositions, folderData, folderPositions,
       activeHub, activeFolder, highlightSet,
-      settings.showEdgeColors, settings.edgeOntology, settings.edgeSimilarity])
+      settings.showEdgeColors, settings.edgeOntology, settings.edgeSimilarity, settings.layoutMode])
 
   const { camera } = useThree()
   useEffect(() => {
     if (maxRadius > 0) {
       const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180)
-      // 2.5x Radius gibt einen ueberschaubaren Aussenblick statt Fast-Innenansicht
-      const dist = (maxRadius * 2.5) / Math.sin(fov / 2)
-      camera.position.set(0, 0, Math.max(40, Math.min(800, dist)))
+      // Folder-Layout ist breit aufgespannt -> 1.1x reicht
+      // Hybrid ist eine Sphere -> 2.5x fuer Aussenansicht
+      const factor = settings.layoutMode === 'hybrid' ? 2.5 : 1.1
+      const dist = (maxRadius * factor) / Math.sin(fov / 2)
+      camera.position.set(0, 0, Math.max(20, Math.min(800, dist)))
     }
-  }, [maxRadius, camera])
+  }, [maxRadius, camera, settings.layoutMode])
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
@@ -363,13 +390,17 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
         {hubData.map(hub => {
           const pos = hubPositions.get(hub.id)
           if (!pos) return null
+          const isHybrid = settings.layoutMode === 'hybrid'
+          // Im Hybrid-Mode Hubs deutlich groesser/heller — sonst gehen sie im Concept-Punkte-Meer unter
+          const hybridIntensityBoost = isHybrid ? 2.5 : 1.0
+          const hybridSizeBoost = isHybrid ? 2.0 : 1.0
           const size = 0.35 + hub.memberCount * 0.08
           return <ClusterHub key={hub.id} position={pos}
-            color={hub.color} size={Math.min(size, 1.1)}
+            color={hub.color} size={Math.min(size, 1.1) * hybridSizeBoost}
             label={hub.label} showLabel={showLabels}
             onClick={() => handleHubClick(hub.id, hub.memberNodeIds)}
-            intensityMul={settings.nebulaIntensity}
-            sizeMul={settings.nebulaSize}
+            intensityMul={settings.nebulaIntensity * hybridIntensityBoost}
+            sizeMul={settings.nebulaSize * hybridSizeBoost}
             colorMul={settings.colorIntensity} pulse={settings.clusterPulse} />
         })}
         <InstancedNodes
@@ -396,7 +427,7 @@ interface Props {
 export default function MetisSphere3D({ graph, onNodeClick, onClusterClick, onFolderClick, onCameraMove, transparent, showLabels = false }: Props) {
   const isDraggingRef = useRef(false)
   const { settings, update, save, reset } = useSphereSettings()
-  const layoutEnabled = settings.layoutMode !== 'folder'
+  const layoutEnabled = settings.layoutMode === 'hybrid'
   const sphereLayout = useSphereLayout(layoutEnabled)
   const sphereLayoutInput: SphereLayoutInput | null = sphereLayout.positions
     && sphereLayout.folders
@@ -406,7 +437,7 @@ export default function MetisSphere3D({ graph, onNodeClick, onClusterClick, onFo
   const handleCameraMove = useCallback((a: number, e: number, d: number) => { onCameraMove?.(a, e, d) }, [onCameraMove])
   return (
     <div className="w-full h-full relative" style={{ background: 'transparent' }}>
-      <Canvas camera={{ position: [0, 0, 400], fov: 36 }}
+      <Canvas camera={{ position: [0, 0, 120], fov: 36 }}
         style={{ background: 'transparent' }} gl={{ antialias: true, alpha: true }}>
         <MetisScene graph={graph} onNodeClick={onNodeClick} onClusterClick={onClusterClick} onFolderClick={onFolderClick}
           transparent={transparent} onCameraMove={handleCameraMove}
