@@ -112,7 +112,7 @@ export function computeSemanticLayout(
   // Links: starke Edges ziehen
   const link = forceLink<SimLink>(simLinks)
     .distance(8)
-    .strength(l => Math.min(1.0, ((l as SimLink).strength - 0.5) * 1.5))
+    .strength((l: SimLink) => Math.min(1.0, (l.strength - 0.5) * 1.5))
 
   // Sphere-Constraint: Nodes Richtung Shell ziehen
   const radial = forceRadial(radius * 0.85, 0, 0, 0)
