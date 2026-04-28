@@ -1,28 +1,26 @@
-// MetisSphereSemanticLayout — Force-Directed Layout via d3-force-3d
-// Konzepte werden NICHT hierarchisch nach Folder gruppiert, sondern
-// nach semantischer Aehnlichkeit (Edges) positioniert.
-// Folder-Hubs landen am Centroid ihrer Member, Cluster-Hubs ebenso.
+// MetisSphereSemanticLayout — Cluster-basiertes Layout
 //
-// Modi:
-//   - 'semantic': nur Edge-Forces, Folder als Farbe sichtbar (kein Anker)
-//   - 'hybrid':   Folder als schwacher Centroid-Anker + Edge-Forces
+// Strategie:
+//   1. Cluster-Positionen kommen vom Backend (PCA auf Centroide)
+//   2. 50 Force-Iterationen auf Cluster-Ebene (Repulsion + Sphere-Constraint)
+//      — verhindert Cluster-Overlap, behaelt PCA-Topologie
+//   3. Concepts werden lokal um ihren Cluster-Centroid verteilt
+//   4. Hybrid-Mode: Cluster-Positionen werden zu Folder-Centroids gezogen
 //
-// Skalierung:
-//   - Aktuell ~3800 sichtbare Nodes, ~26k Edges
-//   - Edge-Filter strength >= 0.85 reduziert Sim-Last drastisch
-//   - 200 Iterationen one-shot, kein Frame-Loop
-//   - Octree-Repulsion via d3 (forceManyBody mit theta=0.9)
+// Performance: nur 2372 Nodes in Force-Sim, 3839 Concepts deterministisch.
+// Cache-friendly: bei reinem Folder-Anker-Wechsel wird PCA nicht neu gerechnet.
 
 import {
-  forceSimulation, forceLink, forceManyBody,
-  forceRadial, forceX, forceY, forceZ,
+  forceSimulation, forceManyBody, forceRadial,
+  forceX, forceY, forceZ,
   type SimulationNode,
 } from 'd3-force-3d'
 import type { MetisGraph } from '../../types/metis'
 
-const SIM_EDGE_MIN_STRENGTH = 0.85   // nur starke Edges ziehen
-const SIM_ITERATIONS = 200
-const SHELL_RADIUS_FACTOR = 1.0      // Multiplier auf Auto-Radius
+const SIM_ITERATIONS = 60
+const HUB_REPULSION = -120        // Cluster-Hubs stossen sich kraeftig ab
+const SHELL_STRENGTH = 0.05       // dezenter Sphere-Constraint
+const FOLDER_ANCHOR_STRENGTH = 0.15 // Hybrid: Folder-Centroid Anker
 
 interface LayoutResult {
   nodePositions: Map<number, [number, number, number]>
@@ -31,157 +29,164 @@ interface LayoutResult {
   maxRadius: number
 }
 
-interface SimNode extends SimulationNode {
-  id: number
-  folderId: number | null
+export interface SphereLayoutInput {
+  positions: Record<string, [number, number, number]>
+  folders: Record<string, number | null>
+  shellRadius: number
+}
+
+interface ClusterSimNode extends SimulationNode {
+  clusterId: number
   folderAnchor: [number, number, number] | null
 }
 
-interface SimLink {
-  source: number
-  target: number
-  strength: number
-}
-
-// Initiale Positionen: zufaellig auf Sphaere — gibt der Sim Startenergie
-function randomShellPosition(radius: number): [number, number, number] {
-  const u = Math.random(), v = Math.random()
-  const theta = 2 * Math.PI * u
-  const phi = Math.acos(2 * v - 1)
-  return [
-    radius * Math.sin(phi) * Math.cos(theta),
-    radius * Math.sin(phi) * Math.sin(theta),
-    radius * Math.cos(phi),
-  ]
-}
-
-// Folder-Anker auf Fibonacci-Sphaere — gleichmaessige Verteilung
-function fibPoint(i: number, n: number, r: number): [number, number, number] {
+// Determinstisch um Centroid verteilen (Fibonacci-Sphaere)
+function fibPoints(count: number, radius: number): [number, number, number][] {
   const golden = Math.PI * (3 - Math.sqrt(5))
-  const y = n > 1 ? 1 - (i / (n - 1)) * 2 : 0
-  const rad = Math.sqrt(1 - y * y)
-  const theta = golden * i
-  return [Math.cos(theta) * rad * r, y * r, Math.sin(theta) * rad * r]
+  const result: [number, number, number][] = []
+  for (let i = 0; i < count; i++) {
+    const y = count > 1 ? 1 - (i / (count - 1)) * 2 : 0
+    const r = Math.sqrt(1 - y * y)
+    const theta = golden * i
+    result.push([Math.cos(theta) * r * radius, y * radius, Math.sin(theta) * r * radius])
+  }
+  return result
+}
+
+// Folder-Centroide berechnen (Mean der Cluster-Positionen pro Folder)
+function computeFolderCentroids(
+  clusterPositions: Map<number, [number, number, number]>,
+  clusterFolders: Map<number, number | null>,
+): Map<number, [number, number, number]> {
+  const sums = new Map<number, [number, number, number, number]>() // [sx, sy, sz, count]
+  clusterPositions.forEach((pos, cid) => {
+    const fid = clusterFolders.get(cid)
+    if (fid === null || fid === undefined) return
+    const cur = sums.get(fid) ?? [0, 0, 0, 0]
+    sums.set(fid, [cur[0] + pos[0], cur[1] + pos[1], cur[2] + pos[2], cur[3] + 1])
+  })
+  const result = new Map<number, [number, number, number]>()
+  sums.forEach(([sx, sy, sz, n], fid) => {
+    if (n > 0) result.set(fid, [sx / n, sy / n, sz / n])
+  })
+  return result
 }
 
 export function computeSemanticLayout(
   graph: MetisGraph,
-  mode: 'semantic' | 'hybrid' = 'semantic',
+  mode: 'semantic' | 'hybrid',
+  input: SphereLayoutInput,
 ): LayoutResult {
-  const n = graph.nodes.length
-  const radius = (8 + Math.sqrt(n) * 1.2) * SHELL_RADIUS_FACTOR
+  const { positions: pcaPositions, folders: clusterFolderRaw, shellRadius } = input
 
-  // Folder-Anker positionieren (auch im 'semantic' Mode fuer Hub-Positionen)
-  const folders = graph.folders || []
-  const folderAnchors = new Map<number, [number, number, number]>()
-  folders.forEach((f, i) => {
-    folderAnchors.set(f.id, fibPoint(i, Math.max(folders.length, 2), radius * 0.7))
-  })
+  // Map-konvertieren fuer schnelleren Zugriff
+  const clusterFolders = new Map<number, number | null>()
+  Object.entries(clusterFolderRaw).forEach(([k, v]) => clusterFolders.set(Number(k), v))
 
-  // SimNodes vorbereiten
-  const simNodes: SimNode[] = graph.nodes.map(node => {
-    const start = randomShellPosition(radius)
-    const anchor = node.folder_id ? folderAnchors.get(node.folder_id) || null : null
-    return {
-      id: node.id,
-      folderId: node.folder_id ?? null,
-      folderAnchor: anchor,
-      x: start[0], y: start[1], z: start[2],
-    }
-  })
+  // SimNodes: nur Cluster (nicht Concepts!)
+  const folderCentroids0 = (() => {
+    const initial = new Map<number, [number, number, number]>()
+    Object.entries(pcaPositions).forEach(([k, p]) => initial.set(Number(k), p))
+    return computeFolderCentroids(initial, clusterFolders)
+  })()
 
-  // SimLinks: nur starke Edges, Quelle/Ziel via Index
-  const idToIndex = new Map<number, number>()
-  simNodes.forEach((sn, i) => idToIndex.set(sn.id, i))
-  const simLinks: SimLink[] = []
-  for (const e of graph.edges) {
-    if ((e.strength ?? 0) < SIM_EDGE_MIN_STRENGTH) continue
-    const si = idToIndex.get(e.source_node_id)
-    const ti = idToIndex.get(e.target_node_id)
-    if (si === undefined || ti === undefined) continue
-    simLinks.push({ source: si, target: ti, strength: e.strength ?? 0.85 })
+  const simNodes: ClusterSimNode[] = []
+  for (const cl of graph.clusters || []) {
+    const pcaPos = pcaPositions[String(cl.id)]
+    if (!pcaPos) continue
+    const fid = clusterFolders.get(cl.id) ?? null
+    const folderAnchor = fid !== null ? folderCentroids0.get(fid) ?? null : null
+    simNodes.push({
+      clusterId: cl.id,
+      folderAnchor,
+      x: pcaPos[0], y: pcaPos[1], z: pcaPos[2],
+    })
   }
 
-  // --- Forces ---
-  // Repulsion: alle Nodes stossen sich ab
-  const manyBody = forceManyBody()
-    .strength(-15)
-    .distanceMax(radius * 0.8)
-    .theta(0.9)
+  // --- Force-Sim auf Cluster-Ebene (60 Iter, leichter als alter Plan) ---
+  const sim = forceSimulation<ClusterSimNode>(simNodes, 3)
+    .force('charge', forceManyBody().strength(HUB_REPULSION).distanceMax(shellRadius * 1.5))
+    .force('radial', forceRadial(shellRadius * 0.85, 0, 0, 0).strength(SHELL_STRENGTH))
+    .alphaDecay(0.1)
+    .velocityDecay(0.5)
 
-  // Links: starke Edges ziehen
-  const link = forceLink<SimLink>(simLinks)
-    .distance(8)
-    .strength((l: SimLink) => Math.min(1.0, (l.strength - 0.5) * 1.5))
-
-  // Sphere-Constraint: Nodes Richtung Shell ziehen
-  const radial = forceRadial(radius * 0.85, 0, 0, 0)
-    .strength(0.3)
-
-  const sim = forceSimulation<SimNode>(simNodes, 3)
-    .force('charge', manyBody)
-    .force('link', link)
-    .force('radial', radial)
-    .alphaDecay(0.05)
-    .velocityDecay(0.4)
-
-  // Hybrid-Modus: zusaetzlich Folder-Anker (schwach)
   if (mode === 'hybrid') {
-    sim.force('folderX', forceX((d: any) => (d as SimNode).folderAnchor?.[0] ?? 0).strength(
-      (d: any) => (d as SimNode).folderAnchor ? 0.08 : 0,
+    sim.force('folderX', forceX((d: any) => (d as ClusterSimNode).folderAnchor?.[0] ?? 0).strength(
+      (d: any) => (d as ClusterSimNode).folderAnchor ? FOLDER_ANCHOR_STRENGTH : 0,
     ))
-    sim.force('folderY', forceY((d: any) => (d as SimNode).folderAnchor?.[1] ?? 0).strength(
-      (d: any) => (d as SimNode).folderAnchor ? 0.08 : 0,
+    sim.force('folderY', forceY((d: any) => (d as ClusterSimNode).folderAnchor?.[1] ?? 0).strength(
+      (d: any) => (d as ClusterSimNode).folderAnchor ? FOLDER_ANCHOR_STRENGTH : 0,
     ))
-    sim.force('folderZ', forceZ((d: any) => (d as SimNode).folderAnchor?.[2] ?? 0).strength(
-      (d: any) => (d as SimNode).folderAnchor ? 0.08 : 0,
+    sim.force('folderZ', forceZ((d: any) => (d as ClusterSimNode).folderAnchor?.[2] ?? 0).strength(
+      (d: any) => (d as ClusterSimNode).folderAnchor ? FOLDER_ANCHOR_STRENGTH : 0,
     ))
   }
 
-  // One-Shot: alle Iterationen in einem Block
   sim.stop()
   sim.tick(SIM_ITERATIONS)
 
-  // --- Ergebnis: Positionen extrahieren ---
-  const nodePositions = new Map<number, [number, number, number]>()
+  // --- Cluster-Positionen extrahieren ---
+  const clusterPositions = new Map<number, [number, number, number]>()
   for (const sn of simNodes) {
-    nodePositions.set(sn.id, [sn.x ?? 0, sn.y ?? 0, sn.z ?? 0])
+    clusterPositions.set(sn.clusterId, [sn.x ?? 0, sn.y ?? 0, sn.z ?? 0])
   }
 
-  // Cluster-Hubs: Centroid der Member-Nodes
-  const hubPositions = new Map<string, [number, number, number]>()
+  // --- Concepts: lokal um ihren Cluster-Centroid verteilen ---
+  // Concept -> Cluster-Mapping
+  const conceptCluster = new Map<number, number>()
   for (const cl of graph.clusters || []) {
-    let cx = 0, cy = 0, cz = 0, cnt = 0
     for (const nid of cl.node_ids || []) {
-      const pos = nodePositions.get(nid)
-      if (!pos) continue
-      cx += pos[0]; cy += pos[1]; cz += pos[2]; cnt++
-    }
-    if (cnt > 0) {
-      hubPositions.set(`hub-${cl.id}`, [cx / cnt, cy / cnt, cz / cnt])
+      if (!conceptCluster.has(nid)) conceptCluster.set(nid, cl.id)
     }
   }
 
-  // Folder-Hubs: Centroid der Folder-Nodes (im semantic mode wandern sie mit)
-  const folderPositions = new Map<number, [number, number, number]>()
-  for (const f of folders) {
-    let cx = 0, cy = 0, cz = 0, cnt = 0
-    for (const node of graph.nodes) {
-      if (node.folder_id !== f.id) continue
-      const pos = nodePositions.get(node.id)
-      if (!pos) continue
-      cx += pos[0]; cy += pos[1]; cz += pos[2]; cnt++
-    }
-    if (cnt > 0) {
-      folderPositions.set(f.id, [cx / cnt, cy / cnt, cz / cnt])
-    }
+  const nodePositions = new Map<number, [number, number, number]>()
+  // Pro Cluster Fibonacci-Wolke
+  const clustersById = new Map<number, typeof graph.clusters[0]>()
+  for (const cl of graph.clusters || []) clustersById.set(cl.id, cl)
+
+  clustersById.forEach((cl, cid) => {
+    const center = clusterPositions.get(cid)
+    if (!center) return
+    const memberIds = cl.node_ids || []
+    const memberCount = memberIds.length
+    // Lokaler Radius: sqrt-Skalierung damit grosse Cluster nicht implodieren
+    const localRadius = Math.max(1.5, Math.sqrt(memberCount) * 1.0)
+    const offsets = fibPoints(memberCount, localRadius)
+    memberIds.forEach((nid, i) => {
+      const off = offsets[i] || [0, 0, 0]
+      nodePositions.set(nid, [center[0] + off[0], center[1] + off[1], center[2] + off[2]])
+    })
+  })
+
+  // Cluster-lose Concepts: zufaellig auf der Shell
+  let orphanIdx = 0
+  for (const node of graph.nodes) {
+    if (nodePositions.has(node.id)) continue
+    const orphanRadius = shellRadius * 1.05 // leicht ausserhalb damit sichtbar
+    const u = (orphanIdx * 0.618) % 1; orphanIdx++
+    const v = ((orphanIdx * 0.382) + 0.5) % 1
+    const theta = 2 * Math.PI * u
+    const phi = Math.acos(2 * v - 1)
+    nodePositions.set(node.id, [
+      orphanRadius * Math.sin(phi) * Math.cos(theta),
+      orphanRadius * Math.sin(phi) * Math.sin(theta),
+      orphanRadius * Math.cos(phi),
+    ])
   }
 
-  // MaxRadius fuer Kamera-Auto-Fit
+  // Hub-Positionen = Cluster-Positionen mit "hub-{id}" Key
+  const hubPositions = new Map<string, [number, number, number]>()
+  clusterPositions.forEach((p, cid) => hubPositions.set(`hub-${cid}`, p))
+
+  // Folder-Hubs: Centroid der finalen Cluster-Positionen
+  const folderPositions = computeFolderCentroids(clusterPositions, clusterFolders)
+
+  // MaxRadius
   let maxR = 0
   const measure = (m: Map<any, [number, number, number]>) => {
     m.forEach(p => {
-      const d = Math.sqrt(p[0] ** 2 + p[1] ** 2 + p[2] ** 2)
+      const d = Math.sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2])
       if (d > maxR) maxR = d
     })
   }

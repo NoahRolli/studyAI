@@ -18,7 +18,8 @@ import InstancedEdges, { type InstancedEdge } from './InstancedEdges'
 import MetisSphereSettings from './MetisSphereSettings'
 import { useSphereSettings } from '../../hooks/useSphereSettings'
 import { computeHierarchicalLayout } from './MetisSphereLayout'
-import { computeSemanticLayout } from './MetisSphereSemanticLayout'
+import { computeSemanticLayout, type SphereLayoutInput } from './MetisSphereSemanticLayout'
+import { useSphereLayout } from '../../hooks/useSphereLayout'
 
 const COLORS: Record<string, THREE.Color> = {
   note: new THREE.Color('#90edb8'),
@@ -113,12 +114,13 @@ function TrackballControls({ groupRef, onInteract, isDraggingRef }: {
 }
 
 function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCameraMove, transparent,
-  showLabels, isDraggingRef, settings }: {
+  showLabels, isDraggingRef, settings, sphereLayoutInput }: {
   graph: MetisGraph; onNodeClick?: (id: number) => void; onClusterClick?: (id: number) => void; onFolderClick?: (id: number) => void
   onCameraMove: (a: number, e: number, d: number) => void
   transparent?: boolean; showLabels: boolean
   isDraggingRef: React.MutableRefObject<boolean>
   settings: import('../../hooks/useSphereSettings').SphereSettings
+  sphereLayoutInput: SphereLayoutInput | null
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const idleTime = useRef(0)
@@ -227,11 +229,14 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
 
   const { nodePositions, hubPositions, folderPositions, maxRadius } = useMemo(
     () => {
-      if (settings.layoutMode === 'semantic') return computeSemanticLayout(graph, 'semantic')
-      if (settings.layoutMode === 'hybrid') return computeSemanticLayout(graph, 'hybrid')
+      if (settings.layoutMode !== 'folder' && sphereLayoutInput) {
+        const mode = settings.layoutMode === 'hybrid' ? 'hybrid' : 'semantic'
+        return computeSemanticLayout(graph, mode, sphereLayoutInput)
+      }
+      // Fallback: hierarchisch (auch wenn semantic gewaehlt aber input fehlt)
       return computeHierarchicalLayout(graph)
     },
-    [graph, settings.layoutMode],
+    [graph, settings.layoutMode, sphereLayoutInput],
   )
 
   const instancedNodeData = useMemo(() => {
@@ -388,6 +393,13 @@ interface Props {
 export default function MetisSphere3D({ graph, onNodeClick, onClusterClick, onFolderClick, onCameraMove, transparent, showLabels = false }: Props) {
   const isDraggingRef = useRef(false)
   const { settings, update, save, reset } = useSphereSettings()
+  const layoutEnabled = settings.layoutMode !== 'folder'
+  const sphereLayout = useSphereLayout(layoutEnabled)
+  const sphereLayoutInput: SphereLayoutInput | null = sphereLayout.positions
+    && sphereLayout.folders
+    && sphereLayout.shellRadius != null
+    ? { positions: sphereLayout.positions, folders: sphereLayout.folders, shellRadius: sphereLayout.shellRadius }
+    : null
   const handleCameraMove = useCallback((a: number, e: number, d: number) => { onCameraMove?.(a, e, d) }, [onCameraMove])
   return (
     <div className="w-full h-full relative" style={{ background: 'transparent' }}>
@@ -395,7 +407,8 @@ export default function MetisSphere3D({ graph, onNodeClick, onClusterClick, onFo
         style={{ background: 'transparent' }} gl={{ antialias: true, alpha: true }}>
         <MetisScene graph={graph} onNodeClick={onNodeClick} onClusterClick={onClusterClick} onFolderClick={onFolderClick}
           transparent={transparent} onCameraMove={handleCameraMove}
-          showLabels={showLabels} isDraggingRef={isDraggingRef} settings={settings} />
+          showLabels={showLabels} isDraggingRef={isDraggingRef} settings={settings}
+          sphereLayoutInput={sphereLayoutInput} />
       </Canvas>
       <MetisSphereSettings settings={settings} onUpdate={update} onSave={save} onReset={reset} />
     </div>
