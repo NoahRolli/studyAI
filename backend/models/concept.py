@@ -181,6 +181,8 @@ class ConceptCluster(Base):
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )
+    centroid_text = Column(Text, nullable=True)
+    centroid_dim = Column(Integer, nullable=True)
 
     members = relationship(
         "ConceptClusterMember", back_populates="cluster",
