@@ -11,10 +11,11 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { MetisGraph } from '../../types/metis'
 import {
-  ClusterHub, BackgroundGrid, CameraTracker,
+  BackgroundGrid, CameraTracker,
 } from './MetisSphereNodes'
 import InstancedNodes from './InstancedNodes'
 import InstancedEdges, { type InstancedEdge } from './InstancedEdges'
+import InstancedClusterHubs, { type ClusterHubData } from './InstancedClusterHubs'
 import MetisSphereSettings from './MetisSphereSettings'
 import { useSphereSettings } from '../../hooks/useSphereSettings'
 import { computeHierarchicalLayout } from './MetisSphereLayout'
@@ -240,6 +241,56 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
     [graph, settings.layoutMode, sphereLayoutInput],
   )
 
+  // Unified Hub-Data für InstancedClusterHubs (Folder + Cluster zusammen)
+  const unifiedHubs = useMemo<ClusterHubData[]>(() => {
+    const result: ClusterHubData[] = []
+    for (const fd of folderData) {
+      const pos = folderPositions.get(fd.id)
+      if (!pos) continue
+      result.push({
+        id: `folder-${fd.id}`,
+        position: pos,
+        color: fd.color,
+        size: 1.2,
+        label: fd.label,
+        memberCount: 9999,
+        isFolder: true,
+      })
+    }
+    for (const hub of hubData) {
+      const pos = hubPositions.get(hub.id)
+      if (!pos) continue
+      const size = Math.min(0.35 + hub.memberCount * 0.08, 1.1)
+      result.push({
+        id: hub.id,
+        position: pos,
+        color: hub.color,
+        size,
+        label: hub.label,
+        memberCount: hub.memberCount,
+        isFolder: false,
+      })
+    }
+    return result
+  }, [folderData, folderPositions, hubData, hubPositions])
+
+  const activeUnifiedHubId = activeHub
+    ? activeHub
+    : activeFolder !== null
+      ? `folder-${activeFolder}`
+      : null
+
+  const handleUnifiedHubClick = useCallback((id: string) => {
+    if (id.startsWith('folder-')) {
+      const fid = parseInt(id.replace('folder-', ''))
+      handleFolderClick(fid)
+    } else {
+      const hub = hubData.find(h => h.id === id)
+      if (hub) handleHubClick(id, hub.memberNodeIds)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hubData])
+
   const instancedNodeData = useMemo(() => {
     const data: Array<{ id: number; position: [number, number, number]; color: THREE.Color }> = []
     for (const node of graph.nodes) {
@@ -255,7 +306,7 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
   // === Phase 2.1: Konsolidierte Edge-Liste fuer Custom-Shader ===
   // Drei Edge-Quellen werden in ein einziges Array gepackt
   // Alpha steuert Sichtbarkeit, Color bleibt voll
-  const instancedEdgeData = useMemo<InstancedEdge[]>(() => {
+    const instancedEdgeData = useMemo<InstancedEdge[]>(() => {
     const result: InstancedEdge[] = []
     const hasHighlight = highlightSet.size > 0
 
@@ -350,28 +401,17 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
         {/* === Phase 2.1: Alle Edges in einem Custom-Shader-Draw === */}
         <InstancedEdges edges={instancedEdgeData} />
 
-        {folderData.map(fd => {
-          const pos = folderPositions.get(fd.id)
-          if (!pos) return null
-          return <ClusterHub key={`folder-${fd.id}`} position={pos}
-            color={fd.color} size={1.2} label={fd.label} showLabel={showLabels}
-            onClick={() => handleFolderClick(fd.id)}
-            intensityMul={settings.nebulaIntensity * 1.3}
-            sizeMul={settings.nebulaSize * 1.2}
-            colorMul={settings.colorIntensity} pulse={settings.clusterPulse} />
-        })}
-        {hubData.map(hub => {
-          const pos = hubPositions.get(hub.id)
-          if (!pos) return null
-          const size = 0.35 + hub.memberCount * 0.08
-          return <ClusterHub key={hub.id} position={pos}
-            color={hub.color} size={Math.min(size, 1.1)}
-            label={hub.label} showLabel={showLabels}
-            onClick={() => handleHubClick(hub.id, hub.memberNodeIds)}
-            intensityMul={settings.nebulaIntensity}
-            sizeMul={settings.nebulaSize}
-            colorMul={settings.colorIntensity} pulse={settings.clusterPulse} />
-        })}
+        <InstancedClusterHubs
+          hubs={unifiedHubs}
+          activeHubId={activeUnifiedHubId}
+          showLabels={showLabels}
+          intensityMul={settings.nebulaIntensity}
+          sizeMul={settings.nebulaSize}
+          colorMul={settings.colorIntensity}
+          pulse={settings.clusterPulse}
+          onHubClick={handleUnifiedHubClick}
+          isDraggingRef={isDraggingRef}
+        />
         <InstancedNodes
           nodes={instancedNodeData}
           highlightSet={highlightSet}
@@ -398,17 +438,20 @@ export default function MetisSphere3D({ graph, onNodeClick, onClusterClick, onFo
   const { settings, update, save, reset } = useSphereSettings()
   const layoutEnabled = settings.layoutMode === 'hybrid'
   const sphereLayout = useSphereLayout(layoutEnabled)
-  const sphereLayoutInput: SphereLayoutInput | null = sphereLayout.positions
+  const sphereLayoutInput: SphereLayoutInput | null = useMemo(() =>
+    sphereLayout.positions
     && sphereLayout.folders
     && sphereLayout.shellRadius != null
     && sphereLayout.connectivity != null
-    ? {
-        positions: sphereLayout.positions,
-        folders: sphereLayout.folders,
-        shellRadius: sphereLayout.shellRadius,
-        connectivity: sphereLayout.connectivity,
-      }
-    : null
+      ? {
+          positions: sphereLayout.positions,
+          folders: sphereLayout.folders,
+          shellRadius: sphereLayout.shellRadius,
+          connectivity: sphereLayout.connectivity,
+        }
+      : null,
+    [sphereLayout.positions, sphereLayout.folders, sphereLayout.shellRadius, sphereLayout.connectivity],
+  )
   const handleCameraMove = useCallback((a: number, e: number, d: number) => { onCameraMove?.(a, e, d) }, [onCameraMove])
   return (
     <div className="w-full h-full relative" style={{ background: 'transparent' }}>
