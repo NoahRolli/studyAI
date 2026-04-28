@@ -240,40 +240,17 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
     [graph, settings.layoutMode, sphereLayoutInput],
   )
 
-  // Concept-ID -> Folder-Farbe (fuer Hybrid-Mode)
-  const nodeToFolderColor = useMemo(() => {
-    const colorByFolder = new Map<number, THREE.Color>()
-    for (const fd of folderData) colorByFolder.set(fd.id, fd.color)
-    const m = new Map<number, THREE.Color>()
-    for (const node of graph.nodes) {
-      if (node.folder_id) {
-        const c = colorByFolder.get(node.folder_id)
-        if (c) m.set(node.id, c)
-      }
-    }
-    return m
-  }, [graph.nodes, folderData])
-
   const instancedNodeData = useMemo(() => {
     const data: Array<{ id: number; position: [number, number, number]; color: THREE.Color }> = []
-    const isHybrid = settings.layoutMode === 'hybrid'
     for (const node of graph.nodes) {
       const pos = nodePositions.get(node.id)
       if (!pos) continue
-      let color: THREE.Color
-      if (!settings.showNodeColors) {
-        color = WHITE
-      } else if (isHybrid) {
-        // Hybrid: Folder-Farbe dominiert -> Regionen sichtbar
-        color = nodeToFolderColor.get(node.id) || nodeToHubColor.get(node.id) || WHITE
-      } else {
-        // Folder-Layout: Cluster-Farbe (wie bisher)
-        color = nodeToHubColor.get(node.id) || WHITE
-      }
+      const hubColor = nodeToHubColor.get(node.id)
+      const color = settings.showNodeColors && hubColor ? hubColor : WHITE
       data.push({ id: node.id, position: pos, color })
     }
     return data
-  }, [graph.nodes, nodePositions, nodeToHubColor, nodeToFolderColor, settings.showNodeColors, settings.layoutMode])
+  }, [graph.nodes, nodePositions, nodeToHubColor, settings.showNodeColors])
 
   // === Phase 2.1: Konsolidierte Edge-Liste fuer Custom-Shader ===
   // Drei Edge-Quellen werden in ein einziges Array gepackt
@@ -283,10 +260,7 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
     const hasHighlight = highlightSet.size > 0
 
     // 1. Node-to-Node Edges (Konzept-Beziehungen)
-    // Hybrid: nur sehr starke Edges (>= 0.92), sonst wird's unleserlich
-    const edgeMinStrength = settings.layoutMode === 'hybrid' ? 0.92 : 0
     for (const edge of graph.edges) {
-      if ((edge.strength ?? 0) < edgeMinStrength && edge.id >= 0) continue
       const s = nodePositions.get(edge.source_node_id)
       const e = nodePositions.get(edge.target_node_id)
       if (!s || !e) continue
@@ -349,9 +323,8 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
   useEffect(() => {
     if (maxRadius > 0) {
       const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180)
-      // Folder-Layout ist breit aufgespannt -> naeher fuer mehr Detail
-      // Hybrid (UI: "Semantisch") ist eine Sphere -> weit weg fuer Gesamtansicht
-      const factor = settings.layoutMode === 'hybrid' ? 3.5 : 0.85
+      // Beide Modi nutzen selbe Auto-Fit-Distanz
+      const factor = 0.85
       const dist = (maxRadius * factor) / Math.sin(fov / 2)
       camera.position.set(0, 0, Math.max(20, Math.min(800, dist)))
     }
@@ -390,22 +363,13 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
         {hubData.map(hub => {
           const pos = hubPositions.get(hub.id)
           if (!pos) return null
-          const isHybrid = settings.layoutMode === 'hybrid'
-          // Im Hybrid-Mode Hubs deutlich groesser/heller — sonst gehen sie im Concept-Punkte-Meer unter
-          const hybridIntensityBoost = isHybrid ? 2.5 : 1.0
-          // Im Hybrid-Mode: Cluster mit hoher Connectivity (Familie-Knoten) werden zusaetzlich groesser
-          // log-Skalierung damit Mega-Cluster nicht den Bildschirm fuellen
-          const clusterIdNum = parseInt(hub.id.replace('hub-', ''))
-          const conn = sphereLayoutInput?.connectivity[String(clusterIdNum)] ?? 0
-          const connBoost = isHybrid ? (1 + Math.log(1 + conn / 10) * 0.4) : 1.0
-          const hybridSizeBoost = isHybrid ? 2.0 * connBoost : 1.0
           const size = 0.35 + hub.memberCount * 0.08
           return <ClusterHub key={hub.id} position={pos}
-            color={hub.color} size={Math.min(size, 1.1) * hybridSizeBoost}
+            color={hub.color} size={Math.min(size, 1.1)}
             label={hub.label} showLabel={showLabels}
             onClick={() => handleHubClick(hub.id, hub.memberNodeIds)}
-            intensityMul={settings.nebulaIntensity * hybridIntensityBoost}
-            sizeMul={settings.nebulaSize * hybridSizeBoost}
+            intensityMul={settings.nebulaIntensity}
+            sizeMul={settings.nebulaSize}
             colorMul={settings.colorIntensity} pulse={settings.clusterPulse} />
         })}
         <InstancedNodes
