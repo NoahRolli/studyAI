@@ -183,6 +183,9 @@ class ConceptCluster(Base):
     )
     centroid_text = Column(Text, nullable=True)
     centroid_dim = Column(Integer, nullable=True)
+    final_x = Column(Float, nullable=True)
+    final_y = Column(Float, nullable=True)
+    final_z = Column(Float, nullable=True)
 
     members = relationship(
         "ConceptClusterMember", back_populates="cluster",
