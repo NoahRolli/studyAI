@@ -2,7 +2,7 @@
 # Liefert Nodes mit Folder-Info, Edges, Clusters
 # Ausgelagert aus concepts.py fuer Uebersichtlichkeit
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from backend.models.database import get_db
@@ -98,7 +98,10 @@ def _edge_to_dict(e: ConceptEdge, type_map: dict) -> dict:
 
 
 @router.get("/graph")
-def get_concept_graph(db: Session = Depends(get_db)):
+def get_concept_graph(
+    db: Session = Depends(get_db),
+    min_edge_strength: float = 0.0,
+):
     """Graph gefiltert nach metis_enabled Ordnern, mit Folder-Info pro Node."""
     # Sichtbare Concept-IDs: Notes immer, Summaries nur aus aktiven Ordnern
     folder_ids = {r[0] for r in db.query(Folder.id).filter(
@@ -158,7 +161,11 @@ def get_concept_graph(db: Session = Depends(get_db)):
     # Stattdessen alle nicht-rejected Edges laden, dann in Python filtern (O(1) Set-Lookup)
     if node_ids:
         all_edges = db.query(ConceptEdge).filter(
-            ConceptEdge.status != "rejected"
+            ConceptEdge.status != "rejected",
+            or_(
+                ConceptEdge.status == "confirmed",
+                ConceptEdge.strength >= min_edge_strength,
+            ),
         ).all()
         edges = [e for e in all_edges
                  if e.source_concept_id in node_ids

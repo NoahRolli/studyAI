@@ -109,7 +109,7 @@ export function useMetisGraph(minSourceCount: number = 2) {
 
   const loadGraph = useCallback(async () => {
     try {
-      const data = await get<ConceptGraph>('/api/concepts/graph')
+      const data = await get<ConceptGraph>('/api/concepts/graph?min_edge_strength=0.85')
       setConceptGraph(data)
     } catch (err) {
       console.error('Concept graph load failed:', err)
