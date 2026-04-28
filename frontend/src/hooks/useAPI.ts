@@ -71,6 +71,14 @@ export function put<T>(endpoint: string, body?: unknown): Promise<T> {
   })
 }
 
+// PATCH — Partial-Update (z.B. einzelnes Feld einer Conversation)
+export function patch<T>(endpoint: string, body?: unknown): Promise<T> {
+  return fetchApi<T>(endpoint, {
+    method: 'PATCH',
+    body: body ? JSON.stringify(body) : undefined,
+  })
+}
+
 // DELETE — Daten löschen (z.B. Modul entfernen)
 export function del<T>(endpoint: string): Promise<T> {
   return fetchApi<T>(endpoint, { method: 'DELETE' })
