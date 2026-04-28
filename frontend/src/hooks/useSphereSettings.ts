@@ -1,10 +1,14 @@
 // useSphereSettings — Persistente Sphäre-Einstellungen via localStorage
 // Slider für Nebel, Edges, Nodes + Toggles für visuelle Features
 // Boolean-Werte für Ontologie-Symbole, Edge-Labels, Node-Farben
+// layoutMode: folder (hierarchisch) | semantic (force-directed) | hybrid (folder + force)
 
 import { useState, useCallback } from 'react'
 
+export type LayoutMode = 'folder' | 'semantic' | 'hybrid'
+
 export interface SphereSettings {
+  layoutMode: LayoutMode
   nebulaIntensity: number
   nebulaSize: number
   edgeSimilarity: number
@@ -22,6 +26,7 @@ export interface SphereSettings {
 const STORAGE_KEY = 'pallas-sphere-settings'
 
 const DEFAULTS: SphereSettings = {
+  layoutMode: 'folder',
   nebulaIntensity: 1.0,
   nebulaSize: 1.0,
   edgeSimilarity: 1.0,
@@ -47,9 +52,12 @@ function loadSettings(): SphereSettings {
 export function useSphereSettings() {
   const [settings, setSettings] = useState<SphereSettings>(loadSettings)
 
-  const update = useCallback((key: keyof SphereSettings, value: number | boolean) => {
-    setSettings(prev => ({ ...prev, [key]: value }))
-  }, [])
+  const update = useCallback(
+    (key: keyof SphereSettings, value: number | boolean | LayoutMode) => {
+      setSettings(prev => ({ ...prev, [key]: value }))
+    },
+    [],
+  )
 
   const save = useCallback(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))

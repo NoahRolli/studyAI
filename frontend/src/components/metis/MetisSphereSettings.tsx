@@ -4,11 +4,11 @@
 
 import { useState } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
-import type { SphereSettings } from '../../hooks/useSphereSettings'
+import type { SphereSettings, LayoutMode } from '../../hooks/useSphereSettings'
 
 interface Props {
   settings: SphereSettings
-  onUpdate: (key: keyof SphereSettings, value: number | boolean) => void
+  onUpdate: (key: keyof SphereSettings, value: number | boolean | LayoutMode) => void
   onSave: () => void
   onReset: () => void
 }
@@ -89,6 +89,32 @@ export default function MetisSphereSettings({ settings, onUpdate, onSave, onRese
         </span>
         <button onClick={() => setOpen(false)}
           className="text-xs px-1" style={{ color: 'var(--color-text-muted)' }}>x</button>
+      </div>
+
+      {/* Layout-Mode Pill-Switch */}
+      <div className="flex gap-1 mb-3 p-1 rounded"
+        style={{ background: 'var(--color-hover-bg)', border: '1px solid var(--color-border)' }}>
+        {(['folder', 'semantic', 'hybrid'] as LayoutMode[]).map(mode => {
+          const active = settings.layoutMode === mode
+          const labels: Record<LayoutMode, { de: string; en: string }> = {
+            folder: { de: 'Ordner', en: 'Folder' },
+            semantic: { de: 'Semantisch', en: 'Semantic' },
+            hybrid: { de: 'Hybrid', en: 'Hybrid' },
+          }
+          return (
+            <button key={mode} onClick={() => onUpdate('layoutMode', mode)}
+              className="flex-1 text-xs py-1 rounded transition-colors"
+              style={{
+                color: active ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                background: active ? 'var(--color-bg)' : 'transparent',
+                border: active ? '1px solid var(--color-primary)' : '1px solid transparent',
+                fontFamily: 'Orbitron, monospace',
+                letterSpacing: '0.05em',
+              }}>
+              {de ? labels[mode].de : labels[mode].en}
+            </button>
+          )
+        })}
       </div>
 
       {/* Slider */}
