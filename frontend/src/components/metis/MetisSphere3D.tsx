@@ -231,7 +231,9 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
     () => {
       if (settings.layoutMode !== 'folder' && sphereLayoutInput) {
         const mode = settings.layoutMode === 'hybrid' ? 'hybrid' : 'semantic'
-        return computeSemanticLayout(graph, mode, sphereLayoutInput)
+        const result = computeSemanticLayout(graph, mode, sphereLayoutInput)
+        // shellRadius vom Backend ist die echte Sphere-Groesse, robuster als maxRadius
+        return { ...result, maxRadius: sphereLayoutInput.shellRadius }
       }
       // Fallback: hierarchisch (auch wenn semantic gewaehlt aber input fehlt)
       return computeHierarchicalLayout(graph)

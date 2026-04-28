@@ -82,14 +82,28 @@ def _pca_3d(matrix: np.ndarray) -> np.ndarray:
 
 
 def _scale_to_shell(coords: np.ndarray, target_radius: float) -> np.ndarray:
-    """Normalisiert auf eine sphere-shell mit gegebenem Radius.
-    Behaelt relative Distanzen, skaliert nur den Gesamt-Spread."""
-    # Aktueller max. Abstand vom Ursprung
+    """Quantil-basierte Skalierung: 90% der Punkte landen in [0.4, 0.95] * shell.
+    Verhindert dass ein Outlier-Cluster den Rand definiert und der Rest in
+    einer dichten Wolke kollabiert. Power-Law-PCA-Verteilungen werden so
+    aufgespreizt zu einer echten Shell.
+    """
     norms = np.linalg.norm(coords, axis=1)
-    max_norm = float(norms.max()) if norms.size > 0 else 1.0
-    if max_norm <= 0:
+    if norms.size == 0:
         return coords
-    return coords * (target_radius / max_norm)
+    # Quantile der aktuellen Verteilung
+    q05, q95 = np.quantile(norms, [0.05, 0.95])
+    if q95 <= q05:
+        # Degenerierte Verteilung — fallback auf Max-Skalierung
+        max_norm = float(norms.max()) if norms.max() > 0 else 1.0
+        return coords * (target_radius / max_norm)
+    # Map [q05, q95] -> [shell*0.4, shell*0.95] linear, dann clamp auf [shell*0.3, shell]
+    target_low = target_radius * 0.4
+    target_high = target_radius * 0.95
+    new_norms = target_low + (norms - q05) * (target_high - target_low) / (q95 - q05)
+    new_norms = np.clip(new_norms, target_radius * 0.3, target_radius)
+    # Skalierungsfaktor pro Punkt
+    factors = np.where(norms > 0, new_norms / norms, 1.0)
+    return coords * factors[:, None]
 
 
 @router.get("/sphere-layout")
