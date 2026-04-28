@@ -2,7 +2,7 @@
 // User-Bubble vs Assistant-Bubble, Confidence-Badge, Inline [N]/[!]-Marker,
 // Pill-Liste der Citations unten mit Open-Source-Buttons.
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
 import type {
   DelphiMessage as DelphiMessageType,
@@ -44,10 +44,10 @@ function renderContentWithMarkers(
   content: string,
   onCitationClick: (idx: number) => void,
   t: any,
-): JSX.Element[] {
+): React.ReactElement[] {
   // Regex matched [N], [SOURCE N], [Quelle N], [!] — siehe Backend _CITE_RE
   const pattern = /\[(?:SOURCE|Source|Quelle|QUELLE)?\s*(\d+)\]|\[!\]/g
-  const out: JSX.Element[] = []
+  const out: React.ReactElement[] = []
   let lastIdx = 0
   let key = 0
   let match: RegExpExecArray | null
