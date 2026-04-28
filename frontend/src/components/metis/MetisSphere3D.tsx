@@ -437,13 +437,11 @@ export default function MetisSphere3D({ graph, onNodeClick, onClusterClick, onFo
   const sphereLayoutInput: SphereLayoutInput | null = sphereLayout.positions
     && sphereLayout.folders
     && sphereLayout.shellRadius != null
-    && sphereLayout.edges != null
     && sphereLayout.connectivity != null
     ? {
         positions: sphereLayout.positions,
         folders: sphereLayout.folders,
         shellRadius: sphereLayout.shellRadius,
-        edges: sphereLayout.edges,
         connectivity: sphereLayout.connectivity,
       }
     : null

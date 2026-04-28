@@ -157,94 +157,81 @@ def _compute_cluster_edges(
 
 @router.get("/sphere-layout")
 def get_sphere_layout(db: Session = Depends(get_db)):
-    """Liefert pre-computed Cluster-Positionen (PCA auf Centroide).
+    """Liefert pre-computed Cluster-Positionen (Force-Sim cached in DB).
+
+    Voraussetzung: scripts/compute_sphere_layout.py wurde ausgefuehrt
+    und hat final_x/y/z in concept_clusters geschrieben.
 
     Response shape:
       {
         "cluster_positions": { "<cluster_id>": [x, y, z], ... },
         "cluster_folders":   { "<cluster_id>": <folder_id|null>, ... },
-        "shell_radius": float
+        "shell_radius": float,
+        "cluster_connectivity": { "<cluster_id>": float, ... }
       }
     """
     clusters = db.query(ConceptCluster).filter(
-        ConceptCluster.centroid_text.isnot(None),
+        ConceptCluster.final_x.isnot(None),
+        ConceptCluster.final_y.isnot(None),
+        ConceptCluster.final_z.isnot(None),
     ).all()
     if not clusters:
         raise HTTPException(
             status_code=404,
-            detail="No cluster centroids — run scripts/compute_cluster_centroids.py",
+            detail=("No pre-computed sphere layout. "
+                    "Run scripts/compute_sphere_layout.py first."),
         )
 
-    # Centroide parsen
-    valid_clusters: list[ConceptCluster] = []
-    centroid_list: list[np.ndarray] = []
-    for cl in clusters:
-        try:
-            arr = json.loads(cl.centroid_text)
-            if isinstance(arr, list) and len(arr) > 0:
-                centroid_list.append(np.asarray(arr, dtype=np.float32))
-                valid_clusters.append(cl)
-        except Exception:
-            continue
-
-    if not valid_clusters:
-        raise HTTPException(status_code=500, detail="Centroide invalid")
-
-    matrix = np.stack(centroid_list, axis=0)  # (n, 1024)
-
-    # PCA → 3D
-    coords3d = _pca_3d(matrix)  # (n, 3)
-
-    # Auf sinnvollen Sphere-Radius skalieren
-    # n=2372 → radius ~ 8 + sqrt(2372)*1.2 ~ 66
-    n = len(valid_clusters)
-    target_radius = 8.0 + np.sqrt(n) * 1.2
-    scaled = _scale_to_shell(coords3d, target_radius)
-
-    # Dominanten Folder pro Cluster bestimmen (fuer Hybrid-Mode)
-    concept_folder = _build_concept_folder_map(db)
-    cluster_positions: dict[str, list[float]] = {}
-    cluster_folders: dict[str, int | None] = {}
-
-    for cl, pos in zip(valid_clusters, scaled):
-        members = db.query(ConceptClusterMember.concept_id).filter(
-            ConceptClusterMember.cluster_id == cl.id,
-        ).all()
-        member_ids = [m[0] for m in members]
-        # Dominanter Folder
-        folder_counts: dict[int, int] = {}
-        for cid in member_ids:
-            fid = concept_folder.get(cid)
-            if fid:
-                folder_counts[fid] = folder_counts.get(fid, 0) + 1
-        best_fid: int | None = None
-        best_cnt = 0
-        for fid, cnt in folder_counts.items():
-            if cnt > best_cnt:
-                best_fid = fid
-                best_cnt = cnt
-        cluster_positions[str(cl.id)] = [float(pos[0]), float(pos[1]), float(pos[2])]
-        cluster_folders[str(cl.id)] = best_fid
-
-    # Cluster-Edges (Konzept-Edges aggregiert auf Cluster-Ebene)
+    # Cluster-Member-Map fuer Folder + Connectivity-Aggregation
     cluster_member_ids: dict[int, list[int]] = {}
-    for cl in valid_clusters:
+    for cl in clusters:
         members = db.query(ConceptClusterMember.concept_id).filter(
             ConceptClusterMember.cluster_id == cl.id,
         ).all()
         cluster_member_ids[cl.id] = [m[0] for m in members]
 
-    cluster_edges, connectivity = _compute_cluster_edges(
+    # Dominanten Folder pro Cluster
+    concept_folder = _build_concept_folder_map(db)
+    cluster_folders: dict[str, int | None] = {}
+    for cl in clusters:
+        counts: dict[int, int] = {}
+        for cid in cluster_member_ids[cl.id]:
+            fid_pair = concept_folder.get(cid)
+            if fid_pair is None:
+                continue
+            fid = fid_pair[0] if isinstance(fid_pair, tuple) else fid_pair
+            counts[fid] = counts.get(fid, 0) + 1
+        best_fid: int | None = None
+        best_cnt = 0
+        for fid, cnt in counts.items():
+            if cnt > best_cnt:
+                best_fid = fid
+                best_cnt = cnt
+        cluster_folders[str(cl.id)] = best_fid
+
+    # Positions direkt aus DB
+    cluster_positions: dict[str, list[float]] = {}
+    for cl in clusters:
+        cluster_positions[str(cl.id)] = [
+            float(cl.final_x), float(cl.final_y), float(cl.final_z),
+        ]
+
+    # Connectivity nur — Edges selbst werden im Frontend nicht mehr fuer Sim gebraucht
+    _, connectivity = _compute_cluster_edges(
         db, cluster_member_ids, min_strength=0.85,
     )
+
+    # Shell-Radius aus Daten ableiten (95-Perzentil der Norms)
+    norms = np.array([
+        np.sqrt(cl.final_x ** 2 + cl.final_y ** 2 + cl.final_z ** 2)
+        for cl in clusters
+    ])
+    shell_radius = float(np.quantile(norms, 0.95)) if len(norms) > 0 else 70.0
 
     return {
         "cluster_positions": cluster_positions,
         "cluster_folders": cluster_folders,
-        "shell_radius": float(target_radius),
-        "cluster_edges": [
-            {"a": a, "b": b, "weight": w} for a, b, w in cluster_edges
-        ],
+        "shell_radius": shell_radius,
         "cluster_connectivity": {
             str(cid): w for cid, w in connectivity.items()
         },
