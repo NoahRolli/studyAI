@@ -96,7 +96,7 @@ function TrackballControls({ groupRef, onInteract, isDraggingRef }: {
     const tm = (e: TouchEvent) => { if (e.touches.length === 1) onMove(e.touches[0].clientX, e.touches[0].clientY) }
     const wh = (e: WheelEvent) => {
       e.preventDefault(); onInteract()
-      camera.position.z = Math.max(15, Math.min(200, camera.position.z + e.deltaY * 0.03))
+      camera.position.z = Math.max(15, Math.min(800, camera.position.z + e.deltaY * 0.03))
     }
     el.addEventListener('pointerdown', pd); el.addEventListener('pointermove', pm)
     el.addEventListener('pointerup', onUp); el.addEventListener('pointerleave', onUp)
@@ -324,8 +324,9 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
   useEffect(() => {
     if (maxRadius > 0) {
       const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180)
-      const dist = (maxRadius * 1.1) / Math.sin(fov / 2)
-      camera.position.set(0, 0, Math.max(20, Math.min(200, dist)))
+      // 2.5x Radius gibt einen ueberschaubaren Aussenblick statt Fast-Innenansicht
+      const dist = (maxRadius * 2.5) / Math.sin(fov / 2)
+      camera.position.set(0, 0, Math.max(40, Math.min(800, dist)))
     }
   }, [maxRadius, camera])
 
@@ -405,7 +406,7 @@ export default function MetisSphere3D({ graph, onNodeClick, onClusterClick, onFo
   const handleCameraMove = useCallback((a: number, e: number, d: number) => { onCameraMove?.(a, e, d) }, [onCameraMove])
   return (
     <div className="w-full h-full relative" style={{ background: 'transparent' }}>
-      <Canvas camera={{ position: [0, 0, 120], fov: 36 }}
+      <Canvas camera={{ position: [0, 0, 400], fov: 36 }}
         style={{ background: 'transparent' }} gl={{ antialias: true, alpha: true }}>
         <MetisScene graph={graph} onNodeClick={onNodeClick} onClusterClick={onClusterClick} onFolderClick={onFolderClick}
           transparent={transparent} onCameraMove={handleCameraMove}
