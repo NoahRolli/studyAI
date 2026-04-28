@@ -7,7 +7,7 @@
 // - Custom ShaderMaterial: Vertex-Shader passt nichts an, Fragment-Shader nimmt Alpha
 // - NormalBlending: ueberlappende Edges mischen sich natuerlich
 
-import { useRef, useEffect, useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 
 const MAX_EDGES = 200000
@@ -46,14 +46,30 @@ interface InstancedEdgesProps {
 }
 
 export default function InstancedEdges({ edges }: InstancedEdgesProps) {
-  const geomRef = useRef<THREE.BufferGeometry>(null)
-
-  // Pre-allocated Buffer fuer Position (3 floats) und Color (RGBA = 4 floats) pro Vertex
-  // Jede Edge = 2 Vertices, also 2 * 3 = 6 position floats und 2 * 4 = 8 color floats
+  // Pre-allocated Buffer (persistent über React-Re-Renders)
   const positions = useMemo(() => new Float32Array(MAX_EDGES * 2 * 3), [])
   const vertexColors = useMemo(() => new Float32Array(MAX_EDGES * 2 * 4), [])
 
-  // ShaderMaterial einmal erzeugen, nicht bei jedem Render neu
+  // BufferAttributes IMPERATIV erstellen — werden NICHT pro React-Render neu gemacht
+  // Vorher: <bufferAttribute /> in JSX wurde von R3F bei jedem Re-Render frisch
+  // attached -> alte Daten weg -> Flicker zwischen Frames
+  const positionAttr = useMemo(
+    () => new THREE.BufferAttribute(positions, 3),
+    [positions],
+  )
+  const colorAttr = useMemo(
+    () => new THREE.BufferAttribute(vertexColors, 4),
+    [vertexColors],
+  )
+
+  // Geometry einmal erzeugen mit den persistenten Attributen
+  const geometry = useMemo(() => {
+    const geom = new THREE.BufferGeometry()
+    geom.setAttribute('position', positionAttr)
+    geom.setAttribute('vertexColor', colorAttr)
+    return geom
+  }, [positionAttr, colorAttr])
+
   const material = useMemo(() => new THREE.ShaderMaterial({
     vertexShader: VERTEX_SHADER,
     fragmentShader: FRAGMENT_SHADER,
@@ -63,17 +79,13 @@ export default function InstancedEdges({ edges }: InstancedEdgesProps) {
   }), [])
 
   useEffect(() => {
-    const geom = geomRef.current
-    if (!geom) return
-
     const count = Math.min(edges.length, MAX_EDGES)
 
     for (let i = 0; i < count; i++) {
       const e = edges[i]
-      const posOff = i * 6   // 2 vertices * 3 floats
-      const colOff = i * 8   // 2 vertices * 4 floats (RGBA)
+      const posOff = i * 6
+      const colOff = i * 8
 
-      // Position: start + end
       positions[posOff] = e.start[0]
       positions[posOff + 1] = e.start[1]
       positions[posOff + 2] = e.start[2]
@@ -81,8 +93,6 @@ export default function InstancedEdges({ edges }: InstancedEdgesProps) {
       positions[posOff + 4] = e.end[1]
       positions[posOff + 5] = e.end[2]
 
-      // Vertex-Color: RGBA fuer beide Vertices der Edge
-      // Volle Farbe, Alpha steuert die Sichtbarkeit
       vertexColors[colOff] = e.color.r
       vertexColors[colOff + 1] = e.color.g
       vertexColors[colOff + 2] = e.color.b
@@ -93,23 +103,16 @@ export default function InstancedEdges({ edges }: InstancedEdgesProps) {
       vertexColors[colOff + 7] = e.alpha
     }
 
-    geom.setDrawRange(0, count * 2)
-    geom.attributes.position.needsUpdate = true
-    geom.attributes.vertexColor.needsUpdate = true
-  }, [edges, positions, vertexColors])
+    geometry.setDrawRange(0, count * 2)
+    positionAttr.needsUpdate = true
+    colorAttr.needsUpdate = true
+  }, [edges, positions, vertexColors, geometry, positionAttr, colorAttr])
 
   return (
-    <lineSegments frustumCulled={false} material={material}>
-      <bufferGeometry ref={geomRef}>
-        <bufferAttribute
-          attach="attributes-position"
-          args={[positions, 3]}
-        />
-        <bufferAttribute
-          attach="attributes-vertexColor"
-          args={[vertexColors, 4]}
-        />
-      </bufferGeometry>
-    </lineSegments>
+    <lineSegments
+      frustumCulled={false}
+      material={material}
+      geometry={geometry}
+    />
   )
 }
