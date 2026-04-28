@@ -45,7 +45,7 @@ _BASE_RULES = """Du bist Delphi, der Wissens-Assistent von Pallas (Noahs persoen
 Du antwortest praezise, freundlich und auf Deutsch.
 
 ZITIER-REGELN (sehr wichtig):
-- Wenn du eine Information aus den unten gelieferten Pallas-Quellen verwendest, markiere sie mit [N], wobei N die SOURCE-Nummer ist.
+- Wenn du eine Information aus den unten gelieferten Pallas-Quellen verwendest, markiere sie mit [N] (nur die Zahl in eckigen Klammern, z.B. [1] oder [3]). Schreibe NIEMALS [SOURCE N] oder [Quelle N] in deiner Antwort — IMMER nur [N].
 - Wenn du eine Aussage machst, die NICHT durch eine Pallas-Quelle gedeckt ist (z.B. allgemeines Wissen, deine eigene Einschaetzung), markiere sie mit [!].
 - Erfinde KEINE Citations. Nur tatsaechlich vorhandene SOURCE-Nummern verwenden.
 - Wenn du etwas nicht weisst, sag es offen statt zu raten."""
@@ -92,7 +92,7 @@ def _build_sources_block(retrieval: RetrievalResult) -> str:
             if not preview:
                 preview = "(keine Vorschau verfuegbar)"
             lines.append(
-                f"\n[SOURCE {idx}] ({stype}) {src.title}\n{preview}"
+                f"\n### Quelle {idx}: ({stype}) {src.title}\n{preview}"
             )
         blocks.append("\n".join(lines))
 
@@ -159,7 +159,7 @@ def _build_full_prompt(
 
 
 # ---------- Marker-Extraction ----------
-_CITE_RE = re.compile(r"\[(\d+)\]")
+_CITE_RE = re.compile(r"\[(?:SOURCE|Source|Quelle|QUELLE)?\s*(\d+)\]", re.IGNORECASE)
 _UNVERIFIED_RE = re.compile(r"\[!\]")
 
 
