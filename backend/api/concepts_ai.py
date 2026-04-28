@@ -5,6 +5,7 @@ import logging
 # Nutzt den aktiven Provider (Groq/Ollama) via model_router
 
 import json
+import os
 import re
 import httpx
 from fastapi import APIRouter, Depends, Query
@@ -62,6 +63,14 @@ async def ai_chat(prompt: str, page: str = "metis") -> str:
 async def ai_chat_with_provider(prompt: str, page: str = "metis") -> tuple[str, str]:
     """Wie ai_chat, gibt aber (text, provider_name) Tuple zurueck."""
     provider = get_active_provider(page)
+
+    # Optional Groq-Bypass via Env (für CLI-Scripts ohne Rate-Limit-Schleifen)
+    if os.getenv("PALLAS_DISABLE_GROQ") == "1" and provider == "groq":
+        logging.getLogger(__name__).info(
+            "PALLAS_DISABLE_GROQ=1 — skip Groq, direkt Ollama"
+        )
+        provider = "ollama_local"
+
     used = provider
     if provider == "groq":
         try:
