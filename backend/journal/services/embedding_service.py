@@ -1,92 +1,228 @@
-# Embedding Service — Text-Embeddings für Journal-Einträge
-# Nutzt Ollama mit nomic-embed-text (lokal, kein externer API-Call)
-# Nutzt ollama_connector für dynamische URL (MacBook → Server Fallback)
-# Embeddings werden für Clustering und Ähnlichkeitssuche verwendet
+# Embedding Service — Persistierte Vektor-Repraesentationen fuer Journal-Eintraege
+# Nutzt Ollama mit bge-m3 (1024-dim, multilingual incl. Umlaute)
+# Endpoint: /api/embed mit "input"-Key (NICHT das alte /api/embeddings)
 #
-# nomic-embed-text gibt 768-dimensionale Vektoren zurück
-# Diese werden verschlüsselt in der Journal-DB gespeichert
+# Architektur:
+# - Embeddings werden beim Entry-Save berechnet (lazy: nur bei neuem/geaendertem Inhalt)
+# - Verschluesselt mit AES-256-GCM via crypto_service
+# - Persistiert in journal_embeddings Tabelle
+# - Genutzt von clustering_service fuer Topic-Cluster
+#
+# Failover analog zum Pallas-Hauptsystem:
+# 2-Attempt-Loop mit invalidate_cache() bei Fehler
+# (deckt den Fall: Ollama-URL antwortet auf /api/tags, hat aber bge-m3 nicht)
 
+import hashlib
 import httpx
 import numpy as np
+from sqlalchemy.orm import Session
+
 from backend.journal.infra.journal_config import OLLAMA_EMBED_MODEL
-from backend.infra.ollama_connector import get_ollama_url
+from backend.journal.models.journal_embedding import JournalEmbedding
+from backend.journal.services.crypto_service import encrypt_bytes, decrypt_bytes
+from backend.infra.ollama_connector import get_ollama_url, invalidate_cache
 
 
-async def generate_embedding(text: str) -> list[float]:
+EMBEDDING_DIM = 1024  # bge-m3 Default
+MODEL_VERSION = OLLAMA_EMBED_MODEL
+
+
+# ============================================
+# Hash & Serialisierung
+# ============================================
+
+def _compute_content_hash(title: str, content: str) -> str:
+    """SHA-256 Hash analog mood_service — fuer Re-Embed-Detection."""
+    combined = f"{title}|||{content}"
+    return hashlib.sha256(combined.encode("utf-8")).hexdigest()
+
+
+def _serialize_embedding(arr: np.ndarray) -> bytes:
+    """Numpy float32 Array zu bytes fuer Verschluesselung/Persistenz."""
+    return arr.astype(np.float32).tobytes()
+
+
+def _deserialize_embedding(data: bytes) -> np.ndarray:
+    """Bytes zurueck zu numpy float32 Array."""
+    return np.frombuffer(data, dtype=np.float32)
+
+
+# ============================================
+# Ollama-Call
+# ============================================
+
+async def _call_ollama_embed(text: str) -> np.ndarray:
     """
-    Generiert einen Embedding-Vektor für einen Text.
-    Gibt eine Liste von 768 Floats zurück.
+    Macht einen einzelnen /api/embed Call gegen die aktuelle Ollama-URL.
+    Wirft ConnectionError bei Status != 200.
     """
     base_url = await get_ollama_url()
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
-            f"{base_url}/api/embeddings",
+            f"{base_url}/api/embed",
             json={
                 "model": OLLAMA_EMBED_MODEL,
-                "prompt": text[:2000],  # Textlänge begrenzen
+                "input": text[:2000],
             }
         )
-
         if response.status_code != 200:
             raise ConnectionError(
-                f"Ollama Embedding fehlgeschlagen (Status {response.status_code}). "
-                f"Ist {OLLAMA_EMBED_MODEL} installiert? ollama pull {OLLAMA_EMBED_MODEL}"
+                f"Ollama embed fehlgeschlagen (Status {response.status_code}). "
+                f"Ist {OLLAMA_EMBED_MODEL} installiert? "
+                f"ollama pull {OLLAMA_EMBED_MODEL}"
             )
+        data = response.json()
+        return np.array(data["embeddings"][0], dtype=np.float32)
 
-        return response.json()["embedding"]
 
-
-async def generate_entry_embedding(title: str, content: str) -> list[float]:
+async def generate_embedding(text: str) -> np.ndarray:
     """
-    Generiert ein Embedding für einen Journal-Eintrag.
-    Kombiniert Titel und Inhalt für besseren Kontext.
+    Generiert einen Embedding-Vektor mit Failover-Loop.
+    Bei Fehler im ersten Versuch: Cache invalidieren, nochmal probieren.
+    Deckt Edge-Case "Ollama-URL antwortet, hat aber Model nicht".
     """
+    last_error: Exception | None = None
+    for attempt in range(2):
+        try:
+            return await _call_ollama_embed(text)
+        except (ConnectionError, httpx.HTTPError, KeyError, ValueError) as e:
+            last_error = e
+            invalidate_cache()
+    raise ConnectionError(
+        f"Embedding nach 2 Versuchen fehlgeschlagen: {last_error}"
+    )
+
+
+async def generate_entry_embedding(title: str, content: str) -> np.ndarray:
+    """Kombiniert Titel und Inhalt fuer besseren Kontext."""
     combined = f"{title}\n\n{content}"
     return await generate_embedding(combined)
 
 
-def cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
-    """
-    Berechnet die Kosinus-Ähnlichkeit zwischen zwei Vektoren.
-    Gibt einen Wert zwischen -1.0 und 1.0 zurück.
-    1.0 = identisch, 0.0 = unrelated, -1.0 = gegensätzlich
-    """
-    a = np.array(vec_a)
-    b = np.array(vec_b)
+# ============================================
+# Aehnlichkeit
+# ============================================
 
-    dot_product = np.dot(a, b)
+def cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
+    """
+    Cosine-Similarity zwischen zwei Vektoren.
+    Akzeptiert numpy-Arrays oder konvertierbare Sequenzen.
+    """
+    a = np.asarray(vec_a, dtype=np.float32)
+    b = np.asarray(vec_b, dtype=np.float32)
     norm_a = np.linalg.norm(a)
     norm_b = np.linalg.norm(b)
-
     if norm_a == 0 or norm_b == 0:
         return 0.0
+    return float(np.dot(a, b) / (norm_a * norm_b))
 
-    return float(dot_product / (norm_a * norm_b))
 
+# ============================================
+# Persistenz: Speichern
+# ============================================
 
-def find_similar_entries(
-    target_embedding: list[float],
-    entries: list[dict],
-    threshold: float = 0.7,
-    max_results: int = 5,
-) -> list[dict]:
+async def embed_and_store(
+    entry_id: int,
+    title: str,
+    content: str,
+    key: bytes,
+    db: Session,
+) -> bool:
     """
-    Findet ähnliche Einträge basierend auf Embedding-Ähnlichkeit.
-    
-    entries: Liste von {"id": int, "embedding": list[float], ...}
-    threshold: Mindest-Ähnlichkeit (0.0-1.0)
-    
-    Gibt sortierte Liste zurück mit zusätzlichem "similarity" Feld.
+    Vollstaendiger Flow: Hash-Check → ggf. embedden → encrypt → persist.
+    Idempotent: bei unveraendertem Hash wird nichts gemacht.
+
+    Returns:
+        True wenn neu/aktualisiert embedded, False wenn Cache-Hit (kein Re-Embed)
     """
-    results = []
-    for entry in entries:
-        if "embedding" not in entry or not entry["embedding"]:
+    content_hash = _compute_content_hash(title, content)
+
+    # Cache-Check: existiert schon ein Embedding mit gleichem Hash + Modell?
+    existing = db.query(JournalEmbedding).filter(
+        JournalEmbedding.entry_id == entry_id
+    ).first()
+
+    if (
+        existing
+        and existing.content_hash == content_hash
+        and existing.model_version == MODEL_VERSION
+    ):
+        return False  # Cache-Hit, kein Re-Embed
+
+    # Embedding generieren
+    arr = await generate_entry_embedding(title, content)
+
+    # Sanity-Check Dimension
+    if arr.shape[0] != EMBEDDING_DIM:
+        raise ValueError(
+            f"Unerwartete Embedding-Dimension: {arr.shape[0]} "
+            f"(erwartet {EMBEDDING_DIM} fuer {MODEL_VERSION})"
+        )
+
+    # Encrypten
+    encrypted = encrypt_bytes(_serialize_embedding(arr), key)
+
+    # Insert oder Update
+    if existing:
+        existing.encrypted_embedding = encrypted
+        existing.content_hash = content_hash
+        existing.model_version = MODEL_VERSION
+        existing.embedding_dim = EMBEDDING_DIM
+    else:
+        db.add(JournalEmbedding(
+            entry_id=entry_id,
+            encrypted_embedding=encrypted,
+            content_hash=content_hash,
+            model_version=MODEL_VERSION,
+            embedding_dim=EMBEDDING_DIM,
+        ))
+
+    db.commit()
+    return True
+
+
+# ============================================
+# Persistenz: Laden
+# ============================================
+
+def load_embedding(
+    entry_id: int,
+    key: bytes,
+    db: Session,
+) -> np.ndarray | None:
+    """
+    Laed und entschluesselt das Embedding eines einzelnen Eintrags.
+    Returns None wenn kein Embedding existiert.
+    """
+    row = db.query(JournalEmbedding).filter(
+        JournalEmbedding.entry_id == entry_id
+    ).first()
+    if not row:
+        return None
+    plain_bytes = decrypt_bytes(row.encrypted_embedding, key)
+    return _deserialize_embedding(plain_bytes)
+
+
+def load_all_embeddings(
+    key: bytes,
+    db: Session,
+    model_version: str | None = None,
+) -> dict[int, np.ndarray]:
+    """
+    Laed alle Embeddings als dict[entry_id, ndarray].
+    Genutzt vom Cluster-Algorithmus fuer Full-Recluster.
+    Optional gefiltert auf bestimmte Modell-Version (default: aktuelle).
+    """
+    target_version = model_version or MODEL_VERSION
+    rows = db.query(JournalEmbedding).filter(
+        JournalEmbedding.model_version == target_version
+    ).all()
+    result: dict[int, np.ndarray] = {}
+    for row in rows:
+        try:
+            plain_bytes = decrypt_bytes(row.encrypted_embedding, key)
+            result[row.entry_id] = _deserialize_embedding(plain_bytes)
+        except ValueError:
+            # Beschaedigtes Embedding ueberspringen statt Crash
             continue
-
-        similarity = cosine_similarity(target_embedding, entry["embedding"])
-        if similarity >= threshold:
-            results.append({**entry, "similarity": round(similarity, 4)})
-
-    # Nach Ähnlichkeit absteigend sortieren
-    results.sort(key=lambda x: x["similarity"], reverse=True)
-    return results[:max_results]
+    return result

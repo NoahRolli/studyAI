@@ -97,3 +97,47 @@ def decrypt_text(encrypted_data: bytes, key: bytes) -> str:
         raise ValueError(
             "Entschlüsselung fehlgeschlagen — falsches Passwort oder beschädigte Daten"
         ) from e
+
+def encrypt_bytes(plaintext: bytes, key: bytes) -> bytes:
+    """
+    Verschluesselt rohe Bytes mit AES-256-GCM.
+    Pendant zu encrypt_text fuer binaere Daten (z.B. numpy-Embeddings).
+    Jeder Aufruf generiert einen eigenen IV.
+
+    Args:
+        plaintext: Die zu verschluesselnden Bytes
+        key: 32-byte AES-256 Schluessel
+
+    Returns:
+        bytes: IV (12 bytes) + Ciphertext + AuthTag (16 bytes)
+    """
+    iv = os.urandom(AES_IV_LENGTH)
+    aesgcm = AESGCM(key)
+    ciphertext_with_tag = aesgcm.encrypt(iv, plaintext, None)
+    return iv + ciphertext_with_tag
+
+
+def decrypt_bytes(encrypted_data: bytes, key: bytes) -> bytes:
+    """
+    Entschluesselt AES-256-GCM Bytes.
+    Pendant zu decrypt_text fuer binaere Daten (z.B. numpy-Embeddings).
+
+    Args:
+        encrypted_data: bytes mit IV (12 bytes) + Ciphertext + AuthTag
+        key: 32-byte AES-256 Schluessel
+
+    Returns:
+        Entschluesselte Bytes (NICHT decoded — caller muss interpretieren)
+
+    Raises:
+        ValueError: Wenn Entschluesselung fehlschlaegt
+    """
+    try:
+        iv = encrypted_data[:AES_IV_LENGTH]
+        ciphertext_with_tag = encrypted_data[AES_IV_LENGTH:]
+        aesgcm = AESGCM(key)
+        return aesgcm.decrypt(iv, ciphertext_with_tag, None)
+    except Exception as e:
+        raise ValueError(
+            "Entschluesselung fehlgeschlagen — falscher Key oder beschaedigte Daten"
+        ) from e
