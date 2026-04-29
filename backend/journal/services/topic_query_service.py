@@ -10,7 +10,7 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from backend.journal.crypto.aes_gcm import decrypt_text
+from backend.journal.services.crypto_service import decrypt_text
 from backend.journal.models.journal_topic_cluster import (
     JournalTopicCluster,
     JournalEntryClusterMembership,
