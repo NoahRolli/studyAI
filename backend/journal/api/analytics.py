@@ -20,8 +20,6 @@ from backend.journal.services.mood_service import (
     analyze_entry_mood,
     analyze_multiple_entries,
 )
-from backend.journal.services.embedding_service import generate_entry_embedding
-from backend.journal.services.clustering_service import cluster_entries, label_cluster
 from backend.journal.services.storyline_service import detect_storylines
 from backend.journal.models.journal_database import get_journal_db
 from backend.journal.models.journal_entry import JournalEntry
@@ -97,29 +95,13 @@ async def get_clusters(
     language: str = Query(default="de"),
     db: Session = Depends(get_journal_db),
 ):
-    """Gruppiert alle Einträge nach thematischer Ähnlichkeit."""
-    entries = db.query(JournalEntry).filter(
-        JournalEntry.is_deleted == 0
-    ).all()
-    if len(entries) < 2:
-        raise HTTPException(
-            status_code=400,
-            detail="Mindestens 2 Einträge für Clustering nötig",
-        )
-
-    key = session_manager.get_key()
-    entries_with_embeddings = []
-    for entry in entries:
-        decrypted = _decrypt_entry(entry, key)
-        embedding = await generate_entry_embedding(
-            decrypted["title"], decrypted["content"]
-        )
-        entries_with_embeddings.append({**decrypted, "embedding": embedding})
-
-    clusters = cluster_entries(entries_with_embeddings)
-    for c in clusters:
-        c["label"] = await label_cluster(c["titles"], language)
-    return clusters
+    """Stub: Topics-System wird auf neue Embedding-Pipeline migriert (Phase 4).
+    Neuer Endpoint kommt unter /api/journal/insights/topics."""
+    raise HTTPException(
+        status_code=503,
+        detail="Topics-System wird migriert. Bitte CLI nutzen: "
+               "python -m backend.scripts.journal_recluster",
+    )
 
 
 # --- Storyline Endpunkte (mit Cache) ---
