@@ -17,6 +17,7 @@ from backend.journal.models.journal_topic_cluster import (
 )
 from backend.journal.models.mood_cache import MoodCache
 from backend.journal.models.journal_embedding import JournalEmbedding
+from backend.journal.models.journal_entry import JournalEntry
 
 
 def get_topics_overview(key: bytes, db: Session) -> dict:
@@ -78,6 +79,27 @@ def _build_topic_dict(
     member_ids = [m.entry_id for m in memberships]
     core_entry_id = member_ids[0] if member_ids else None
 
+    # Titles parallel zu IDs holen (decrypted, in Member-Order)
+    # Symmetrie zu member_entry_ids: gleicher Index = gleicher Entry
+    member_titles: list[str] = []
+    if member_ids:
+        # IN-Query holt alle Entries auf einmal, dann in member_ids-Order sortieren
+        entries_by_id = {
+            entry.id: entry
+            for entry in db.query(JournalEntry)
+            .filter(JournalEntry.id.in_(member_ids))
+            .all()
+        }
+        for entry_id in member_ids:
+            entry = entries_by_id.get(entry_id)
+            if entry is None:
+                member_titles.append("")
+                continue
+            try:
+                member_titles.append(decrypt_text(entry.encrypted_title, key))
+            except Exception:
+                member_titles.append("")
+
     # Mood-Aggregation: AVG ueber MoodCache.score fuer diese Member
     avg_mood = None
     if member_ids:
@@ -96,6 +118,7 @@ def _build_topic_dict(
         "cohesion": float(cluster.cohesion),
         "avg_mood": avg_mood,
         "member_entry_ids": member_ids,
+        "member_titles": member_titles,
         "core_entry_id": core_entry_id,
         "last_clustered_at": (
             cluster.last_clustered_at.isoformat()
