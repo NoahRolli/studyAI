@@ -31,6 +31,7 @@ from backend.journal.models.journal_database import engine as journal_engine
 from backend.journal.models.journal_database import JournalBase
 from backend.journal.api.calendar import router as journal_calendar_router
 from backend.journal.api.insights import router as journal_insights_router
+from backend.journal.api.topics import router as journal_topics_router
 from backend.journal.api.mood_checkin import router as mood_checkin_router
 from backend.journal.api.journal_metis import router as journal_metis_router
 from backend.journal.api.journal_metis_ai import router as journal_metis_ai_router
@@ -144,6 +145,7 @@ app.include_router(journal_med_calendar_router)
 app.include_router(journal_medications_router)
 app.include_router(journal_dose_router)
 app.include_router(journal_calendar_router)
+app.include_router(journal_topics_router)
 app.include_router(journal_insights_router)
 app.include_router(mood_checkin_router)
 app.include_router(journal_metis_router)
