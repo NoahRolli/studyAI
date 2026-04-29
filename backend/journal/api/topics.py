@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from backend.models.database import get_db
+from backend.journal.models.journal_database import get_journal_db
 from backend.journal.api.dependencies import require_unlocked
 from backend.journal.services.session_service import session_manager
 from backend.journal.services.clustering_service import (
@@ -43,7 +43,7 @@ class RecomputeRequest(BaseModel):
 
 
 @router.get("/topics")
-async def get_topics(db: Session = Depends(get_db)):
+async def get_topics(db: Session = Depends(get_journal_db)):
     """
     Liefert aktuellen Cluster-Stand inkl. Labels und Mood-Aggregat.
     Read-only — Recompute geht ueber POST /topics/recompute.
@@ -56,7 +56,7 @@ async def get_topics(db: Session = Depends(get_db)):
 @router.post("/topics/recompute")
 async def recompute_topics(
     payload: RecomputeRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_journal_db),
 ):
     """
     Full Recluster + Re-Label aller Eintraege.
