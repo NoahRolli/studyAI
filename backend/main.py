@@ -65,6 +65,7 @@ from backend.api.weather import router as weather_router
 from backend.api.llm import router as llm_router
 # Alle Models importieren, damit SQLAlchemy-Relationships auflösen
 import backend.models.registry  # noqa: F401
+import backend.journal.models  # noqa: F401
 
 
 # Erstellt alle Tabellen in beiden Datenbanken beim Server-Start

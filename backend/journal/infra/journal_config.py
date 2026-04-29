@@ -34,7 +34,7 @@ AES_IV_LENGTH = 12              # 96-bit IV (empfohlen für GCM)
 OLLAMA_PRIMARY_URL = os.environ.get("OLLAMA_PRIMARY_URL", "")
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_CHAT_MODEL = "gemma4:e2b"              # Für Sentiment, Storylines
-OLLAMA_EMBED_MODEL = "nomic-embed-text"     # Für Embeddings/Clustering
+OLLAMA_EMBED_MODEL = "bge-m3"     # Für Embeddings/Clustering
 
 # Session-Einstellungen
 # AES-Key lebt nur im RAM, wird bei Server-Neustart gelöscht
