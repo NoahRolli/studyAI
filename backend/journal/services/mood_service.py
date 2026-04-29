@@ -11,6 +11,9 @@ from backend.journal.services.journal_ai_service import journal_ai
 from backend.journal.models.mood_cache import MoodCache
 
 from backend.journal.services.fuzzy_mood import fuzzify, dominant_mood
+from backend.journal.services.embedding_service import embed_and_store, load_embedding
+from backend.journal.services.clustering_service import assign_entry_to_cluster
+from backend.journal.services.session_service import session_manager
 def _compute_hash(title: str, content: str) -> str:
     """SHA-256 Hash über Titel + Inhalt — für Cache-Invalidierung."""
     combined = f"{title}|||{content}"
@@ -37,6 +40,33 @@ def _clamp_score(score: float) -> float:
         return 0.0
 
 
+async def _ensure_embedding(entry_id: int, title: str, content: str, db: Session) -> None:
+    """
+    Stellt sicher dass ein Embedding fuer den Eintrag existiert.
+    Schluckt Fehler nicht-blockierend - Mood-Flow soll bei Embed-Fehler nicht crashen.
+    Idempotent: kein Re-Embed bei unveraendertem Hash.
+    """
+    key = session_manager.get_key()
+    if not key:
+        return  # Keine Session, kein Encrypt moeglich - skip
+    try:
+        await embed_and_store(entry_id, title, content, key, db)
+    except Exception:
+        # Bewusst geschluckt: Embedding-Fehler darf Mood nicht blockieren
+        # CLI-Script kann fehlende Embeddings spaeter nachholen
+        return
+
+    # Inkrementelle Cluster-Zuordnung: neuer Entry waehlt naechsten Cluster
+    # Falls noch keine Cluster existieren oder kein Cluster nahe genug -> None
+    try:
+        embedding = load_embedding(entry_id, key, db)
+        if embedding is not None:
+            assign_entry_to_cluster(entry_id, embedding, key, db)
+    except Exception:
+        # Auch hier defensiv: Cluster-Fehler darf Mood nicht blockieren
+        pass
+
+
 async def analyze_entry_mood(
     entry_id: int,
     title: str,
@@ -59,6 +89,7 @@ async def analyze_entry_mood(
 
     # Cache Hit — Hash und Sprache stimmen überein
     if cached and cached.content_hash == content_hash and cached.language == language:
+        await _ensure_embedding(entry_id, title, content, db)
         return _cache_to_dict(cached)
 
     # Cache Miss — Ollama analysieren
@@ -96,6 +127,8 @@ async def analyze_entry_mood(
         db.add(cached)
 
     db.commit()
+
+    await _ensure_embedding(entry_id, title, content, db)
 
     return {
         "entry_id": entry_id,
