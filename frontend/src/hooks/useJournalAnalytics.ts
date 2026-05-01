@@ -9,6 +9,7 @@ import { get, post } from './useAPI'
 import { useLanguage } from './useLanguage'
 import type {
   MoodResult,
+  RecomputeState,
   StorylineResult,
   TopicsOverview,
 } from '../types/models'
@@ -85,12 +86,17 @@ export default function useJournalAnalytics() {
     try {
       setTopicsRecomputing(true)
       setTopicsError(null)
-      const result = await post<{ status: string; overview?: TopicsOverview }>(
-        '/api/journal/insights/topics/recompute',
-        { threshold, language }
-      )
+      const result = await post<{
+        status: string
+        overview?: TopicsOverview
+        recompute_state?: RecomputeState
+      }>('/api/journal/insights/topics/recompute', { threshold, language })
       if (result.overview) {
-        setTopicsOverview(result.overview)
+        // Backend liefert recompute_state separat - ins overview mergen
+        const merged = result.recompute_state
+          ? { ...result.overview, recompute_state: result.recompute_state }
+          : result.overview
+        setTopicsOverview(merged)
         topicsLoadedRef.current = true
       }
     } catch (err) {

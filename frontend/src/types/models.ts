@@ -123,12 +123,23 @@ export interface TopicCluster {
   label_generated_at: string | null  // ISO datetime
 }
 
+// Recompute-State (von GET/POST /api/journal/insights/topics[/recompute])
+// Tracking wieviele Entries seit dem letzten Full-Recompute zugeordnet wurden.
+// Frontend zeigt Hinweis-Badge wenn recompute_recommended === true.
+export interface RecomputeState {
+  entries_since_last_recompute: number
+  last_recompute_at: string | null   // ISO datetime, null wenn nie gelaufen
+  recompute_recommended: boolean     // true wenn entries_since_last >= threshold
+  recompute_threshold: number        // aktuell 3 (Backend-Konstante)
+}
+
 export interface TopicsOverview {
   total_entries: number
   clustered_entries: number
   orphan_count: number      // Entries ohne Cluster-Zuordnung
   cluster_count: number
   topics: TopicCluster[]    // sortiert nach entry_count desc
+  recompute_state: RecomputeState
 }
 
 // Narrative Storyline (von POST /api/journal/analytics/storylines)
