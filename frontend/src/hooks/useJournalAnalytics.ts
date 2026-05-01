@@ -9,7 +9,6 @@ import { get, post } from './useAPI'
 import { useLanguage } from './useLanguage'
 import type {
   MoodResult,
-  ClusterResult,
   StorylineResult,
   TopicsOverview,
 } from '../types/models'
@@ -28,17 +27,11 @@ export default function useJournalAnalytics() {
 
   // --- Loaded-Flags als Refs (immer aktuell, keine Closure-Probleme) ---
   const moodsLoadedRef = useRef(false)
-  const clustersLoadedRef = useRef(false)
   const storylinesLoadedRef = useRef(false)
   const topicsLoadedRef = useRef(false)
 
   // --- Mood-State ---
   const [moods, setMoods] = useState<MoodResult[]>([])
-
-  // --- Cluster-State ---
-  const [clusters, setClusters] = useState<ClusterResult[]>([])
-  const [clustersLoading, setClustersLoading] = useState(false)
-  const [clustersError, setClustersError] = useState<string | null>(null)
 
   // --- Topics-State (neue Pipeline: bge-m3 Embeddings + average-link) ---
   const [topicsOverview, setTopicsOverview] = useState<TopicsOverview | null>(null)
@@ -68,24 +61,6 @@ export default function useJournalAnalytics() {
       moodsLoadedRef.current = true
     } catch (err) {
       throw err
-    }
-  }
-
-  // --- Clusters laden (Ref-basierter Cache-Check) ---
-  async function loadClusters() {
-    if (clustersLoadedRef.current) return
-    try {
-      setClustersLoading(true)
-      setClustersError(null)
-      const data = await post<ClusterResult[]>(
-        `/api/journal/analytics/clusters?language=${language}`
-      )
-      setClusters(data)
-      clustersLoadedRef.current = true
-    } catch (err) {
-      setClustersError(err instanceof Error ? err.message : 'Error')
-    } finally {
-      setClustersLoading(false)
     }
   }
 
@@ -185,10 +160,6 @@ export default function useJournalAnalytics() {
   function resetAnalytics() {
     setMoods([])
     moodsLoadedRef.current = false
-    setClusters([])
-    clustersLoadedRef.current = false
-    setClustersLoading(false)
-    setClustersError(null)
     setStorylines([])
     storylinesLoadedRef.current = false
     setStorylinesLoading(false)
@@ -206,7 +177,6 @@ export default function useJournalAnalytics() {
   // --- Cache invalidieren (nach Entry-Änderung) ---
   function invalidateCache() {
     moodsLoadedRef.current = false
-    clustersLoadedRef.current = false
     storylinesLoadedRef.current = false
     topicsLoadedRef.current = false
     setInsightResults({})
@@ -215,8 +185,6 @@ export default function useJournalAnalytics() {
   return {
     // Moods
     moods, moodsLoaded: moodsLoadedRef.current, loadMoods,
-    // Clusters
-    clusters, clustersLoading, clustersError, loadClusters,
     // Topics (neue Pipeline)
     topicsOverview, topicsLoading, topicsError, topicsRecomputing,
     loadTopics, recomputeTopics,

@@ -154,7 +154,6 @@ const en = {
     ontology: 'Ontology',
     delphi: 'Delphi',
       mood: 'Mood',
-      clusters: 'Topics',
       topics: 'Topics',
       storylines: 'Storylines',
       medications: 'Medications',
@@ -224,15 +223,6 @@ const en = {
     empty: 'No mood data yet. Create entries to see your mood timeline.',
     unknown: 'unknown',
     confidence: 'Confidence',
-  },
-
-  // Cluster View
-  clusterView: {
-    title: 'Topic Clusters',
-    openMindmap: 'Open Mindmap',
-    loading: 'Analyzing topics...',
-    empty: 'No clusters yet. At least 2 entries needed.',
-    entries: 'Entries',
   },
 
   // Topics View (new pipeline)

@@ -155,7 +155,6 @@ const de = {
     ontology: 'Ontologie',
     delphi: 'Delphi',
       mood: 'Stimmung',
-      clusters: 'Themen',
       topics: 'Themen',
       storylines: 'Storylines',
       medications: 'Medikamente',
@@ -225,15 +224,6 @@ const de = {
     empty: 'Noch keine Mood-Daten. Erstelle Einträge um deinen Stimmungsverlauf zu sehen.',
     unknown: 'unbekannt',
     confidence: 'Konfidenz',
-  },
-
-  // Cluster View
-  clusterView: {
-    title: 'Themen-Cluster',
-    openMindmap: 'Mindmap öffnen',
-    loading: 'Themen werden analysiert...',
-    empty: 'Noch keine Cluster. Mindestens 2 Einträge nötig.',
-    entries: 'Einträge',
   },
 
   // Topics View (neue Pipeline)

@@ -108,16 +108,6 @@ export interface MoodResult {
   fuzzy_label?: string
 }
 
-// Themen-Cluster (von POST /api/journal/analytics/clusters)
-// DEPRECATED — alter Endpoint wurde durch GET /api/journal/insights/topics ersetzt
-// Wird nach Phase 4.2 (Frontend-Migration) entfernt
-export interface ClusterResult {
-  cluster_id: number
-  entry_ids: number[]
-  titles: string[]
-  label: string             // AI-generiertes Cluster-Label
-}
-
 // Topics-System (von GET /api/journal/insights/topics)
 // Loest ClusterResult ab — basiert auf bge-m3 Embeddings + average-link clustering
 export interface TopicCluster {
