@@ -109,11 +109,36 @@ export interface MoodResult {
 }
 
 // Themen-Cluster (von POST /api/journal/analytics/clusters)
+// DEPRECATED — alter Endpoint wurde durch GET /api/journal/insights/topics ersetzt
+// Wird nach Phase 4.2 (Frontend-Migration) entfernt
 export interface ClusterResult {
   cluster_id: number
   entry_ids: number[]
   titles: string[]
   label: string             // AI-generiertes Cluster-Label
+}
+
+// Topics-System (von GET /api/journal/insights/topics)
+// Loest ClusterResult ab — basiert auf bge-m3 Embeddings + average-link clustering
+export interface TopicCluster {
+  cluster_id: number
+  label: string | null      // null wenn LLM-Label noch nicht generiert
+  entry_count: number       // Cache-Wert (nicht autoritativ — nutze member_entry_ids.length)
+  cohesion: number          // 0.0 bis 1.0 — wie eng der Cluster zusammenhaengt
+  avg_mood: number | null   // -1.0 bis +1.0 — Durchschnitt aus MoodCache
+  member_entry_ids: number[]
+  member_titles: string[]   // parallel zu member_entry_ids, gleicher Index
+  core_entry_id: number | null  // Entry mit hoechster Centroid-Similarity
+  last_clustered_at: string | null  // ISO datetime
+  label_generated_at: string | null  // ISO datetime
+}
+
+export interface TopicsOverview {
+  total_entries: number
+  clustered_entries: number
+  orphan_count: number      // Entries ohne Cluster-Zuordnung
+  cluster_count: number
+  topics: TopicCluster[]    // sortiert nach entry_count desc
 }
 
 // Narrative Storyline (von POST /api/journal/analytics/storylines)
