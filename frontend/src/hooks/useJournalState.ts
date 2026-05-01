@@ -20,7 +20,7 @@ export type JournalTab =
   | 'entries'
   | 'calendar'
   | 'mood'
-  | 'clusters'
+  | 'topics'
   | 'storylines'
   | 'insights'
   | 'medications'

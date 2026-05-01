@@ -15,7 +15,7 @@ import EntryForm from '../components/journal/EntryForm'
 import EntryList from '../components/journal/EntryList'
 import CalendarView from '../components/journal/CalendarView'
 import MoodChart from '../components/journal/MoodChart'
-import ClusterView from '../components/journal/ClusterView'
+import TopicsView from '../components/journal/TopicsView'
 import StorylineView from '../components/journal/StorylineView'
 import InsightsView from '../components/journal/InsightsView'
 import MedicationTracker from '../components/journal/MedicationTracker'
@@ -62,7 +62,7 @@ function Journal() {
     { key: 'entries', label: t.journal.tabs.entries },
     { key: 'calendar', label: t.journal.tabs.calendar },
     { key: 'mood', label: t.journal.tabs.mood },
-    { key: 'clusters', label: t.journal.tabs.clusters },
+    { key: 'topics', label: t.journal.tabs.topics },
     { key: 'storylines', label: t.journal.tabs.storylines },
     { key: 'insights' as JournalTab, label: t.journal.tabs.insights },
     ...(s.medEnabled
@@ -242,13 +242,15 @@ function Journal() {
 
           )}
 
-          {/* Tab: Themen */}
-          {s.activeTab === 'clusters' && (
-            <ClusterView
-              clusters={a.clusters}
-              loading={a.clustersLoading}
-              error={a.clustersError}
-              onLoad={a.loadClusters}
+          {/* Tab: Themen (Topics-Pipeline) */}
+          {s.activeTab === 'topics' && (
+            <TopicsView
+              overview={a.topicsOverview}
+              loading={a.topicsLoading}
+              recomputing={a.topicsRecomputing}
+              error={a.topicsError}
+              onLoad={a.loadTopics}
+              onRecompute={a.recomputeTopics}
             />
           )}
 
