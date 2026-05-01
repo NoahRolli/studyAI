@@ -79,7 +79,10 @@ async def analyze_entry_mood(
     1. Hash berechnen
     2. Cache prüfen (gleicher Hash + gleiche Sprache = Hit)
     3. Bei Miss: Ollama analysieren, Cache speichern
+    Inhalts-Sprache wird via langdetect erkannt (UI-Sprache als Fallback).
     """
+    from backend.journal.services.language_detect import detect_content_language
+    language = detect_content_language(content, fallback=language)  # type: ignore[arg-type]
     content_hash = _compute_hash(title, content)
 
     # Cache-Lookup

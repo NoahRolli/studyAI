@@ -132,6 +132,10 @@ Rules:
         if not await self.is_available():
             return "Ohne Titel" if language == "de" else "Untitled"
 
+        # Inhalts-Sprache erkennen (UI-Sprache wird Fallback bei kurzem Text)
+        from backend.journal.services.language_detect import detect_content_language
+        language = detect_content_language(content, fallback=language)  # type: ignore[arg-type]
+
         if language == "de":
             prompt = f"""Generiere einen kurzen Titel für diesen Tagebucheintrag.
 Der Titel soll den Kern des Eintrags in maximal 6 Wörtern zusammenfassen.

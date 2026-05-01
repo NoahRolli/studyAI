@@ -333,6 +333,12 @@ async def regenerate_label(
     if not top_entries:
         return ""
 
+    # Inhalts-Sprache erkennen anhand des Top-Entries (semantisch zentralster)
+    from backend.journal.services.language_detect import detect_content_language
+    top = top_entries[0]
+    sample_text = f"{top['title']} {top['content']}"
+    language = detect_content_language(sample_text, fallback=language)  # type: ignore[arg-type]
+
     snippets = "\n".join(
         f"- {e['title']}: {e['content'][:150]}" for e in top_entries
     )
