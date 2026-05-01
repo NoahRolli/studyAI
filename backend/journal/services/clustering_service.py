@@ -35,6 +35,10 @@ from backend.journal.services.embedding_service import (
     _deserialize_embedding,
 )
 from backend.journal.services.journal_ai_service import journal_ai
+from backend.journal.services.topic_state_service import (
+    increment_counter,
+    reset_after_recompute,
+)
 
 
 # Konfiguration
@@ -201,6 +205,9 @@ async def cluster_all_entries(
         cid = _persist_cluster(entry_ids, embs, key, db)
         cluster_ids.append(cid)
 
+    # Counter zuruecksetzen + Timestamp setzen - Full-Recompute fertig
+    reset_after_recompute(db)
+
     db.commit()
 
     return {
@@ -267,6 +274,9 @@ def assign_entry_to_cluster(
             JournalEntryClusterMembership.cluster_id == best_cluster_id
         ).count()
         cluster.entry_count = member_count
+
+    # Counter inkrementieren - nur bei erfolgreicher Cluster-Zuweisung
+    increment_counter(db)
 
     db.commit()
     return best_cluster_id
