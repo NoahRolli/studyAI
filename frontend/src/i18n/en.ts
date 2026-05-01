@@ -155,6 +155,7 @@ const en = {
     delphi: 'Delphi',
       mood: 'Mood',
       clusters: 'Topics',
+      topics: 'Topics',
       storylines: 'Storylines',
       medications: 'Medications',
       insights: 'Insights',
@@ -232,6 +233,25 @@ const en = {
     loading: 'Analyzing topics...',
     empty: 'No clusters yet. At least 2 entries needed.',
     entries: 'Entries',
+  },
+
+  // Topics View (new pipeline)
+  topicsView: {
+    title: 'Topics',
+    openMindmap: 'Open Mindmap',
+    loading: 'Loading topics...',
+    empty: 'No topics yet. At least 2 entries needed.',
+    entries: 'entries',
+    entriesClustered: 'entries clustered into topics',
+    orphans: 'unclustered',
+    cohesion: 'Cohesion',
+    unlabeled: '(no label)',
+    untitled: '(no title)',
+    thresholdLabel: 'Threshold',
+    thresholdLoose: 'loose',
+    thresholdTight: 'tight',
+    recompute: 'Recompute',
+    recomputing: 'Computing...',
   },
 
   // Storyline View
