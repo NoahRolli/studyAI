@@ -11,3 +11,4 @@ from backend.journal.models.journal_topic_cluster import (  # noqa: F401
     JournalTopicCluster,
     JournalEntryClusterMembership,
 )
+from backend.journal.models.journal_topic_state import JournalTopicState  # noqa: F401
