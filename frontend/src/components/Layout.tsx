@@ -6,12 +6,15 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import GlobalTaskBar from './GlobalTaskBar'
+import DelphiBubble from './delphi/DelphiBubble'
 
 function Layout() {
   const location = useLocation()
 
   // Sidebar auf der Begrüssungsseite ausblenden
   const isWelcomePage = location.pathname === '/'
+  // DelphiBubble auf der Delphi-Page selbst ausblenden (vermeidet Doppelung)
+  const isDelphiPage = location.pathname.startsWith('/delphi')
 
   return (
     <div
@@ -26,6 +29,8 @@ function Layout() {
         <Outlet />
       </main>
       <GlobalTaskBar />
+      {/* Delphi Quick-Access Bubble - ueberall ausser auf /delphi selbst */}
+      {!isDelphiPage && <DelphiBubble />}
     </div>
   )
 }

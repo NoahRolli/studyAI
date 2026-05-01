@@ -460,6 +460,16 @@ const de = {
     pinNode: 'Position fixieren',
     unpinNode: 'Position freigeben',
   },
+  // Delphi-Bubble — Floating Quick-Access (Toggle + Chat-Fenster auf jeder Seite)
+  delphiBubble: {
+    title: 'Delphi',
+    placeholder: 'Frag Pallas...',
+    hint: 'Stelle eine Frage und Pallas führt dich zur Antwort.',
+    toggleAriaLabel: 'Delphi öffnen',
+    closeAriaLabel: 'Delphi schließen',
+    sendAriaLabel: 'Frage senden',
+  },
+
   // Delphi — Wissens-Chat
   delphi: {
     newConversation: 'Neue Konversation',

@@ -459,6 +459,16 @@ const en = {
     pinNode: 'Pin position',
     unpinNode: 'Unpin position',
   },
+  // Delphi-Bubble — Floating Quick-Access (toggle + chat panel on every page)
+  delphiBubble: {
+    title: 'Delphi',
+    placeholder: 'Ask Pallas...',
+    hint: 'Ask a question and Pallas will guide you to the answer.',
+    toggleAriaLabel: 'Open Delphi',
+    closeAriaLabel: 'Close Delphi',
+    sendAriaLabel: 'Send question',
+  },
+
   // Delphi — Knowledge Chat
   delphi: {
     newConversation: 'New conversation',
