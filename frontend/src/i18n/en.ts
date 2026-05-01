@@ -242,6 +242,8 @@ const en = {
     thresholdTight: 'tight',
     recompute: 'Recompute',
     recomputing: 'Computing...',
+    entriesSinceRecompute: 'new entries since last recompute',
+    newShort: 'new',
   },
 
   // Storyline View

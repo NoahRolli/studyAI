@@ -243,6 +243,8 @@ const de = {
     thresholdTight: 'eng',
     recompute: 'Neu berechnen',
     recomputing: 'Berechne...',
+    entriesSinceRecompute: 'neue Einträge seit letztem Recompute',
+    newShort: 'neu',
   },
 
   // Storyline View

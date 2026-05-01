@@ -133,17 +133,37 @@ function TopicsView({
             <span>0.85 ({t.topicsView.thresholdTight})</span>
           </div>
         </div>
-        <button
-          onClick={handleRecompute}
-          disabled={recomputing}
-          className="hud-btn text-xs whitespace-nowrap"
-          style={{
-            opacity: recomputing ? 0.5 : 1,
-            cursor: recomputing ? 'wait' : 'pointer',
-          }}
-        >
-          {recomputing ? t.topicsView.recomputing : t.topicsView.recompute}
-        </button>
+        {(() => {
+          const recState = overview?.recompute_state
+          const recommended = recState?.recompute_recommended ?? false
+          const newCount = recState?.entries_since_last_recompute ?? 0
+          const showCount = recommended && newCount > 0 && !recomputing
+          return (
+            <button
+              onClick={handleRecompute}
+              disabled={recomputing}
+              className="hud-btn text-xs whitespace-nowrap"
+              style={{
+                opacity: recomputing ? 0.5 : 1,
+                cursor: recomputing ? 'wait' : 'pointer',
+                boxShadow:
+                  recommended && !recomputing
+                    ? '0 0 12px var(--color-primary), inset 0 0 4px var(--color-primary)'
+                    : undefined,
+                borderColor:
+                  recommended && !recomputing
+                    ? 'var(--color-primary)'
+                    : undefined,
+              }}
+            >
+              {recomputing
+                ? t.topicsView.recomputing
+                : showCount
+                  ? `${t.topicsView.recompute} (${newCount} ${t.topicsView.newShort})`
+                  : t.topicsView.recompute}
+            </button>
+          )
+        })()}
       </div>
 
       {/* Stats-Zeile */}
@@ -152,6 +172,19 @@ function TopicsView({
           {overview.clustered_entries} / {overview.total_entries} {t.topicsView.entriesClustered}
           {overview.orphan_count > 0 && (
             <span> · {overview.orphan_count} {t.topicsView.orphans}</span>
+          )}
+          {overview.recompute_state.entries_since_last_recompute > 0 && (
+            <span
+              style={{
+                color: overview.recompute_state.recompute_recommended
+                  ? 'var(--color-primary)'
+                  : undefined,
+              }}
+            >
+              {' · '}
+              {overview.recompute_state.entries_since_last_recompute}{' '}
+              {t.topicsView.entriesSinceRecompute}
+            </span>
           )}
         </div>
       )}
