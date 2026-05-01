@@ -72,7 +72,7 @@ export function useDelphi() {
   }, [currentId, loadConversationDetail])
 
   // --- Actions ---
-  async function newConversation() {
+  async function newConversation(): Promise<number | null> {
     try {
       setError(null)
       const payload: DelphiCreateConversationIn = {}
@@ -82,8 +82,10 @@ export function useDelphi() {
       // Optimistic: vorne in Liste einfuegen + sofort selektieren
       setConversations(prev => [conv, ...prev])
       setCurrentId(conv.id)
+      return conv.id
     } catch (err) {
       setError(err instanceof Error ? err.message : t.delphi.errorGeneric)
+      return null
     }
   }
 
@@ -91,14 +93,16 @@ export function useDelphi() {
     setCurrentId(id)
   }
 
-  async function sendMessage(content: string) {
-    if (!currentId || !content.trim() || sending) return
+  async function sendMessage(content: string, convId?: number) {
+    // convId-Param umgeht State-Race nach frischem newConversation()
+    const targetId = convId ?? currentId
+    if (!targetId || !content.trim() || sending) return
     try {
       setSending(true)
       setError(null)
       const payload: DelphiSendMessageIn = { content }
       const resp = await post<DelphiSendResponse>(
-        `/api/delphi/conversations/${currentId}/messages`, payload
+        `/api/delphi/conversations/${targetId}/messages`, payload
       )
       // Lokales Detail-Update: zwei neue Messages anhaengen
       setCurrentDetail(prev => prev ? {
@@ -111,7 +115,9 @@ export function useDelphi() {
     } catch (err) {
       setError(err instanceof Error ? err.message : t.delphi.errorSendFailed)
       // Recovery: Detail neu laden falls User-Msg schon persistiert wurde
-      if (currentId !== null) loadConversationDetail(currentId)
+      // (targetId verwenden, nicht currentId - falls per convId-Param aufgerufen)
+      const recoveryId = convId ?? currentId
+      if (recoveryId !== null) loadConversationDetail(recoveryId)
     } finally {
       setSending(false)
     }

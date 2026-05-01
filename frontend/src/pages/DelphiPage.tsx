@@ -4,6 +4,7 @@
 // Enter sendet, Shift+Enter macht Newline.
 
 import { useState, useEffect, useRef } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../hooks/useLanguage'
 import { useDelphi } from '../hooks/useDelphi'
 import DelphiSidebar from '../components/delphi/DelphiSidebar'
@@ -31,6 +32,37 @@ function DelphiPage() {
   const [draft, setDraft] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  // Bubble-Navigation: liest initialDraft aus location.state und sendet ggf. sofort
+  // State wird danach gecleart damit Re-Renders nichts erneut triggern
+  useEffect(() => {
+    const state = location.state as {
+      initialDraft?: string
+      autoSend?: boolean
+    } | null
+    if (!state?.initialDraft) return
+
+    const draftText = state.initialDraft
+    if (state.autoSend) {
+      // Async-Flow: erst Conversation erstellen, dann mit echter ID senden
+      // (umgeht React-State-Race nach setCurrentId)
+      ;(async () => {
+        const newId = await newConversation()
+        if (newId !== null) {
+          await sendMessage(draftText, newId)
+        }
+      })()
+    } else {
+      // Nur Draft setzen, User schickt manuell ab
+      setDraft(draftText)
+    }
+
+    // State clearen damit Re-Renders nichts erneut triggern
+    navigate(location.pathname, { replace: true, state: null })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
 
   // Auto-Scroll zum Ende wenn neue Messages kommen
   useEffect(() => {
