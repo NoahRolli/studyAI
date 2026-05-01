@@ -227,7 +227,7 @@ function buildTree(
   return [{
     id: 1,
     label: t.journal.title,
-    detail: `${clusters.length} ${t.mindmap.themes}, ${storylines.length} ${t.mindmap.storylines}`,
+    detail: `${topics.length} ${t.mindmap.themes}, ${storylines.length} ${t.mindmap.storylines}`,
     depth_level: 0,
     position_x: 0,
     position_y: 0,
