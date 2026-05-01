@@ -6,7 +6,7 @@
 // Persistenz: localStorage merkt sich open/closed-State
 
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useLanguage } from '../../hooks/useLanguage'
 
 const STORAGE_KEY = 'pallas-delphi-bubble-open'
@@ -14,6 +14,16 @@ const STORAGE_KEY = 'pallas-delphi-bubble-open'
 function DelphiBubble() {
   const { t } = useLanguage()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // mounted-State: bei jedem Route-Wechsel false -> nach 800ms true
+  // -> Bubble fadet erst NACH der Page-Animation ein
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(false)
+    const timer = setTimeout(() => setMounted(true), 800)
+    return () => clearTimeout(timer)
+  }, [location.pathname])
 
   // Open-State aus localStorage (Default closed)
   const [open, setOpen] = useState<boolean>(() => {
@@ -79,13 +89,16 @@ function DelphiBubble() {
           height: '48px',
           borderRadius: '50%',
           backgroundColor: 'var(--color-bg-card)',
-          border: '1px solid var(--color-primary)',
+          border: '2px solid var(--color-primary)',
           boxShadow: '0 0 12px rgba(0, 212, 255, 0.3), inset 0 0 8px rgba(0, 212, 255, 0.1)',
           cursor: 'pointer',
           display: 'flex',
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? 'scale(1)' : 'scale(0.85)',
+          pointerEvents: mounted ? 'auto' : 'none',
+          transition: 'opacity 0.5s ease, transform 0.5s ease, box-shadow 0.3s ease',
           alignItems: 'center',
           justifyContent: 'center',
-          transition: 'box-shadow 0.3s ease, transform 0.2s ease',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.boxShadow =
@@ -100,26 +113,33 @@ function DelphiBubble() {
         <div
           className="absolute animate-glow-pulse"
           style={{
-            width: '24px',
-            height: '24px',
+            width: '34px',
+            height: '34px',
             borderRadius: '50%',
             backgroundColor: 'var(--color-primary)',
             opacity: 0.25,
           }}
         />
-        {/* Delta-Symbol vorne */}
-        <span
-          className="hud-title relative"
+        {/* Delta-Symbol vorne (SVG, hohl, bis zum äußeren Ring) */}
+        <svg
+          viewBox="-12 -12 24 24"
+          width="38"
+          height="38"
+          className="relative"
           style={{
-            color: 'var(--color-primary)',
-            fontSize: '20px',
-            fontWeight: 700,
-            lineHeight: 1,
-            textShadow: '0 0 6px rgba(0, 212, 255, 0.8)',
+            filter: 'drop-shadow(0 0 6px rgba(0, 212, 255, 0.8))',
+            overflow: 'visible',
           }}
+          aria-hidden="true"
         >
-          Δ
-        </span>
+          <polygon
+            points="0,-10 -8.66,5 8.66,5"
+            fill="none"
+            stroke="var(--color-primary)"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
     )
   }
