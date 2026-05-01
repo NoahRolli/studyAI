@@ -88,22 +88,6 @@ async def get_all_moods(
     return await analyze_multiple_entries(decrypted, language, db)
 
 
-# --- Clustering Endpunkte ---
-
-@router.post("/clusters")
-async def get_clusters(
-    language: str = Query(default="de"),
-    db: Session = Depends(get_journal_db),
-):
-    """Stub: Topics-System wird auf neue Embedding-Pipeline migriert (Phase 4).
-    Neuer Endpoint kommt unter /api/journal/insights/topics."""
-    raise HTTPException(
-        status_code=503,
-        detail="Topics-System wird migriert. Bitte CLI nutzen: "
-               "python -m backend.scripts.journal_recluster",
-    )
-
-
 # --- Storyline Endpunkte (mit Cache) ---
 
 @router.post("/storylines")
