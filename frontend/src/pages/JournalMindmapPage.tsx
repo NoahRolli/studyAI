@@ -13,10 +13,10 @@ import ReactFlow, {
   MiniMap,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { post } from '../hooks/useAPI'
+import { get, post } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import { treeLayout } from '../utils/mindmapLayouts'
-import type { ClusterResult, StorylineResult } from '../types/models'
+import type { TopicCluster, TopicsOverview, StorylineResult } from '../types/models'
 import type { MindmapTreeNode } from '../utils/mindmapLayouts'
 
 function JournalMindmapPage() {
@@ -43,16 +43,19 @@ function JournalMindmapPage() {
       try {
         setLoading(true)
         setError(null)
-        const [clusters, storylines] = await Promise.all([
-          post<ClusterResult[]>('/api/journal/analytics/clusters').catch(() => []),
+        const [overview, storylines] = await Promise.all([
+          get<TopicsOverview>('/api/journal/insights/topics').catch(
+            () => ({ topics: [] } as Partial<TopicsOverview> as TopicsOverview)
+          ),
           post<StorylineResult[]>('/api/journal/analytics/storylines').catch(() => []),
         ])
-        if (clusters.length === 0) {
+        const topics = overview?.topics ?? []
+        if (topics.length === 0) {
           setError(t.mindmap.minEntries)
           setLoading(false)
           return
         }
-        const tree = buildTree(clusters, storylines, t)
+        const tree = buildTree(topics, storylines, t)
         setTreeData(tree)
         applyLayout(tree)
       } catch (err) {
@@ -180,34 +183,40 @@ function JournalMindmapPage() {
   )
 }
 
-// --- Baum aus Clusters + Storylines bauen ---
+// --- Baum aus Topics + Storylines bauen ---
 function buildTree(
-  clusters: ClusterResult[],
+  topics: TopicCluster[],
   storylines: StorylineResult[],
   t: ReturnType<typeof useLanguage>['t'],
 ): MindmapTreeNode[] {
-  const clusterNodes: MindmapTreeNode[] = clusters.map((cluster, ci) => {
+  const clusterNodes: MindmapTreeNode[] = topics.map((topic, ci) => {
     const relevantStories = storylines.filter((s) =>
-      s.entry_ids.some((id) => cluster.entry_ids.includes(id))
+      s.entry_ids.some((id) => topic.member_entry_ids.includes(id))
     )
     const storyInfo = relevantStories.length > 0
       ? `\n${t.mindmap.storylines}: ${relevantStories.map((s) => `${s.title} (${s.arc_type})`).join(', ')}`
       : ''
 
-    const entryNodes: MindmapTreeNode[] = cluster.titles.map((title, ti) => ({
-      id: cluster.entry_ids[ti] + 10000,
-      label: title,
-      detail: `${t.mindmap.entry} #${cluster.entry_ids[ti]}`,
+    const entryNodes: MindmapTreeNode[] = topic.member_titles.map((title, ti) => ({
+      id: topic.member_entry_ids[ti] + 10000,
+      label: title || `#${topic.member_entry_ids[ti]}`,
+      detail: `${t.mindmap.entry} #${topic.member_entry_ids[ti]}`,
       depth_level: 2,
       position_x: 0,
       position_y: 0,
       children: [],
     }))
 
+    // Detail-Text mit Cohesion und avg_mood angereichert
+    const moodPart = topic.avg_mood !== null
+      ? ` · mood ${topic.avg_mood >= 0 ? '+' : ''}${topic.avg_mood.toFixed(2)}`
+      : ''
+    const cohesionPart = ` · cohesion ${(topic.cohesion * 100).toFixed(0)}%`
+
     return {
       id: ci + 1000,
-      label: cluster.label,
-      detail: `${cluster.entry_ids.length} ${t.common.entries}${storyInfo}`,
+      label: topic.label ?? '(ohne Label)',
+      detail: `${topic.member_entry_ids.length} ${t.common.entries}${cohesionPart}${moodPart}${storyInfo}`,
       depth_level: 1,
       position_x: 0,
       position_y: 0,
