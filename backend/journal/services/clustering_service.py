@@ -257,6 +257,7 @@ def assign_entry_to_cluster(
         cluster_id=best_cluster_id,
         similarity_to_centroid=round(best_sim, 4),
     ))
+    db.flush()
     # Entry-Count des Clusters inkrementieren
     cluster = db.query(JournalTopicCluster).filter(
         JournalTopicCluster.id == best_cluster_id
