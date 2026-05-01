@@ -24,6 +24,7 @@ from backend.journal.services.clustering_service import (
     regenerate_all_labels,
 )
 from backend.journal.services.topic_query_service import get_topics_overview
+from backend.journal.services.topic_state_service import get_state_summary
 
 
 router = APIRouter(prefix="/api/journal/insights", tags=["journal-topics"])
@@ -50,7 +51,8 @@ async def get_topics(db: Session = Depends(get_journal_db)):
     """
     require_unlocked()
     key = session_manager.get_key()
-    return get_topics_overview(key, db)
+    overview = get_topics_overview(key, db)
+    return {**overview, "recompute_state": get_state_summary(db)}
 
 
 @router.post("/topics/recompute")
@@ -82,6 +84,7 @@ async def recompute_topics(
     label_count = await regenerate_all_labels(key, db, language=payload.language)
 
     overview = get_topics_overview(key, db)
+    recompute_state = get_state_summary(db)
 
     return {
         "status": "ok",
@@ -90,4 +93,5 @@ async def recompute_topics(
         "cluster_count": cluster_result["cluster_count"],
         "labels_generated": label_count,
         "overview": overview,
+        "recompute_state": recompute_state,
     }
