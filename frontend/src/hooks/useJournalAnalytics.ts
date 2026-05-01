@@ -5,12 +5,13 @@
 // Wird von useJournalState eingebunden und an Komponenten weitergereicht
 
 import { useState, useRef } from 'react'
-import { post } from './useAPI'
+import { get, post } from './useAPI'
 import { useLanguage } from './useLanguage'
 import type {
   MoodResult,
   ClusterResult,
   StorylineResult,
+  TopicsOverview,
 } from '../types/models'
 
 // Insight-Key Typen für die modularen Analysen
@@ -29,6 +30,7 @@ export default function useJournalAnalytics() {
   const moodsLoadedRef = useRef(false)
   const clustersLoadedRef = useRef(false)
   const storylinesLoadedRef = useRef(false)
+  const topicsLoadedRef = useRef(false)
 
   // --- Mood-State ---
   const [moods, setMoods] = useState<MoodResult[]>([])
@@ -37,6 +39,12 @@ export default function useJournalAnalytics() {
   const [clusters, setClusters] = useState<ClusterResult[]>([])
   const [clustersLoading, setClustersLoading] = useState(false)
   const [clustersError, setClustersError] = useState<string | null>(null)
+
+  // --- Topics-State (neue Pipeline: bge-m3 Embeddings + average-link) ---
+  const [topicsOverview, setTopicsOverview] = useState<TopicsOverview | null>(null)
+  const [topicsLoading, setTopicsLoading] = useState(false)
+  const [topicsError, setTopicsError] = useState<string | null>(null)
+  const [topicsRecomputing, setTopicsRecomputing] = useState(false)
 
   // --- Storyline-State ---
   const [storylines, setStorylines] = useState<StorylineResult[]>([])
@@ -78,6 +86,42 @@ export default function useJournalAnalytics() {
       setClustersError(err instanceof Error ? err.message : 'Error')
     } finally {
       setClustersLoading(false)
+    }
+  }
+
+  // --- Topics laden (Ref-basierter Cache-Check) ---
+  async function loadTopics() {
+    if (topicsLoadedRef.current) return
+    try {
+      setTopicsLoading(true)
+      setTopicsError(null)
+      const data = await get<TopicsOverview>('/api/journal/insights/topics')
+      setTopicsOverview(data)
+      topicsLoadedRef.current = true
+    } catch (err) {
+      setTopicsError(err instanceof Error ? err.message : 'Error')
+    } finally {
+      setTopicsLoading(false)
+    }
+  }
+
+  // --- Topics neu berechnen (Full Recluster + Re-Label) ---
+  async function recomputeTopics(threshold: number) {
+    try {
+      setTopicsRecomputing(true)
+      setTopicsError(null)
+      const result = await post<{ status: string; overview?: TopicsOverview }>(
+        '/api/journal/insights/topics/recompute',
+        { threshold, language }
+      )
+      if (result.overview) {
+        setTopicsOverview(result.overview)
+        topicsLoadedRef.current = true
+      }
+    } catch (err) {
+      setTopicsError(err instanceof Error ? err.message : 'Error')
+    } finally {
+      setTopicsRecomputing(false)
     }
   }
 
@@ -149,6 +193,11 @@ export default function useJournalAnalytics() {
     storylinesLoadedRef.current = false
     setStorylinesLoading(false)
     setStorylinesError(null)
+    setTopicsOverview(null)
+    topicsLoadedRef.current = false
+    setTopicsLoading(false)
+    setTopicsError(null)
+    setTopicsRecomputing(false)
     setInsightResults({})
     setInsightLoading({})
     setInsightErrors({})
@@ -159,6 +208,7 @@ export default function useJournalAnalytics() {
     moodsLoadedRef.current = false
     clustersLoadedRef.current = false
     storylinesLoadedRef.current = false
+    topicsLoadedRef.current = false
     setInsightResults({})
   }
 
@@ -167,6 +217,9 @@ export default function useJournalAnalytics() {
     moods, moodsLoaded: moodsLoadedRef.current, loadMoods,
     // Clusters
     clusters, clustersLoading, clustersError, loadClusters,
+    // Topics (neue Pipeline)
+    topicsOverview, topicsLoading, topicsError, topicsRecomputing,
+    loadTopics, recomputeTopics,
     // Storylines
     storylines, storylinesLoading, storylinesError, loadStorylines,
     // Insights
