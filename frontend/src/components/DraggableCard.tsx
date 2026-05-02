@@ -7,33 +7,40 @@
 // - type: "folder" oder "module" — wird beim Drop ausgewertet
 // - children: Der Inhalt der Karte (wird einfach durchgereicht)
 
-import { useDraggable } from '@dnd-kit/core'
+import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
 interface DraggableCardProps {
   id: string
   type: 'folder' | 'module'
   children: React.ReactNode
+  disabled?: boolean
 }
 
-function DraggableCard({ id, type, children }: DraggableCardProps) {
-  // useDraggable — macht das Element greifbar
-  // data enthält Typ-Info die beim Drop-Event ausgelesen wird
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+function DraggableCard({ id, type, children, disabled = false }: DraggableCardProps) {
+  // useSortable — macht das Element draggable UND animiert Nachbarelemente live
+  // data enthaelt Typ-Info die beim Drop-Event ausgelesen wird
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
     data: { type },
+    disabled,
   })
 
   // Transform als CSS — verschiebt das Element visuell beim Ziehen
   const style: React.CSSProperties = {
-    transform: CSS.Translate.toString(transform),
+    transform: CSS.Transform.toString(transform),
+    transition,
     opacity: isDragging ? 0.5 : 1,
-    cursor: 'grab',
-    transition: isDragging ? 'none' : 'opacity 0.2s ease',
+    cursor: disabled ? 'default' : 'grab',
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+    >
       {children}
     </div>
   )
