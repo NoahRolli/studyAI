@@ -142,6 +142,7 @@ def main():
         if do_docs:
             print("\n[ProjectDocs] Starte Project-Docs-Import …")
             all_stats["ProjectDocs"] = import_project_docs(
+                db=db, export_dir=args.export_dir, dry_run=args.dry_run,
             )
             _print_stats_block("Project-Docs Import", all_stats["ProjectDocs"])
 

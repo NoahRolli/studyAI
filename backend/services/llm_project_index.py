@@ -22,39 +22,61 @@ STARTER_PROJECT_UUID = "019a15ca-0ba2-7290-911d-68e908eee1d5"
 
 def load_project_index(export_dir: str | Path) -> dict[str, dict[str, Any]]:
     """
-    Lädt projects.json und gibt ein Dict {uuid: {name, docs}} zurück.
+    Laedt Projects aus dem Claude-Export.
+
+    Unterstuetzt zwei Formate:
+    - Altes Format: projects.json (Liste mit allen Projects)
+    - Neues Format: projects/{uuid}.json (eine Datei pro Project)
 
     Args:
-        export_dir: Pfad zum Claude-Export-Ordner (enthält projects.json).
+        export_dir: Pfad zum Claude-Export-Ordner.
 
     Returns:
         Dict mit UUID als Key und {name: str, docs: list} als Value.
         Starter-Project "How to use Claude" wird ausgefiltert.
 
     Raises:
-        FileNotFoundError: Wenn projects.json nicht existiert.
+        FileNotFoundError: Wenn weder projects.json noch projects/ existiert.
         ValueError: Wenn projects.json nicht das erwartete Listen-Format hat.
     """
     export_path = Path(export_dir)
     projects_file = export_path / "projects.json"
+    projects_dir = export_path / "projects"
 
-    if not projects_file.exists():
-        raise FileNotFoundError(f"projects.json nicht gefunden: {projects_file}")
+    entries: list[dict[str, Any]] = []
 
-    with open(projects_file, encoding="utf-8") as f:
-        raw = json.load(f)
+    if projects_file.exists():
+        # Altes Format: Single-File mit Liste
+        with open(projects_file, encoding="utf-8") as f:
+            raw = json.load(f)
+        if not isinstance(raw, list):
+            raise ValueError(
+                f"projects.json muss eine Liste sein, ist aber {type(raw).__name__}"
+            )
+        entries = raw
 
-    if not isinstance(raw, list):
-        raise ValueError(
-            f"projects.json muss eine Liste sein, ist aber {type(raw).__name__}"
+    elif projects_dir.exists() and projects_dir.is_dir():
+        # Neues Format: Verzeichnis mit einer JSON-Datei pro Project
+        for json_file in sorted(projects_dir.glob("*.json")):
+            with open(json_file, encoding="utf-8") as f:
+                entry = json.load(f)
+            if isinstance(entry, dict):
+                entries.append(entry)
+
+    else:
+        raise FileNotFoundError(
+            f"Weder projects.json noch projects/ gefunden in: {export_path}"
         )
 
     index: dict[str, dict[str, Any]] = {}
-    for entry in raw:
+    for entry in entries:
         if not isinstance(entry, dict):
             continue
         uuid = entry.get("uuid")
         if not uuid or uuid == STARTER_PROJECT_UUID:
+            continue
+        # Backup-Filter via Flag fuer den Fall dass Anthropic die UUID aendert
+        if entry.get("is_starter_project") is True:
             continue
         index[uuid] = {
             "name": entry.get("name", "Unbenannt"),
