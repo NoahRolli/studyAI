@@ -14,6 +14,8 @@ interface EntryFormProps {
   onAutoTitleChange?: (val: boolean) => void
   onSave: (data: JournalEntryCreate) => void
   onCancel: () => void
+  fullscreen?: boolean
+  onToggleFullscreen?: () => void
 }
 
 function EntryForm({
@@ -23,6 +25,8 @@ function EntryForm({
   onAutoTitleChange,
   onSave,
   onCancel,
+  fullscreen,
+  onToggleFullscreen,
 }: EntryFormProps) {
   const { t } = useLanguage()
 
@@ -38,8 +42,32 @@ function EntryForm({
   // Validierung: Content muss vorhanden sein, Titel wenn nicht autoTitle
   const isValid = form.content.trim() !== '' && (autoTitle || form.title.trim() !== '')
 
+  const wrapperClass = fullscreen
+    ? 'p-6 overflow-auto hud-grid-bg animate-fade-in'
+    : 'hud-card p-6 mb-6 animate-fade-in'
+  const wrapperStyle: React.CSSProperties = fullscreen
+    ? {
+        position: 'fixed',
+        top: 0, right: 0, bottom: 0, left: 0,
+        zIndex: 50,
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: 'var(--color-bg-deep)',
+      }
+    : {}
+
   return (
-    <div className="hud-card p-6 mb-6 animate-fade-in">
+    <div className={`${wrapperClass} relative`} style={wrapperStyle}>
+      {onToggleFullscreen && (
+        <div className="absolute top-3 right-3 z-20">
+          <button
+            type="button"
+            onClick={onToggleFullscreen}
+            className="hud-btn text-xs px-2 py-1"
+            title={fullscreen ? 'Escape' : 'Fullscreen'}
+          >{fullscreen ? '✖' : '⛶'}</button>
+        </div>
+      )}
       <h2
         className="hud-title text-sm mb-4"
         style={{ color: 'var(--color-primary)' }}
@@ -109,7 +137,7 @@ function EntryForm({
       </div>
 
       {/* Inhalt */}
-      <div className="mb-6">
+      <div className={fullscreen ? "mb-6 flex-1 flex flex-col" : "mb-6"}>
         <label
           className="block text-xs mb-1"
           style={{ color: 'var(--color-text-muted)' }}
@@ -120,8 +148,9 @@ function EntryForm({
           value={form.content}
           onChange={(e) => setForm({ ...form, content: e.target.value })}
           placeholder={t.entryForm.contentPlaceholder}
-          rows={6}
-          className="hud-input resize-y"
+          rows={fullscreen ? undefined : 6}
+          className={fullscreen ? "hud-input flex-1 resize-none" : "hud-input resize-y"}
+          style={fullscreen ? { minHeight: 0 } : {}}
         />
       </div>
 

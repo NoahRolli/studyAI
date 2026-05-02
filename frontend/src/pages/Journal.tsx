@@ -3,7 +3,7 @@
 // Drei Zustände: Setup → Unlock → Tabs (Einträge, Kalender, Analytics, Meds, Insights, Metis)
 // Analytics-Daten kommen gecacht aus useJournalAnalytics via useJournalState
 
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import useJournalState from '../hooks/useJournalState'
 import type { JournalTab } from '../hooks/useJournalState'
 import type { JournalEntry } from '../types/models'
@@ -30,6 +30,18 @@ function Journal() {
 
   // Ref um CalendarView von aussen zu steuern (Tag öffnen)
   const calendarRef = useRef<{ openDay: (date: string) => void }>(null)
+
+  // Fullscreen-Mode fuer Eintraege (Schreiben + Bearbeiten)
+  const [fullscreen, setFullscreen] = useState(false)
+
+  // Escape beendet Fullscreen
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape' && fullscreen) setFullscreen(false)
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [fullscreen])
 
   // Auto-Lock bei Navigation weg oder Laptop-Zuklappen
   useJournalLock({
@@ -199,6 +211,8 @@ function Journal() {
                   onAutoTitleChange={s.setAutoTitle}
                   onSave={s.createEntry}
                   onCancel={() => s.setShowForm(false)}
+                  fullscreen={fullscreen}
+                  onToggleFullscreen={() => setFullscreen(!fullscreen)}
                 />
               )}
               <EntryList
@@ -209,6 +223,8 @@ function Journal() {
                 onSaveEdit={s.saveEdit}
                 onCancelEdit={s.cancelEdit}
                 onDelete={s.deleteEntry}
+                fullscreen={fullscreen}
+                onToggleFullscreen={() => setFullscreen(!fullscreen)}
               />
             </div>
           )}

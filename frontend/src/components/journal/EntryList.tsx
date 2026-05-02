@@ -15,11 +15,14 @@ interface EntryListProps {
   onSaveEdit: (data: JournalEntryCreate) => void
   onCancelEdit: () => void
   onDelete: (id: number) => void
+  fullscreen?: boolean
+  onToggleFullscreen?: () => void
 }
 
 function EntryList({
   entries, editingId, editEntry,
   onStartEdit, onSaveEdit, onCancelEdit, onDelete,
+  fullscreen, onToggleFullscreen,
 }: EntryListProps) {
   const { t } = useLanguage()
   const [search, setSearch] = useState('')
@@ -92,6 +95,8 @@ function EntryList({
               isEdit
               onSave={onSaveEdit}
               onCancel={onCancelEdit}
+              fullscreen={fullscreen}
+              onToggleFullscreen={onToggleFullscreen}
             />
           ) : (
             <div className="flex items-center justify-between">
