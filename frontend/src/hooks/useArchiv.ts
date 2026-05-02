@@ -132,11 +132,14 @@ export function useArchiv() {
   }
 
   // --- DnD: Element in Ordner verschieben ---
-  async function moveToFolder(draggedId: string, targetFolderId: number) {
+  async function moveToFolder(draggedId: string, targetFolderId: number | null) {
     if (draggedId.startsWith('folder-')) {
       const folderId = parseInt(draggedId.replace('folder-', ''))
       if (folderId === targetFolderId) return
-      await put(`/api/folders/${folderId}`, { parent_id: targetFolderId })
+      const payload = targetFolderId === null
+        ? { move_to_root: true }
+        : { parent_id: targetFolderId }
+      await put(`/api/folders/${folderId}`, payload)
     } else if (draggedId.startsWith('module-')) {
       const moduleId = parseInt(draggedId.replace('module-', ''))
       await put(`/api/folders/move-module/${moduleId}`, { folder_id: targetFolderId })

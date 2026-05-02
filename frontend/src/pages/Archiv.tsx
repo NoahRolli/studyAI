@@ -6,12 +6,15 @@ import { Link } from 'react-router-dom'
 import { useLanguage } from '../hooks/useLanguage'
 import { useArchiv } from '../hooks/useArchiv'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { SortableContext, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import DraggableCard from '../components/DraggableCard'
 import DroppableFolder from '../components/DroppableFolder'
+import DroppableBreadcrumb from '../components/DroppableBreadcrumb'
 import ArchivForms from '../components/archiv/ArchivForms'
 import ArchivDocuments from '../components/archiv/ArchivDocuments'
+import SortDropdown from '../components/SortDropdown'
+import { useDocumentSort } from '../hooks/useDocumentSort'
 import type { ModuleCreate } from '../types/models'
 
 function Archiv() {
@@ -22,6 +25,19 @@ function Archiv() {
   const [showModuleForm, setShowModuleForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+
+  const folderSort = useDocumentSort(db.folders, {
+    dateField: "created_at",
+    nameField: (f) => f.name,
+    defaultMode: "manual",
+    allowManual: true,
+  })
+  const moduleSort = useDocumentSort(db.modules, {
+    dateField: "created_at",
+    nameField: (m) => m.name,
+    defaultMode: "manual",
+    allowManual: true,
+  })
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -72,7 +88,22 @@ function Archiv() {
       return
     }
 
-    // Reihenfolge ändern (Sortable)
+    // In Breadcrumb (hoehere Ebene oder Root) verschieben
+    if (targetId === 'drop-breadcrumb-root') {
+      try { await db.moveToFolder(draggedId, null) }
+      catch { db.setError(t.archiv.moveFailed) }
+      return
+    }
+    if (targetId.startsWith('drop-breadcrumb-')) {
+      const targetFolderId = parseInt(targetId.replace('drop-breadcrumb-', ''))
+      try { await db.moveToFolder(draggedId, targetFolderId) }
+      catch { db.setError(t.archiv.moveFailed) }
+      return
+    }
+
+    // Reihenfolge aendern (Sortable) — nur wenn beide Sort-Modi auf 'manual' stehen
+    if (folderSort.mode !== 'manual' || moduleSort.mode !== 'manual') return
+
     if (draggedId.startsWith('folder-') && targetId.startsWith('folder-')) {
       const oldIdx = db.folders.findIndex((f) => `folder-${f.id}` === draggedId)
       const newIdx = db.folders.findIndex((f) => `folder-${f.id}` === targetId)
@@ -116,19 +147,25 @@ function Archiv() {
         </div>
       </div>
 
-      {/* Breadcrumbs */}
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+
+      {/* Breadcrumbs (auch Drop-Targets fuer Folder-Verschiebung) */}
       <div className="flex items-center gap-2 mb-6 text-xs flex-wrap">
-        <button onClick={db.goToRoot} className="transition-colors"
-          style={{ color: db.currentFolderId === null ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
-          {t.sidebar.archiv}
-        </button>
+        <DroppableBreadcrumb id="drop-breadcrumb-root">
+          <button onClick={db.goToRoot} className="transition-colors"
+            style={{ color: db.currentFolderId === null ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
+            {t.sidebar.archiv}
+          </button>
+        </DroppableBreadcrumb>
         {db.breadcrumbs.map((crumb, i) => (
           <span key={crumb.id} className="flex items-center gap-2">
             <span style={{ color: 'var(--color-border)' }}>/</span>
-            <button onClick={() => db.goToBreadcrumb(crumb.id)} className="transition-colors"
-              style={{ color: i === db.breadcrumbs.length - 1 ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
-              {crumb.name}
-            </button>
+            <DroppableBreadcrumb id={`drop-breadcrumb-${crumb.id}`}>
+              <button onClick={() => db.goToBreadcrumb(crumb.id)} className="transition-colors"
+                style={{ color: i === db.breadcrumbs.length - 1 ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
+                {crumb.name}
+              </button>
+            </DroppableBreadcrumb>
           </span>
         ))}
       </div>
@@ -164,14 +201,35 @@ function Archiv() {
         </div>
       )}
 
+      {/* Sort-Toolbar — nur wenn Folders/Modules vorhanden */}
+      {(db.folders.length > 0 || db.modules.length > 0) && (
+        <div className="flex items-center gap-4 mb-4 flex-wrap">
+          {db.folders.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {t.archiv.foldersLabel || 'Ordner'}:
+              </span>
+              <SortDropdown mode={folderSort.mode} onChange={folderSort.setMode} showManual={folderSort.hasManual} />
+            </div>
+          )}
+          {db.modules.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {t.archiv.modulesLabel || 'Module'}:
+              </span>
+              <SortDropdown mode={moduleSort.mode} onChange={moduleSort.setMode} showManual={moduleSort.hasManual} />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* DnD Grid */}
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <SortableContext items={[...db.folders.map(f => `folder-${f.id}`), ...db.modules.map(m => `module-${m.id}`)]}
-          strategy={verticalListSortingStrategy}>
+        <SortableContext items={[...folderSort.sorted.map(f => `folder-${f.id}`), ...moduleSort.sorted.map(m => `module-${m.id}`)]}
+          strategy={rectSortingStrategy}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Ordner */}
-            {db.folders.map((folder) => (
-              <DraggableCard key={`folder-${folder.id}`} id={`folder-${folder.id}`} type="folder">
+            {folderSort.sorted.map((folder) => (
+              <DraggableCard key={`folder-${folder.id}`} id={`folder-${folder.id}`} type="folder" disabled={folderSort.mode !== "manual"}>
                 <DroppableFolder id={`drop-folder-${folder.id}`}>
                   <div onClick={() => editingId !== `folder-${folder.id}` && db.openFolder(folder.id)}
                     className="hud-card p-5 cursor-pointer">
@@ -214,8 +272,8 @@ function Archiv() {
             ))}
 
             {/* Module */}
-            {db.modules.map((module) => (
-              <DraggableCard key={`module-${module.id}`} id={`module-${module.id}`} type="module">
+            {moduleSort.sorted.map((module) => (
+              <DraggableCard key={`module-${module.id}`} id={`module-${module.id}`} type="module" disabled={moduleSort.mode !== "manual"}>
                 <Link to={editingId === `module-${module.id}` ? '#' : `/modules/${module.id}`} className="hud-card p-5 block">
                   <div className="flex items-center gap-3 mb-2">
                     {module.is_pinned && <span className="text-xs" style={{ color: 'var(--color-primary)' }}>&#9650;</span>}

@@ -24,6 +24,7 @@ class FolderCreate(BaseModel):
     description: Optional[str] = None
 
 class FolderUpdate(BaseModel):
+    move_to_root: Optional[bool] = False
     description: Optional[str] = None
     name: Optional[str] = None
     parent_id: Optional[int] = None
@@ -147,7 +148,9 @@ def update_folder(folder_id: int, data: FolderUpdate, db: Session = Depends(get_
         folder.name = data.name
     if data.description is not None:
         folder.description = data.description
-    if data.parent_id is not None:
+    if data.move_to_root:
+        folder.parent_id = None
+    elif data.parent_id is not None:
         if data.parent_id == folder_id:
             raise HTTPException(status_code=400, detail="Ordner kann nicht in sich selbst verschoben werden")
         folder.parent_id = data.parent_id
