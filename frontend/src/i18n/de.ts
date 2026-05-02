@@ -59,6 +59,8 @@ const de = {
   // Archiv
   archiv: {
     title: 'Archiv',
+    foldersLabel: 'Ordner',
+    modulesLabel: 'Module',
     newFolder: '+ Ordner',
     newModule: '+ Modul',
     cancelFolder: 'Abbrechen',
@@ -468,6 +470,17 @@ const de = {
     toggleAriaLabel: 'Delphi öffnen',
     closeAriaLabel: 'Delphi schließen',
     sendAriaLabel: 'Frage senden',
+  },
+
+  // Sort-Dropdown — wiederverwendbar fuer Documents/Folders/Modules
+  sortDropdown: {
+    ariaLabel: 'Sortierung',
+    manual: 'Manuell',
+    dateDesc: 'Neueste zuerst',
+    dateAsc: 'Älteste zuerst',
+    nameAsc: 'Name A-Z',
+    nameDesc: 'Name Z-A',
+    typeAsc: 'Typ',
   },
 
   // Delphi — Wissens-Chat

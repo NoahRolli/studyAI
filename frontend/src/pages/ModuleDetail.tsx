@@ -8,6 +8,8 @@ import { get, post, del } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import type { Module, Document, Summary } from '../types/models'
 import DocumentCard from '../components/archiv/DocumentCard'
+import SortDropdown from '../components/SortDropdown'
+import { useDocumentSort } from '../hooks/useDocumentSort'
 
 function ModuleDetail() {
   const { id } = useParams<{ id: string }>()
@@ -21,7 +23,11 @@ function ModuleDetail() {
   const [generating, setGenerating] = useState<number | null>(null)
   const [generatingMindmap, setGeneratingMindmap] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState(false)
-  const [sortBy, setSortBy] = useState("date-desc")
+  const docSort = useDocumentSort(documents, {
+    dateField: "uploaded_at",
+    nameField: (d) => d.display_name || d.filename,
+    typeField: "file_type",
+  })
 
   // --- Daten laden ---
   const loadModule = useCallback(async () => {
@@ -108,12 +114,7 @@ function ModuleDetail() {
     catch (err) { setError(err instanceof Error ? err.message : t.common.error) }
   }
 
-  // Sortierte Dokumente
-  const sortedDocs = [...documents].sort((a, b) => {
-    if (sortBy === "name") return (a.display_name || a.filename).localeCompare(b.display_name || b.filename)
-    if (sortBy === "date-asc") return new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime()
-    return new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
-  })
+
   if (loading) return (
     <div className="animate-fade-in">
       <p style={{ color: 'var(--color-text-muted)' }}>{t.moduleDetail.moduleLoading}</p>
@@ -172,10 +173,7 @@ function ModuleDetail() {
         <h2 className="hud-title text-sm" style={{ color: "var(--color-primary)" }}>
           {t.moduleDetail.documentsTitle} ({documents.length})
         </h2>
-        <button onClick={() => setSortBy(sortBy === "date-desc" ? "date-asc" : sortBy === "date-asc" ? "name" : "date-desc")}
-          className="text-xs px-2 py-1 rounded transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
-          {sortBy === "date-desc" ? "Neueste" : sortBy === "date-asc" ? "Alteste" : "A-Z"}
-        </button>
+        <SortDropdown mode={docSort.mode} onChange={docSort.setMode} showType={docSort.hasTypeField} />
       </div>
 
       {documents.length === 0 && (
@@ -186,7 +184,7 @@ function ModuleDetail() {
       )}
 
       <div className="space-y-4">
-        {sortedDocs.map((doc) => (
+        {docSort.sorted.map((doc) => (
           <DocumentCard key={doc.id} doc={doc} summary={summaries[doc.id]}
             generating={generating === doc.id}
             generatingMindmap={generatingMindmap === summaries[doc.id]?.id}

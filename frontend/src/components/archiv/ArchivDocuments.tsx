@@ -12,6 +12,8 @@ import { Link } from 'react-router-dom'
 import { del, get } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { Document } from '../../types/models'
+import SortDropdown from '../SortDropdown'
+import { useDocumentSort } from '../../hooks/useDocumentSort'
 
 // Datei-Typ Badges (Text, keine Emojis)
 const FILE_ICONS: Record<string, string> = {
@@ -142,6 +144,11 @@ export default function ArchivDocuments({ folderId, documents, onReload }: Props
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const docSort = useDocumentSort(documents, {
+    dateField: "uploaded_at",
+    nameField: (d) => d.display_name || d.filename,
+    typeField: "file_type",
+  })
 
   // --- Upload ---
   async function uploadFile(file: File) {
@@ -240,12 +247,15 @@ export default function ArchivDocuments({ folderId, documents, onReload }: Props
       {/* Lose Dokumente */}
       {documents.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-xs font-semibold mb-3"
-            style={{ color: 'var(--color-text-muted)' }}>
-            {t.archiv.looseDocuments || 'Dokumente'} ({documents.length})
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold"
+              style={{ color: 'var(--color-text-muted)' }}>
+              {t.archiv.looseDocuments || 'Dokumente'} ({documents.length})
+            </h3>
+            <SortDropdown mode={docSort.mode} onChange={docSort.setMode} showType={docSort.hasTypeField} />
+          </div>
           <div className="space-y-2">
-            {documents.map((doc) => (
+            {docSort.sorted.map((doc) => (
               <DocRow key={doc.id} doc={doc} onDelete={handleDelete}
                 tDelete={t.common.delete} />
             ))}
