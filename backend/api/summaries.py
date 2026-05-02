@@ -34,9 +34,13 @@ async def create_summary(document_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=503,
             detail=f"AI-Service nicht verfügbar: {e}")
+    # Default-Titel: Doc-Display-Name oder Filename ohne Endung
+    default_title = document.display_name or document.filename.rsplit(".", 1)[0]
+
     summary = Summary(
         document_id=document_id, content=result["summary"],
         key_terms=result["key_terms"],
+        title=default_title,
         ai_provider=get_active_provider_name(),
         model_used=get_model_used(),
     )
