@@ -8,31 +8,54 @@ import { get, post } from './useAPI'
 import type { ConceptGraph, MetisGraph } from '../types/metis'
 
 // SSE-Helper: oeffnet EventSource, meldet Progress via updateDetail
+//
+// Backend-Events (nach Chat-65-Refactor):
+// - status:    {batches, concepts, concurrency} — initialer Setup-Info
+// - batch_done: {batch, done, total, clusters_in_batch, total_clusters,
+//                created, provider, elapsed} — pro Batch fertig
+// - batch_error: {batch, done, total, error} — Batch fehlgeschlagen, Run laeuft weiter
+// - cancelled: {done, total, elapsed} — sauberer Cancel, alte Cluster intakt
+// - complete:  {clusters, batches, total_concepts, elapsed} — Run durch
+//
+// done-Counter ist monoton (anders als batch-Index der bei Parallelisierung
+// unsortiert kommen kann). Daher: done/total fuer Progress-Anzeige nutzen.
 function connectSSE(
   url: string, taskId: string,
   updateDetail: (id: string, detail: string) => void,
   onComplete: () => void,
+  onCancelled: () => void,
   onError: () => void,
 ): EventSource {
   const es = new EventSource(url)
 
-  es.addEventListener('batch_start', (e) => {
+  es.addEventListener('status', (e) => {
     const d = JSON.parse(e.data)
-    const folder = d.folder && d.folder !== '—' ? ` [${d.folder}]` : ''
-    updateDetail(taskId, `Batch ${d.batch}/${d.total}${folder} ...`)
+    const conc = d.concurrency ? ` (parallel: ${d.concurrency})` : ''
+    updateDetail(taskId, `Starte ${d.batches} Batches${conc} ...`)
   })
 
   es.addEventListener('batch_done', (e) => {
     const d = JSON.parse(e.data)
+    // done = monotoner Counter, batch = Original-Index (kann unsortiert sein)
+    const progress = d.done != null ? `${d.done}/${d.total}` : `${d.batch}/${d.total}`
     const info = d.provider ? ` — ${d.provider}` : ''
     const created = d.created != null ? ` +${d.created}` : ''
     const clusters = d.clusters_in_batch != null ? ` +${d.clusters_in_batch} clusters` : ''
-    updateDetail(taskId, `Batch ${d.batch}/${d.total}${info}${created}${clusters}`)
+    updateDetail(taskId, `Batch ${progress}${info}${created}${clusters}`)
   })
 
   es.addEventListener('batch_error', (e) => {
     const d = JSON.parse(e.data)
-    updateDetail(taskId, `Batch ${d.batch}/${d.total} — Fehler`)
+    const progress = d.done != null ? `${d.done}/${d.total}` : `${d.batch}/${d.total}`
+    updateDetail(taskId, `Batch ${progress} — Fehler (Run laeuft weiter)`)
+  })
+
+  es.addEventListener('cancelled', (e) => {
+    const d = JSON.parse(e.data)
+    const progress = d.done != null ? `${d.done}/${d.total}` : ''
+    updateDetail(taskId, `Abgebrochen ${progress} — alte Cluster bleiben aktiv`)
+    es.close()
+    onCancelled()
   })
 
   es.addEventListener('complete', () => {
@@ -136,6 +159,7 @@ export function useMetisGraph(minSourceCount: number = 2) {
           '/api/concepts/auto-link/stream',
           'metis-link', updateDetail,
           () => { esRef.current = null; loadGraph(); resolve() },
+          () => { esRef.current = null; loadGraph(); resolve() },  // cancelled = ok, alte Daten intakt
           () => { esRef.current = null; loadGraph(); reject(new Error('Connection lost')) },
         )
         esRef.current = es
@@ -152,6 +176,7 @@ export function useMetisGraph(minSourceCount: number = 2) {
           '/api/concepts/auto-cluster/stream',
           'metis-cluster', updateDetail,
           () => { esRef.current = null; loadGraph(); resolve() },
+          () => { esRef.current = null; loadGraph(); resolve() },  // cancelled = ok, alte Daten intakt
           () => { esRef.current = null; loadGraph(); reject(new Error('Connection lost')) },
         )
         esRef.current = es
