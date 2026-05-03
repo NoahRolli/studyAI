@@ -5,7 +5,7 @@
 # - disable_groq=True (vermeidet 429-Pingpong bei hunderten Calls)
 # - Forward-Progress: alte Cluster bleiben bis neue fertig sind
 # - Cancel-Detection: bricht sauber ab wenn Frontend SSE schliesst
-# - Parallelisierung: Semaphore(4) bounded concurrency + as_completed
+# - Parallelisierung: Semaphore(2) bounded concurrency + as_completed
 #   fuer Live-Progress-Events bei parallelem Ablauf
 
 import json
@@ -28,9 +28,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/concepts", tags=["concepts-cluster-stream"])
 
 # Bounded Concurrency: max parallele LLM-Calls.
-# 4 ist konservativ — MacBook-Ollama serialisiert intern, aber
-# Dispatch-Overhead + parsing parallelisiert sauber.
-CLUSTER_CONCURRENCY = 4
+# 2 ist sweet spot fuer MacBook-Ollama: serialisiert intern auf GPU,
+# aber Dispatch-Overhead + JSON-Parsing parallelisiert. Bei 4 wird
+# unter Last die Ollama-Queue instabil (Chat-Calls timeouten waehrend
+# parallele Embedding-Calls laufen). Siehe Cluster-1-Notiz Chat 66.
+CLUSTER_CONCURRENCY = 2
 
 
 def _sse(event: str, data: dict) -> str:
