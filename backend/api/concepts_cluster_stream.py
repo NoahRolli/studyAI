@@ -5,6 +5,8 @@
 # - disable_groq=True (vermeidet 429-Pingpong bei hunderten Calls)
 # - Forward-Progress: alte Cluster bleiben bis neue fertig sind
 # - Cancel-Detection: bricht sauber ab wenn Frontend SSE schliesst
+# - Parallelisierung: Semaphore(4) bounded concurrency + as_completed
+#   fuer Live-Progress-Events bei parallelem Ablauf
 
 import json
 import time
@@ -25,9 +27,35 @@ from backend.api.concepts_cluster import (
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/concepts", tags=["concepts-cluster-stream"])
 
+# Bounded Concurrency: max parallele LLM-Calls.
+# 4 ist konservativ — MacBook-Ollama serialisiert intern, aber
+# Dispatch-Overhead + parsing parallelisiert sauber.
+CLUSTER_CONCURRENCY = 4
+
 
 def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+def _build_prompt(folder_hint: str, batch: list[str]) -> str:
+    folder_ctx = ""
+    if folder_hint:
+        folder_ctx = (
+            f"These concepts come from the folder '{folder_hint}'. "
+            "Use this as context for grouping, but create "
+            "sub-groups if the topics differ.\n\n"
+        )
+    return (
+        "Group these concepts into thematic clusters. "
+        "Each cluster should have a short descriptive label "
+        "and a list of member concepts. "
+        "Return ONLY a JSON array of objects with "
+        "'label' and 'members' fields. "
+        "Example: [{\"label\": \"Ethics\", "
+        "\"members\": [\"autonomy\", \"privacy\"]}]\n\n"
+        f"{folder_ctx}"
+        f"Concepts: {json.dumps(batch)}"
+    )
 
 
 @router.get("/auto-cluster/stream")
@@ -40,6 +68,10 @@ async def auto_cluster_stream(
     Forward-Progress-Pattern: alte Cluster bleiben live bis der
     komplette Run durch ist. Cancel oder Crash laesst die alten
     Cluster intakt, die neuen Vorschlaege werden verworfen.
+
+    Parallelisierung: Bounded concurrency via Semaphore. Events
+    werden via as_completed sofort beim Fertigwerden eines Batches
+    gestreamt, nicht erst am Ende.
     """
 
     async def generate():
@@ -51,64 +83,88 @@ async def auto_cluster_stream(
         name_to_id = {c.name: c.id for c in concepts}
         concept_folder = _build_concept_folder_map(db)
         batches = _build_folder_batches(concepts, concept_folder, db)
-        total_batches = len(batches)
+
+        # Filter: zu kleine Batches direkt ausschliessen
+        active_batches = [
+            (i, fh, b) for i, (fh, b) in enumerate(batches) if len(b) >= 2
+        ]
+        total_batches = len(active_batches)
         start = time.time()
         all_clusters: dict[str, list[str]] = {}
 
         yield _sse("status", {
             "batches": total_batches,
             "concepts": len(concepts),
+            "concurrency": CLUSTER_CONCURRENCY,
         })
 
-        for i, (folder_hint, batch) in enumerate(batches):
-            # Cancel-Check: hat das Frontend die SSE-Verbindung geschlossen?
-            if await request.is_disconnected():
-                logger.info(
-                    f"Auto-Cluster cancelled at batch {i+1}/{total_batches} "
-                    "— old clusters preserved (forward-progress)"
-                )
-                yield _sse("cancelled", {
-                    "batch": i + 1, "total": total_batches,
-                    "elapsed": round(time.time() - start, 1),
-                })
-                return
-
-            if len(batch) < 2:
-                continue
-
-            yield _sse("batch_start", {
-                "batch": i + 1, "total": total_batches,
-                "size": len(batch), "folder": folder_hint or "—",
-                "elapsed": round(time.time() - start, 1),
+        if total_batches == 0:
+            yield _sse("complete", {
+                "clusters": 0,
+                "batches": 0,
+                "total_concepts": len(concepts),
+                "elapsed": 0.0,
             })
-            await asyncio.sleep(0.05)
+            return
 
-            folder_ctx = ""
-            if folder_hint:
-                folder_ctx = (
-                    f"These concepts come from the folder '{folder_hint}'. "
-                    "Use this as context for grouping, but create "
-                    "sub-groups if the topics differ.\n\n"
-                )
+        sem = asyncio.Semaphore(CLUSTER_CONCURRENCY)
+        cancel_flag = {"cancelled": False}
 
-            prompt = (
-                "Group these concepts into thematic clusters. "
-                "Each cluster should have a short descriptive label "
-                "and a list of member concepts. "
-                "Return ONLY a JSON array of objects with "
-                "'label' and 'members' fields. "
-                "Example: [{\"label\": \"Ethics\", "
-                "\"members\": [\"autonomy\", \"privacy\"]}]\n\n"
-                f"{folder_ctx}"
-                f"Concepts: {json.dumps(batch)}"
-            )
+        async def process_batch(idx: int, folder_hint: str, batch: list[str]):
+            """Ein einzelner Batch: LLM-Call + Parse. Gibt (idx, parsed, provider, err) zurueck."""
+            async with sem:
+                if cancel_flag["cancelled"]:
+                    return (idx, folder_hint, None, None, "cancelled")
+                try:
+                    prompt = _build_prompt(folder_hint, batch)
+                    raw, provider = await ai_chat_with_provider(
+                        prompt, page="metis", disable_groq=True,
+                    )
+                    parsed = parse_json_response(raw)
+                    return (idx, folder_hint, parsed, provider, None)
+                except Exception as e:
+                    return (idx, folder_hint, None, None, str(e)[:200])
 
-            try:
-                # disable_groq=True: Bulk-Workload, vermeidet 429-Pingpong
-                raw, provider = await ai_chat_with_provider(
-                    prompt, page="metis", disable_groq=True,
-                )
-                parsed = parse_json_response(raw)
+        # Tasks parallel starten
+        tasks = [
+            asyncio.create_task(process_batch(idx, fh, b))
+            for idx, fh, b in active_batches
+        ]
+
+        done_count = 0
+        try:
+            for coro in asyncio.as_completed(tasks):
+                # Periodischer Cancel-Check zwischen Batch-Completions
+                if await request.is_disconnected():
+                    cancel_flag["cancelled"] = True
+                    for t in tasks:
+                        if not t.done():
+                            t.cancel()
+                    logger.info(
+                        f"Auto-Cluster cancelled after {done_count}/{total_batches} "
+                        "— old clusters preserved (forward-progress)"
+                    )
+                    yield _sse("cancelled", {
+                        "done": done_count, "total": total_batches,
+                        "elapsed": round(time.time() - start, 1),
+                    })
+                    return
+
+                idx, folder_hint, parsed, provider, err = await coro
+                done_count += 1
+
+                if err:
+                    if err == "cancelled":
+                        # Task hat self-cancelled durch cancel_flag
+                        continue
+                    logger.warning(f"Cluster Batch {idx+1} fehlgeschlagen: {err}")
+                    yield _sse("batch_error", {
+                        "batch": idx + 1, "done": done_count,
+                        "total": total_batches, "error": err,
+                    })
+                    continue
+
+                # Parsed Ergebnis in all_clusters mergen
                 batch_clusters = 0
                 if isinstance(parsed, list):
                     for item in parsed:
@@ -128,32 +184,28 @@ async def auto_cluster_stream(
                         batch_clusters += 1
 
                 yield _sse("batch_done", {
-                    "batch": i + 1, "total": total_batches,
+                    "batch": idx + 1,
+                    "done": done_count, "total": total_batches,
                     "clusters_in_batch": batch_clusters,
                     "total_clusters": len(all_clusters),
                     "provider": provider,
                     "elapsed": round(time.time() - start, 1),
                 })
-            except Exception as e:
-                logger.warning(f"Cluster Batch {i+1} fehlgeschlagen: {e}")
-                yield _sse("batch_error", {
-                    "batch": i + 1, "total": total_batches,
-                    "error": str(e)[:200],
-                })
-
-            await asyncio.sleep(0.05)
+        except asyncio.CancelledError:
+            # Defensive: falls einer der Tasks unerwartet cancelt
+            logger.warning("Auto-Cluster: unexpected CancelledError in main loop")
+            raise
 
         # Final-Cancel-Check vor dem destruktiven Swap
         if await request.is_disconnected():
             logger.info("Auto-Cluster cancelled before commit — old clusters preserved")
             yield _sse("cancelled", {
-                "batch": total_batches, "total": total_batches,
+                "done": done_count, "total": total_batches,
                 "elapsed": round(time.time() - start, 1),
             })
             return
 
         # Atomic Swap: alte Cluster loeschen + neue speichern in einer Transaktion
-        # Bei Fehler hier rollt SQLAlchemy auf den Stand vor dem delete zurueck.
         db.query(ConceptClusterMember).delete()
         db.query(ConceptCluster).delete()
         db.flush()
