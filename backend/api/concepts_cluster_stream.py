@@ -1,11 +1,16 @@
 # Concepts Cluster Stream — SSE fuer Auto-Cluster mit Live-Progress
 # Zeigt Batch-Fortschritt, Provider, neue Cluster pro Batch
+#
+# Bulk-Workload-Pattern:
+# - disable_groq=True (vermeidet 429-Pingpong bei hunderten Calls)
+# - Forward-Progress: alte Cluster bleiben bis neue fertig sind
+# - Cancel-Detection: bricht sauber ab wenn Frontend SSE schliesst
 
 import json
 import time
 import logging
 import asyncio
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from backend.models.database import get_db
@@ -26,19 +31,22 @@ def _sse(event: str, data: dict) -> str:
 
 
 @router.get("/auto-cluster/stream")
-async def auto_cluster_stream(db: Session = Depends(get_db)):
-    """SSE-Stream: Auto-Cluster mit Batch-Fortschritt."""
+async def auto_cluster_stream(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """SSE-Stream: Auto-Cluster mit Batch-Fortschritt.
+
+    Forward-Progress-Pattern: alte Cluster bleiben live bis der
+    komplette Run durch ist. Cancel oder Crash laesst die alten
+    Cluster intakt, die neuen Vorschlaege werden verworfen.
+    """
 
     async def generate():
         concepts = db.query(Concept).all()
         if len(concepts) < 3:
             yield _sse("complete", {"clusters": 0, "message": "Zu wenige Konzepte"})
             return
-
-        # Alte Cluster loeschen
-        db.query(ConceptClusterMember).delete()
-        db.query(ConceptCluster).delete()
-        db.flush()
 
         name_to_id = {c.name: c.id for c in concepts}
         concept_folder = _build_concept_folder_map(db)
@@ -53,6 +61,18 @@ async def auto_cluster_stream(db: Session = Depends(get_db)):
         })
 
         for i, (folder_hint, batch) in enumerate(batches):
+            # Cancel-Check: hat das Frontend die SSE-Verbindung geschlossen?
+            if await request.is_disconnected():
+                logger.info(
+                    f"Auto-Cluster cancelled at batch {i+1}/{total_batches} "
+                    "— old clusters preserved (forward-progress)"
+                )
+                yield _sse("cancelled", {
+                    "batch": i + 1, "total": total_batches,
+                    "elapsed": round(time.time() - start, 1),
+                })
+                return
+
             if len(batch) < 2:
                 continue
 
@@ -84,7 +104,10 @@ async def auto_cluster_stream(db: Session = Depends(get_db)):
             )
 
             try:
-                raw, provider = await ai_chat_with_provider(prompt, page="metis")
+                # disable_groq=True: Bulk-Workload, vermeidet 429-Pingpong
+                raw, provider = await ai_chat_with_provider(
+                    prompt, page="metis", disable_groq=True,
+                )
                 parsed = parse_json_response(raw)
                 batch_clusters = 0
                 if isinstance(parsed, list):
@@ -120,7 +143,21 @@ async def auto_cluster_stream(db: Session = Depends(get_db)):
 
             await asyncio.sleep(0.05)
 
-        # Cluster in DB speichern
+        # Final-Cancel-Check vor dem destruktiven Swap
+        if await request.is_disconnected():
+            logger.info("Auto-Cluster cancelled before commit — old clusters preserved")
+            yield _sse("cancelled", {
+                "batch": total_batches, "total": total_batches,
+                "elapsed": round(time.time() - start, 1),
+            })
+            return
+
+        # Atomic Swap: alte Cluster loeschen + neue speichern in einer Transaktion
+        # Bei Fehler hier rollt SQLAlchemy auf den Stand vor dem delete zurueck.
+        db.query(ConceptClusterMember).delete()
+        db.query(ConceptCluster).delete()
+        db.flush()
+
         count = 0
         for label, members in all_clusters.items():
             if len(members) < 2:
