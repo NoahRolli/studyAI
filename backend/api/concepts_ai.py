@@ -4,6 +4,7 @@ import logging
 # Nur Dokumente aus Ordnern mit metis_enabled=True werden gescannt
 # Nutzt den aktiven Provider (Groq/Ollama) via model_router
 
+import asyncio
 import json
 import os
 import re
@@ -18,7 +19,9 @@ from backend.models.document import Document
 from backend.models.module import Module
 from backend.models.folder import Folder
 from backend.infra.config import OLLAMA_MODEL, OLLAMA_MODEL_SERVER
-from backend.infra.ollama_connector import get_ollama_url, invalidate_cache
+from backend.infra.ollama_connector import (
+    get_ollama_url, invalidate_cache, report_failure, report_success,
+)
 from backend.infra.model_router import get_active_provider, get_model_used
 from backend.services.groq_provider import GroqProvider, GroqRateLimitError
 
@@ -85,10 +88,16 @@ async def ai_chat_with_provider(prompt: str, page: str = "metis", disable_groq: 
     else:
         model = OLLAMA_MODEL if provider == "ollama_local" else OLLAMA_MODEL_SERVER
         used = provider
-    for attempt in range(2):
+    # Retry-Loop: 3 Versuche mit Backoff (0s, 2s, 4s)
+    # Bei Failure: report_failure() → URL geht nach N Fails in Cooldown
+    # Bei Success: report_success() → Failure-Counter resetten
+    last_exc: Exception | None = None
+    for attempt in range(3):
         base_url = await get_ollama_url()
         try:
-            async with httpx.AsyncClient(timeout=300.0) as client:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(connect=5.0, read=90.0, write=10.0, pool=10.0)
+            ) as client:
                 resp = await client.post(f"{base_url}/api/chat", json={
                     "model": model,
                     "messages": [{"role": "user", "content": prompt}],
@@ -96,13 +105,22 @@ async def ai_chat_with_provider(prompt: str, page: str = "metis", disable_groq: 
                 })
                 resp.raise_for_status()
                 text = resp.json().get("message", {}).get("content", "")
+                report_success(base_url)
                 return text, f"{used}:{model}"
         except Exception as e:
-            if attempt == 0:
-                logging.getLogger(__name__).warning(f"Ollama Fehler auf {base_url}: {e} — Retry")
-                invalidate_cache()
+            last_exc = e
+            logging.getLogger(__name__).warning(
+                f"Ollama Fehler auf {base_url} (attempt {attempt + 1}/3): "
+                f"{type(e).__name__}: {e!r}"
+            )
+            report_failure(base_url)
+            invalidate_cache()
+            if attempt < 2:
+                await asyncio.sleep(2.0 * (attempt + 1))
                 continue
             raise
+    if last_exc:
+        raise last_exc
 
 
 # Alias für Abwärtskompatibilität (concepts_cluster.py importiert diesen Namen)
