@@ -168,8 +168,19 @@ def compute_layout(
         pos += forces * step
         step *= params.cooldown
 
-        if (it + 1) % 50 == 0:
-            log.info(f"  iter {it+1}/{params.iterations}, step={step:.4f}")
+        # === DIAGNOSE-LOGGING (Stufe 1) ===
+        if (it + 1) % 10 == 0 or it < 5:
+            pos_norms = np.linalg.norm(pos, axis=1)
+            mean_offset = float(np.linalg.norm(pos.mean(axis=0)))
+            max_norm = float(pos_norms.max())
+            mean_norm = float(pos_norms.mean())
+            force_norms = np.linalg.norm(forces, axis=1)
+            max_force = float(force_norms.max())
+            log.info(
+                f"  iter {it+1:3d}/{params.iterations} | step={step:.4f} | "
+                f"mean_offset={mean_offset:.2e} | max_norm={max_norm:.2e} | "
+                f"mean_norm={mean_norm:.2e} | max_force={max_force:.2e}"
+            )
 
     elapsed = time.time() - start
     log.info(f"Force-Sim done in {elapsed:.1f}s")
