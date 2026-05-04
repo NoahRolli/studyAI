@@ -130,11 +130,6 @@ def compute_layout(
 
         forces += repulsion * params.repulsion_strength
 
-        # Force-Cap: keine Komponente darf zu gross werden
-        force_norms = np.linalg.norm(forces, axis=1, keepdims=True)
-        scale = np.where(force_norms > FORCE_CAP, FORCE_CAP / force_norms, 1.0)
-        forces = forces * scale
-
         # === Edge-Attraktion: spring-like ===
         if len(edges) > 0:
             edge_diff = pos[edge_b] - pos[edge_a]  # (m, 3)
@@ -160,6 +155,14 @@ def compute_layout(
                     continue
                 anchor = folder_centroids[fi]
                 forces[idx] += (anchor - pos[idx]) * params.folder_anchor_strength
+
+        # === Force-Cap NACH allen Force-Komponenten ===
+        # (Repulsion + Edge-Spring + Boundary + Folder-Anchor)
+        # Schutz gegen div-by-zero fuer Cluster mit force=0
+        force_norms = np.linalg.norm(forces, axis=1, keepdims=True)
+        safe_norms = np.maximum(force_norms, 1e-12)
+        scale = np.where(force_norms > FORCE_CAP, FORCE_CAP / safe_norms, 1.0)
+        forces = forces * scale
 
         # Update
         pos += forces * step
