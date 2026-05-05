@@ -99,88 +99,92 @@ def compute_layout(
     start = time.time()
 
     step = params.initial_step
-    for it in range(params.iterations):
-        forces = np.zeros_like(pos)
+    # numerische Warnings im Hot-Path unterdruecken — Force-Cap und
+    # Distance-Floor fangen Edge-Cases bereits ab, spurious RuntimeWarnings
+    # sind nur Log-Noise
+    with np.errstate(divide='ignore', invalid='ignore'):
+        for it in range(params.iterations):
+            forces = np.zeros_like(pos)
 
-        # === Repulsion: chunked all-pairs mit numerischem Schutz ===
-        # Distance-Floor verhindert Explosion bei nahen Paaren
-        # Force-Cap verhindert dass ein Cluster ins Nirgendwo fliegt
-        DIST_FLOOR_SQ = 4.0     # Mindestabstand 2.0 in Sim-Einheiten
-        FORCE_CAP = 5.0         # Max Force-Magnitude pro Cluster pro Iter
-        max_dist_sq = params.repulsion_max_dist ** 2
+            # === Repulsion: chunked all-pairs mit numerischem Schutz ===
+            # Distance-Floor verhindert Explosion bei nahen Paaren
+            # Force-Cap verhindert dass ein Cluster ins Nirgendwo fliegt
+            DIST_FLOOR_SQ = 4.0     # Mindestabstand 2.0 in Sim-Einheiten
+            FORCE_CAP = 5.0         # Max Force-Magnitude pro Cluster pro Iter
+            max_dist_sq = params.repulsion_max_dist ** 2
 
-        # Chunked, damit der (n, n, 3) Tensor nicht den RAM auffrisst
-        # und CPU-Cache effizienter wird
-        chunk_size = 256
-        repulsion = np.zeros_like(pos)
-        for i in range(0, n, chunk_size):
-            j = min(i + chunk_size, n)
-            diff = pos[i:j, None, :] - pos[None, :, :]            # (chunk, n, 3)
-            dist_sq = np.einsum('ijk,ijk->ij', diff, diff)
-            dist_sq = np.maximum(dist_sq, DIST_FLOOR_SQ)           # WICHTIG
-            # Eigene Diagonale ausnullen
-            for k in range(i, j):
-                dist_sq[k - i, k] = np.inf
-            # Cutoff
-            within = dist_sq < max_dist_sq
-            inv_r3 = np.where(within, dist_sq ** (-1.5), 0.0)
-            # Force-Vektor pro Pair
-            chunk_force = (diff * inv_r3[..., None]).sum(axis=1)
-            repulsion[i:j] = chunk_force
+            # Chunked, damit der (n, n, 3) Tensor nicht den RAM auffrisst
+            # und CPU-Cache effizienter wird
+            chunk_size = 256
+            repulsion = np.zeros_like(pos)
+            for i in range(0, n, chunk_size):
+                j = min(i + chunk_size, n)
+                diff = pos[i:j, None, :] - pos[None, :, :]            # (chunk, n, 3)
+                dist_sq = np.einsum('ijk,ijk->ij', diff, diff)
+                dist_sq = np.maximum(dist_sq, DIST_FLOOR_SQ)           # WICHTIG
+                # Eigene Diagonale ausnullen
+                for k in range(i, j):
+                    dist_sq[k - i, k] = np.inf
+                # Cutoff
+                within = dist_sq < max_dist_sq
+                inv_r3 = np.where(within, dist_sq ** (-1.5), 0.0)
+                # Force-Vektor pro Pair
+                chunk_force = (diff * inv_r3[..., None]).sum(axis=1)
+                repulsion[i:j] = chunk_force
 
-        forces += repulsion * params.repulsion_strength
+            forces += repulsion * params.repulsion_strength
 
-        # === Edge-Attraktion: spring-like ===
-        if len(edges) > 0:
-            edge_diff = pos[edge_b] - pos[edge_a]  # (m, 3)
-            edge_dist = np.linalg.norm(edge_diff, axis=1, keepdims=True)
-            edge_dist = np.maximum(edge_dist, 1e-6)
-            edge_unit = edge_diff / edge_dist
-            # Spring: F = strength * (dist - target_dist) * unit_dir
-            spring = edge_strength[:, None] * (edge_dist - params.link_distance) * edge_unit
-            np.add.at(forces, edge_a, spring)
-            np.add.at(forces, edge_b, -spring)
+            # === Edge-Attraktion: spring-like ===
+            if len(edges) > 0:
+                edge_diff = pos[edge_b] - pos[edge_a]  # (m, 3)
+                edge_dist = np.linalg.norm(edge_diff, axis=1, keepdims=True)
+                edge_dist = np.maximum(edge_dist, 1e-6)
+                edge_unit = edge_diff / edge_dist
+                # Spring: F = strength * (dist - target_dist) * unit_dir
+                spring = edge_strength[:, None] * (edge_dist - params.link_distance) * edge_unit
+                np.add.at(forces, edge_a, spring)
+                np.add.at(forces, edge_b, -spring)
 
-        # === Soft-Boundary: nur wenn ueber boundary_radius ===
-        norms = np.linalg.norm(pos, axis=1, keepdims=True)
-        excess = np.maximum(norms - params.boundary_radius, 0.0)
-        if (excess > 0).any():
-            unit = pos / np.maximum(norms, 1e-6)
-            forces -= unit * excess * params.boundary_strength
+            # === Soft-Boundary: nur wenn ueber boundary_radius ===
+            norms = np.linalg.norm(pos, axis=1, keepdims=True)
+            excess = np.maximum(norms - params.boundary_radius, 0.0)
+            if (excess > 0).any():
+                unit = pos / np.maximum(norms, 1e-6)
+                forces -= unit * excess * params.boundary_strength
 
-        # === Folder-Anchor (nur bei sehr schwacher Strength) ===
-        if folder_centroids and params.folder_anchor_strength > 0:
-            for idx, fi in enumerate(folder_indices):
-                if fi is None or fi not in folder_centroids:
-                    continue
-                anchor = folder_centroids[fi]
-                forces[idx] += (anchor - pos[idx]) * params.folder_anchor_strength
+            # === Folder-Anchor (nur bei sehr schwacher Strength) ===
+            if folder_centroids and params.folder_anchor_strength > 0:
+                for idx, fi in enumerate(folder_indices):
+                    if fi is None or fi not in folder_centroids:
+                        continue
+                    anchor = folder_centroids[fi]
+                    forces[idx] += (anchor - pos[idx]) * params.folder_anchor_strength
 
-        # === Force-Cap NACH allen Force-Komponenten ===
-        # (Repulsion + Edge-Spring + Boundary + Folder-Anchor)
-        # Schutz gegen div-by-zero fuer Cluster mit force=0
-        force_norms = np.linalg.norm(forces, axis=1, keepdims=True)
-        safe_norms = np.maximum(force_norms, 1e-12)
-        scale = np.where(force_norms > FORCE_CAP, FORCE_CAP / safe_norms, 1.0)
-        forces = forces * scale
+            # === Force-Cap NACH allen Force-Komponenten ===
+            # (Repulsion + Edge-Spring + Boundary + Folder-Anchor)
+            # Schutz gegen div-by-zero fuer Cluster mit force=0
+            force_norms = np.linalg.norm(forces, axis=1, keepdims=True)
+            safe_norms = np.maximum(force_norms, 1e-12)
+            scale = np.where(force_norms > FORCE_CAP, FORCE_CAP / safe_norms, 1.0)
+            forces = forces * scale
 
-        # Update
-        pos += forces * step
-        step *= params.cooldown
+            # Update
+            pos += forces * step
+            step *= params.cooldown
 
-        # === DIAGNOSE-LOGGING (Stufe 1) ===
-        if (it + 1) % 10 == 0 or it < 5:
-            pos_norms = np.linalg.norm(pos, axis=1)
-            mean_offset = float(np.linalg.norm(pos.mean(axis=0)))
-            max_norm = float(pos_norms.max())
-            mean_norm = float(pos_norms.mean())
-            force_norms = np.linalg.norm(forces, axis=1)
-            max_force = float(force_norms.max())
-            log.info(
-                f"  iter {it+1:3d}/{params.iterations} | step={step:.4f} | "
-                f"mean_offset={mean_offset:.2e} | max_norm={max_norm:.2e} | "
-                f"mean_norm={mean_norm:.2e} | max_force={max_force:.2e}"
-            )
+            # === DIAGNOSE-LOGGING (Stufe 1) ===
+            if (it + 1) % 10 == 0 or it < 5:
+                pos_norms = np.linalg.norm(pos, axis=1)
+                mean_offset = float(np.linalg.norm(pos.mean(axis=0)))
+                max_norm = float(pos_norms.max())
+                mean_norm = float(pos_norms.mean())
+                force_norms = np.linalg.norm(forces, axis=1)
+                max_force = float(force_norms.max())
+                log.info(
+                    f"  iter {it+1:3d}/{params.iterations} | step={step:.4f} | "
+                    f"mean_offset={mean_offset:.2e} | max_norm={max_norm:.2e} | "
+                    f"mean_norm={mean_norm:.2e} | max_force={max_force:.2e}"
+                )
 
     elapsed = time.time() - start
     log.info(f"Force-Sim done in {elapsed:.1f}s")
@@ -196,11 +200,27 @@ def compute_layout(
             v = v / np.linalg.norm(v) * params.boundary_radius
             pos[idx] = v
 
-    # Hard-Clip falls noch krasse Outlier dabei sind
+    # Outlier-Behandlung mit abgestuften Schwellwerten:
+    #   > 5.0x boundary  -> Hard fail (klarer Bug, kein silent clamp)
+    #   1.5x - 5.0x      -> Warning + clamp (wie bisher)
+    #   <= 1.5x          -> ok, nichts tun
     norms = np.linalg.norm(pos, axis=1, keepdims=True)
+    catastrophic = norms > params.boundary_radius * 5.0
+    if catastrophic.any():
+        max_norm = float(norms.max())
+        raise RuntimeError(
+            f"Force-Sim divergiert: {int(catastrophic.sum())} cluster ueber 5x boundary "
+            f"(max_norm={max_norm:.2e}, boundary={params.boundary_radius}). "
+            f"Layout NICHT gespeichert. Vermutlich Force-Cap-Bug oder Edge-Spring-Drift."
+        )
+
     too_far = norms > params.boundary_radius * 1.5
     if too_far.any():
-        log.warning(f"  {int(too_far.sum())} cluster ueber 1.5x boundary — clamped")
+        max_norm = float(norms.max())
+        log.warning(
+            f"  {int(too_far.sum())}/{n} cluster ueber 1.5x boundary "
+            f"(max_norm={max_norm:.2f}) — clamped auf 1.2x"
+        )
         scale = np.where(too_far, params.boundary_radius * 1.2 / np.maximum(norms, 1e-6), 1.0)
         pos = pos * scale
 
