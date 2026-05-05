@@ -23,17 +23,31 @@ function fibPoint(index: number, total: number, radius: number): [number, number
   return [Math.cos(theta) * r * radius, y * radius, Math.sin(theta) * r * radius]
 }
 
+// Deterministisches Pseudo-Random pro Index (stabil ueber Sessions)
+function jitter(n: number): number {
+  return Math.abs((Math.sin(n * 12.9898) * 43758.5453) % 1)
+}
+
 // Punkt im Kugelvolumen um ein Zentrum verteilen
+// Volumen + Jitter brechen die perfekte Fibonacci-Schale auf
 function spreadPoint(
   index: number, total: number, center: [number, number, number], spread: number,
 ): [number, number, number] {
   const y = total > 1 ? 1 - (index / (total - 1)) * 2 : 0
-  const r = Math.sqrt(1 - y * y)
   const theta = GOLDEN * index
+  // Volumen statt Oberflaeche: cbrt fuer uniform-im-Volumen Verteilung
+  const radiusFactor = Math.cbrt(0.4 + 0.6 * jitter(index))
+  // Winkel-Jitter bricht die Spirale (~12 Grad)
+  const thetaJitter = (jitter(index + 1000) - 0.5) * 0.4
+  // Hoehen-Jitter, geclamped damit y im Sphere-Bereich bleibt
+  const yJitter = (jitter(index + 2000) - 0.5) * 0.15
+  const yFinal = Math.max(-1, Math.min(1, y + yJitter))
+  const rFinal = Math.sqrt(1 - yFinal * yFinal)
+  const effectiveSpread = spread * radiusFactor
   return [
-    center[0] + Math.cos(theta) * r * spread,
-    center[1] + y * spread,
-    center[2] + Math.sin(theta) * r * spread,
+    center[0] + Math.cos(theta + thetaJitter) * rFinal * effectiveSpread,
+    center[1] + yFinal * effectiveSpread,
+    center[2] + Math.sin(theta + thetaJitter) * rFinal * effectiveSpread,
   ]
 }
 
