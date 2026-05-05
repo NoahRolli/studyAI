@@ -251,7 +251,7 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
         id: `folder-${fd.id}`,
         position: pos,
         color: fd.color,
-        size: 1.2,
+        size: 2.8,
         label: fd.label,
         memberCount: 9999,
         isFolder: true,
@@ -260,7 +260,7 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
     for (const hub of hubData) {
       const pos = hubPositions.get(hub.id)
       if (!pos) continue
-      const size = Math.min(0.35 + hub.memberCount * 0.08, 1.1)
+      const size = Math.min(0.5 + hub.memberCount * 0.04, 2.2)
       result.push({
         id: hub.id,
         position: pos,
