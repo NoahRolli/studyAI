@@ -24,6 +24,17 @@ from backend.api.concepts_cluster import (
     _build_concept_folder_map, _build_folder_batches,
 )
 
+# Phase 2: nach Cluster-Persistierung automatisch Layout neu berechnen.
+# Importe aus den scripts/, weil run() und compute_centroids() bereits
+# saubere importierbare Funktionen sind. Subprocess waere overkill.
+import sys
+from pathlib import Path as _Path
+_SCRIPTS_DIR = _Path(__file__).resolve().parent.parent.parent / "scripts"
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+from compute_cluster_centroids import compute_centroids as _compute_centroids
+from compute_sphere_layout import run as _run_sphere_layout
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/concepts", tags=["concepts-cluster-stream"])
 
@@ -37,6 +48,77 @@ CLUSTER_CONCURRENCY = 2
 
 def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+async def _layout_phase_events(request):
+    """Phase 2 nach Cluster-Persistierung: Centroids + Force-Sim neu berechnen.
+
+    Yielded SSE-Events fuer Live-Progress. Faengt Cancel und Exceptions
+    intern ab und sendet entsprechende Events. Crasht nie nach aussen
+    (Cluster sind bereits committed).
+
+    Events:
+      - layout_phase (phase=centroids|force_sim)
+      - layout_done
+      - layout_failed (bei Exception)
+      - cancelled (bei Disconnect zwischen Phasen)
+    """
+    layout_start = time.time()
+    loop = asyncio.get_event_loop()
+    try:
+        if await request.is_disconnected():
+            logger.info("Auto-Cluster: cancelled before layout phase")
+            yield _sse("cancelled", {"phase": "after_clusters"})
+            return
+
+        yield _sse("layout_phase", {
+            "phase": "centroids",
+            "message": "Centroide berechnen ...",
+        })
+        # force=True weil Cluster komplett neu sind
+        centroid_result = await loop.run_in_executor(
+            None, _compute_centroids, True,
+        )
+        logger.info(f"Auto-Cluster: centroids done -> {centroid_result}")
+
+        if await request.is_disconnected():
+            logger.info("Auto-Cluster: cancelled after centroids")
+            yield _sse("cancelled", {"phase": "after_centroids"})
+            return
+
+        yield _sse("layout_phase", {
+            "phase": "force_sim",
+            "message": "Force-Sim laeuft (200 Iterationen) ...",
+        })
+        # Default-Werte aus compute_sphere_layout.py CLI
+        layout_rc = await loop.run_in_executor(
+            None, _run_sphere_layout, 200, 0.85,
+        )
+        if layout_rc != 0:
+            logger.warning(f"Auto-Cluster: layout returned non-zero rc={layout_rc}")
+
+        yield _sse("layout_done", {
+            "elapsed": round(time.time() - layout_start, 1),
+            "rc": layout_rc,
+        })
+    except RuntimeError as exc:
+        # Hard-Fail aus cluster_layout_service (z.B. Force-Sim divergiert).
+        # Cluster bleiben in DB, nur Layout ist nicht aktualisiert.
+        logger.error(f"Auto-Cluster: layout phase failed: {exc}")
+        yield _sse("layout_failed", {
+            "error": str(exc),
+            "message": "Cluster gespeichert, aber Layout-Compute "
+                       "fehlgeschlagen. Manuell ausloesen via "
+                       "scripts/compute_sphere_layout.py.",
+        })
+    except Exception as exc:  # noqa: BLE001
+        # Defensive: jede andere Exception soll den Stream nicht killen.
+        logger.exception("Auto-Cluster: unexpected layout error")
+        yield _sse("layout_failed", {
+            "error": str(exc),
+            "message": "Layout-Phase fehlgeschlagen, Cluster sind "
+                       "trotzdem gespeichert.",
+        })
 
 
 def _build_prompt(folder_hint: str, batch: list[str]) -> str:
@@ -227,6 +309,21 @@ async def auto_cluster_stream(
             count += 1
 
         db.commit()
+        clusters_elapsed = round(time.time() - start, 1)
+        yield _sse("clusters_done", {
+            "clusters": count,
+            "batches": total_batches,
+            "total_concepts": len(concepts),
+            "elapsed": clusters_elapsed,
+        })
+
+        # ===== Phase 2: Cluster-Layout neu berechnen =====
+        # Logik in _layout_phase_events() gekapselt damit dieser
+        # Stream-Generator fokussiert auf Cluster-Orchestrierung bleibt.
+        async for evt in _layout_phase_events(request):
+            yield evt
+
+        # Final: Gesamt-Status (backwards-compatible, Frontend hoert hier)
         yield _sse("complete", {
             "clusters": count,
             "batches": total_batches,
