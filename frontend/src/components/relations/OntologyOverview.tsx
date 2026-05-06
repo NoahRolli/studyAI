@@ -3,6 +3,7 @@
 // Hover-Icons: Bearbeiten + Loeschen. Inferred nicht editierbar.
 
 import ManualEdgeForm from "./ManualEdgeForm"
+import StructuralGaps from "./StructuralGaps"
 import { useState, useEffect, useCallback } from 'react'
 import { get, del } from '../../hooks/useAPI'
 import { useLanguage } from '../../hooks/useLanguage'
@@ -59,6 +60,7 @@ export default function OntologyOverview({ showMarkers, onNodeFocus }: Props) {
   const [filterType, setFilterType] = useState('all')
   const [filterOrigin, setFilterOrigin] = useState('all')
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
+  const [showGaps, setShowGaps] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
@@ -215,6 +217,17 @@ export default function OntologyOverview({ showMarkers, onNodeFocus }: Props) {
           ))}
         </div>
       )}
+
+      {/* Strukturelle Luecken — collapsible, default zugeklappt */}
+      <div className="mt-8 pt-6" style={{ borderTop: '1px solid var(--color-border)' }}>
+        <button onClick={() => setShowGaps(prev => !prev)}
+          className="flex items-center gap-2 mb-4 hud-tab"
+          style={{ color: 'var(--color-text)' }}>
+          <span style={{ fontSize: '12px' }}>{showGaps ? '▼' : '▶'}</span>
+          <span>{language === 'de' ? 'Strukturelle Lücken' : 'Structural Gaps'}</span>
+        </button>
+        {showGaps && <StructuralGaps />}
+      </div>
 
       {editTarget && (
         <OntologyEditModal

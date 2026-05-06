@@ -1,5 +1,5 @@
 // OntologyPage — Wissensgraph aller typisierten Relationen
-// Tabs: Uebersicht, Vorschlaege, Erwaehnungen, Luecken, Merge, Graph
+// Tabs: Uebersicht, Vorschlaege, Erwaehnungen, Merge, Graph
 // Lazy-Mount + Keep-Alive: Tabs laden beim ersten Besuch, bleiben dann im DOM
 
 import PageProviderBadge from "../components/PageProviderBadge"
@@ -7,13 +7,12 @@ import { useState, useCallback, useRef } from 'react'
 import { useLanguage } from '../hooks/useLanguage'
 import RelationSuggestions from '../components/relations/RelationSuggestions'
 import UnlinkedMentions from '../components/relations/UnlinkedMentions'
-import StructuralGaps from '../components/relations/StructuralGaps'
 import MergeSuggestions from '../components/relations/MergeSuggestions'
 import OntologyOverview from '../components/relations/OntologyOverview'
 import OntologyEgoGraph from '../components/relations/OntologyEgoGraph'
 import { getMarkersVisible, setMarkersVisible } from '../utils/ontologyMarkers'
 
-type Tab = 'overview' | 'suggestions' | 'mentions' | 'gaps' | 'merge' | 'graph'
+type Tab = 'overview' | 'suggestions' | 'mentions' | 'merge' | 'graph'
 
 export default function OntologyPage() {
   const { language } = useLanguage()
@@ -39,7 +38,6 @@ export default function OntologyPage() {
     { key: 'overview', label: language === 'de' ? 'Übersicht' : 'Overview' },
     { key: 'suggestions', label: language === 'de' ? 'Vorschläge' : 'Suggestions' },
     { key: 'mentions', label: language === 'de' ? 'Erwähnungen' : 'Mentions' },
-    { key: 'gaps', label: language === 'de' ? 'Lücken' : 'Gaps' },
     { key: 'merge', label: 'Merge' },
     { key: 'graph', label: 'Graph' },
   ]
@@ -88,7 +86,6 @@ export default function OntologyPage() {
       )}
       {pane('suggestions', <RelationSuggestions onChanged={() => {}} />)}
       {pane('mentions', <UnlinkedMentions />)}
-      {pane('gaps', <StructuralGaps />)}
       {pane('merge', <MergeSuggestions />)}
       {pane('graph',
         <OntologyEgoGraph focusKey={graphFocus} onFocusChange={setGraphFocus} />
