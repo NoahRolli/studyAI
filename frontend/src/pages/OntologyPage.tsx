@@ -1,18 +1,16 @@
 // OntologyPage — Wissensgraph aller typisierten Relationen
-// Tabs: Uebersicht, Vorschlaege, Erwaehnungen, Merge, Graph
+// Tabs: Uebersicht, Inbox, Graph
 // Lazy-Mount + Keep-Alive: Tabs laden beim ersten Besuch, bleiben dann im DOM
 
 import PageProviderBadge from "../components/PageProviderBadge"
 import { useState, useCallback, useRef } from 'react'
 import { useLanguage } from '../hooks/useLanguage'
-import RelationSuggestions from '../components/relations/RelationSuggestions'
-import UnlinkedMentions from '../components/relations/UnlinkedMentions'
-import MergeSuggestions from '../components/relations/MergeSuggestions'
 import OntologyOverview from '../components/relations/OntologyOverview'
+import OntologyInbox from '../components/relations/OntologyInbox'
 import OntologyEgoGraph from '../components/relations/OntologyEgoGraph'
 import { getMarkersVisible, setMarkersVisible } from '../utils/ontologyMarkers'
 
-type Tab = 'overview' | 'suggestions' | 'mentions' | 'merge' | 'graph'
+type Tab = 'overview' | 'inbox' | 'graph'
 
 export default function OntologyPage() {
   const { language } = useLanguage()
@@ -36,9 +34,7 @@ export default function OntologyPage() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'overview', label: language === 'de' ? 'Übersicht' : 'Overview' },
-    { key: 'suggestions', label: language === 'de' ? 'Vorschläge' : 'Suggestions' },
-    { key: 'mentions', label: language === 'de' ? 'Erwähnungen' : 'Mentions' },
-    { key: 'merge', label: 'Merge' },
+    { key: 'inbox', label: language === 'de' ? 'Inbox' : 'Inbox' },
     { key: 'graph', label: 'Graph' },
   ]
 
@@ -84,9 +80,7 @@ export default function OntologyPage() {
         <OntologyOverview showMarkers={showMarkers}
           onNodeFocus={(key) => { setGraphFocus(key); switchTab('graph') }} />
       )}
-      {pane('suggestions', <RelationSuggestions onChanged={() => {}} />)}
-      {pane('mentions', <UnlinkedMentions />)}
-      {pane('merge', <MergeSuggestions />)}
+      {pane('inbox', <OntologyInbox />)}
       {pane('graph',
         <OntologyEgoGraph focusKey={graphFocus} onFocusChange={setGraphFocus} />
       )}
