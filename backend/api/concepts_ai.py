@@ -129,10 +129,49 @@ async def ollama_chat(prompt: str) -> str:
     return await ai_chat(prompt)
 
 
+# Cache fuer Cluster-Labels (lowercase frozenset).
+# Verhindert Phantom-Concepts wo der Concept-Name exakt einem Cluster-Label
+# entspricht (entstehen wenn LLM-Chats ueber Cluster-Labels selbst diskutieren
+# und dann durch die Concept-Extraction laufen). Cache lebt pro Worker-Prozess
+# und wird beim naechsten Group-Topics-Run automatisch refreshed.
+_CLUSTER_LABEL_CACHE: frozenset[str] | None = None
+
+
+def _get_cluster_labels(db: Session) -> frozenset[str]:
+    """Alle Cluster-Labels lowercase als Set (memoized)."""
+    global _CLUSTER_LABEL_CACHE
+    if _CLUSTER_LABEL_CACHE is None:
+        from backend.models.concept import ConceptCluster
+        rows = db.query(ConceptCluster.label).all()
+        _CLUSTER_LABEL_CACHE = frozenset(
+            row[0].lower() for row in rows if row[0]
+        )
+        logging.getLogger(__name__).info(
+            f"Cluster-Label-Cache geladen: {len(_CLUSTER_LABEL_CACHE)} Labels"
+        )
+    return _CLUSTER_LABEL_CACHE
+
+
+def invalidate_cluster_label_cache() -> None:
+    """Nach Group-Topics-Run aufrufen damit neue Labels gefiltert werden."""
+    global _CLUSTER_LABEL_CACHE
+    _CLUSTER_LABEL_CACHE = None
+
+
 def get_or_create_concept(db: Session, name: str) -> Concept:
-    """Konzept holen oder neu erstellen (normalisiert)."""
+    """Konzept holen oder neu erstellen (normalisiert).
+
+    Lehnt Phantom-Concepts ab deren Name einem Cluster-Label entspricht
+    (vermeidet self-referential Loops in der Cluster-Pipeline).
+    """
     normalized = normalize_name(name)
     if not normalized:
+        return None
+    # Filter: Phantom-Concept (Cluster-Label-Echo)?
+    if normalized.lower() in _get_cluster_labels(db):
+        logging.getLogger(__name__).info(
+            f"Phantom-Concept abgelehnt (matcht Cluster-Label): {normalized!r}"
+        )
         return None
     concept = db.query(Concept).filter(
         Concept.name == normalized
