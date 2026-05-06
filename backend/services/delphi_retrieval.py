@@ -8,8 +8,9 @@ Ablauf pro Query:
 4. Dedup auf unique Sources, kombinierter Score (similarity * relevance)
 5. Confidence-Tier anhand Top-Score (high/medium/low)
 
-Slice 1: Sources sind ausschliesslich Notes + Summaries.
-Slice 2 wird LLM-Chat-Messages via SQLite FTS5 dazuholen.
+Sources: Notes + Summaries + LLM-Chat-Messages.
+Notes/Summaries via direkter Resolution, Chat-Messages via concept_sources
+mapping (jeder Message wird beim Concept-Extract auf concepts gemapped).
 
 Title-Cascade fuer Summaries:
   summary.title -> document.display_name -> document.filename -> "Summary #ID"
@@ -28,6 +29,7 @@ from backend.models.concept import ConceptSource
 from backend.models.note import Note
 from backend.models.summary import Summary
 from backend.models.document import Document
+from backend.models.llm import LLMMessage, LLMConversation
 from backend.services.embedding_service import generate_embedding
 from backend.services.delphi_retrieval_cache import get_embedding_cache
 
@@ -46,7 +48,7 @@ CONFIDENCE_MEDIUM_THRESHOLD = 0.55
 # ---------- Result-Dataclasses ----------
 @dataclass
 class RetrievedSource:
-    source_type: str          # "note" | "summary"
+    source_type: str          # "note" | "summary" | "chat_message"
     source_id: int
     title: str
     preview_text: str
@@ -122,6 +124,23 @@ def _fetch_source_metadata(
         title = _resolve_summary_title(summary, doc)
         content = summary.content or ""
         return title, content[:PREVIEW_CHARS].strip()
+
+    if source_type == "chat_message":
+        msg = db.query(LLMMessage).filter(LLMMessage.id == source_id).first()
+        if not msg:
+            return None
+        # Title: Conversation-Titel + Turn-Index, damit der LLM Kontext hat
+        # ueber Thread und Position. Conversation-Title kann lang sein —
+        # wir kappen auf ~80 Chars.
+        conv = db.query(LLMConversation).filter(
+            LLMConversation.id == msg.conversation_id
+        ).first()
+        conv_title = (conv.title or "Untitled") if conv else "Unknown"
+        if len(conv_title) > 80:
+            conv_title = conv_title[:77] + "..."
+        title = f"{conv_title} (Turn {msg.turn_index}, {msg.role})"
+        preview = (msg.text or "").strip()
+        return title, preview[:PREVIEW_CHARS].strip()
 
     return None
 
