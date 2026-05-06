@@ -19,7 +19,10 @@ from backend.models.database import get_db
 from backend.models.concept import (
     Concept, ConceptCluster, ConceptClusterMember,
 )
-from backend.api.concepts_ai import ai_chat_with_provider, parse_json_response
+from backend.api.concepts_ai import (
+    ai_chat_with_provider, parse_json_response,
+    invalidate_cluster_label_cache,
+)
 from backend.api.concepts_cluster import (
     _build_concept_folder_map, _build_folder_batches,
 )
@@ -309,6 +312,10 @@ async def auto_cluster_stream(
             count += 1
 
         db.commit()
+        # Neue Cluster-Labels existieren jetzt — Cache fuer
+        # Phantom-Concept-Filter invalidieren damit naechste
+        # Concept-Extraction die neuen Labels kennt.
+        invalidate_cluster_label_cache()
         clusters_elapsed = round(time.time() - start, 1)
         yield _sse("clusters_done", {
             "clusters": count,
