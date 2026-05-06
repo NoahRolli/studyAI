@@ -433,6 +433,7 @@ const en = {
     autoClustering: 'Grouping...',
     view3D: '3D Sphere',
     viewList: 'List',
+    viewLinks: 'Links',
     viewGraph: 'Graph',
     viewConcepts: 'Concepts',
     noConcepts: 'No concepts. Start a sync.',

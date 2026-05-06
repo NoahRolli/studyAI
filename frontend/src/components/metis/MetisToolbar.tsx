@@ -31,6 +31,7 @@ export default function MetisToolbar({
     { key: '3d', label: t.metis.view3D },
     { key: 'list', label: t.metis.viewList },
     { key: 'graph', label: t.metis.viewGraph },
+    { key: 'links', label: t.metis.viewLinks },
   ]
 
   const anyLoading = syncing || linking || clustering

@@ -7,6 +7,7 @@ import { useLanguage } from '../hooks/useLanguage'
 import { useMetisGraph } from '../hooks/useMetisGraph'
 import MetisToolbar from '../components/metis/MetisToolbar'
 import ConceptListView from '../components/metis/ConceptListView'
+import MetisLinksTab from '../components/metis/MetisLinksTab'
 import ConceptDetailPanel from '../components/metis/ConceptDetailPanel'
 import ClusterDetail from '../components/metis/ClusterDetail'
 import MetisMiniMap3D from '../components/metis/MetisMiniMap3D'
@@ -121,6 +122,8 @@ export default function MetisPage() {
           </div>
         ) : view === 'list' ? (
           <ConceptListView graph={conceptGraph} onRefresh={loadGraph} />
+        ) : view === 'links' ? (
+          <MetisLinksTab />
         ) : view === 'graph' ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-[var(--color-text-muted)]">
