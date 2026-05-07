@@ -29,6 +29,16 @@ logger = logging.getLogger(__name__)
 MAX_RESPONSE_TOKENS = 1500
 MAX_HISTORY_MESSAGES = 10  # Letzte N Messages der Conversation als Kontext
 
+# Source-Type-Labels fuer den Sources-Block. Vorher hart kodiert als
+# binaeres "Notiz" oder "Zusammenfassung" — chat_message wurde dadurch
+# faelschlich als Zusammenfassung gerendert. Lookup mit Fallback auf
+# den raw source_type, falls kuenftig neue Typen dazukommen.
+SOURCE_TYPE_LABELS = {
+    "note": "Notiz",
+    "summary": "Zusammenfassung",
+    "chat_message": "Chat",
+}
+
 
 # ---------- Result-Type ----------
 @dataclass
@@ -87,7 +97,7 @@ def _build_sources_block(retrieval: RetrievalResult) -> str:
     if retrieval.sources:
         lines = ["## Pallas-Quellen fuer deine Antwort:"]
         for idx, src in enumerate(retrieval.sources, start=1):
-            stype = "Notiz" if src.source_type == "note" else "Zusammenfassung"
+            stype = SOURCE_TYPE_LABELS.get(src.source_type, src.source_type)
             preview = (src.preview_text or "").strip()
             if not preview:
                 preview = "(keine Vorschau verfuegbar)"
