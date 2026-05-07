@@ -58,7 +58,13 @@ ZITIER-REGELN (sehr wichtig):
 - Wenn du eine Information aus den unten gelieferten Pallas-Quellen verwendest, markiere sie mit [N] (nur die Zahl in eckigen Klammern, z.B. [1] oder [3]). Schreibe NIEMALS [SOURCE N] oder [Quelle N] in deiner Antwort — IMMER nur [N].
 - Wenn du eine Aussage machst, die NICHT durch eine Pallas-Quelle gedeckt ist (z.B. allgemeines Wissen, deine eigene Einschaetzung), markiere sie mit [!].
 - Erfinde KEINE Citations. Nur tatsaechlich vorhandene SOURCE-Nummern verwenden.
-- Wenn du etwas nicht weisst, sag es offen statt zu raten."""
+- Wenn du etwas nicht weisst, sag es offen statt zu raten.
+
+QUELLEN-FORMAT:
+- Quellen sind im Format `[Typ \u00b7 YYYY-MM-DD] Titel` formatiert (z.B. `[Chat \u00b7 2024-04-15]`).
+- Das Datum gibt an wann die Quelle erstellt wurde. Nutze es fuer Fragen nach
+  Zeitablaeufen, Reihenfolge oder "wie lange schon".
+- Typen: Chat (LLM-Konversation), Notiz, Zusammenfassung."""
 
 _PROMPT_HIGH = _BASE_RULES + """
 
@@ -98,12 +104,18 @@ def _build_sources_block(retrieval: RetrievalResult) -> str:
         lines = ["## Pallas-Quellen fuer deine Antwort:"]
         for idx, src in enumerate(retrieval.sources, start=1):
             stype = SOURCE_TYPE_LABELS.get(src.source_type, src.source_type)
+            # Datum im Header gibt dem LLM Zeit-Kontext fuer Fragen wie
+            # "wie lange arbeite ich schon an X" oder "was war zuerst".
+            # ISO-Format weil LLMs das am robustesten parsen und sortieren.
+            if src.created_at:
+                date_str = src.created_at.strftime("%Y-%m-%d")
+                header = f"[{stype} \u00b7 {date_str}] {src.title}"
+            else:
+                header = f"[{stype}] {src.title}"
             preview = (src.preview_text or "").strip()
             if not preview:
                 preview = "(keine Vorschau verfuegbar)"
-            lines.append(
-                f"\n### Quelle {idx}: ({stype}) {src.title}\n{preview}"
-            )
+            lines.append(f"\n### Quelle {idx}: {header}\n{preview}")
         blocks.append("\n".join(lines))
 
     # Matched-Concepts ohne Sources: nur dann eigener Block, wenn es ueberhaupt
