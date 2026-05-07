@@ -22,6 +22,7 @@ import logging
 import asyncio
 import numpy as np
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
 
@@ -55,6 +56,9 @@ class RetrievedSource:
     similarity_score: float
     matched_concept_id: int
     matched_concept_name: str
+    # created_at der Source — fuer Zeit-Kontext im LLM-Prompt. Optional
+    # weil aeltere Notes/Summaries das Feld evtl. nicht haben.
+    created_at: Optional[datetime] = None
 
 
 @dataclass
@@ -102,15 +106,19 @@ def _fetch_source_metadata(
     db: Session,
     source_type: str,
     source_id: int,
-) -> Optional[tuple[str, str]]:
-    """Holt (title, preview_text) fuer eine Source. None wenn nicht gefunden."""
+) -> Optional[tuple[str, str, Optional[datetime]]]:
+    """Holt (title, preview_text, created_at) fuer eine Source.
+
+    None wenn nicht gefunden. created_at kann None sein wenn die Source
+    das Feld nicht hat (alte Records).
+    """
     if source_type == "note":
         note = db.query(Note).filter(Note.id == source_id).first()
         if not note:
             return None
         # Note.content ist HTML/TipTap -> rough strip fuer Preview
         preview = (note.content or "").replace("<", " <")[:PREVIEW_CHARS * 2]
-        return note.title, preview[:PREVIEW_CHARS].strip()
+        return note.title, preview[:PREVIEW_CHARS].strip(), note.created_at
 
     if source_type == "summary":
         summary = db.query(Summary).filter(Summary.id == source_id).first()
@@ -123,7 +131,7 @@ def _fetch_source_metadata(
             ).first()
         title = _resolve_summary_title(summary, doc)
         content = summary.content or ""
-        return title, content[:PREVIEW_CHARS].strip()
+        return title, content[:PREVIEW_CHARS].strip(), summary.created_at
 
     if source_type == "chat_message":
         msg = db.query(LLMMessage).filter(LLMMessage.id == source_id).first()
@@ -140,7 +148,10 @@ def _fetch_source_metadata(
             conv_title = conv_title[:77] + "..."
         title = f"{conv_title} (Turn {msg.turn_index}, {msg.role})"
         preview = (msg.text or "").strip()
-        return title, preview[:PREVIEW_CHARS].strip()
+        # Bei Chat-Messages priorisieren wir msg.created_at ueber
+        # conv.created_at — das Datum der Message selbst ist relevanter
+        # fuer Zeit-Fragen als wann die Conversation gestartet wurde.
+        return title, preview[:PREVIEW_CHARS].strip(), msg.created_at
 
     return None
 
@@ -235,7 +246,7 @@ async def retrieve_for_query(
         meta = _fetch_source_metadata(db, entry["source_type"], entry["source_id"])
         if meta is None:
             continue
-        title, preview = meta
+        title, preview, created_at = meta
         out.append(RetrievedSource(
             source_type=entry["source_type"],
             source_id=entry["source_id"],
@@ -244,6 +255,7 @@ async def retrieve_for_query(
             similarity_score=entry["similarity_score"],
             matched_concept_id=entry["concept_id"],
             matched_concept_name=entry["concept_name"],
+            created_at=created_at,
         ))
 
     return RetrievalResult(
