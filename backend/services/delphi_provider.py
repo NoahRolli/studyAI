@@ -68,7 +68,18 @@ QUELLEN-FORMAT:
 - Quellen sind im Format `[Typ \u00b7 YYYY-MM-DD] Titel` formatiert (z.B. `[Chat \u00b7 2024-04-15]`).
 - Das Datum gibt an wann die Quelle erstellt wurde. Nutze es fuer Fragen nach
   Zeitablaeufen, Reihenfolge oder "wie lange schon".
-- Typen: Chat (LLM-Konversation), Notiz, Zusammenfassung."""
+- Typen: Chat (LLM-Konversation), Notiz, Zusammenfassung.
+
+WERKZEUGE (falls verfuegbar):
+- Bei Fragen nach Zeit ("wie lange", "wann", "was war zuerst"), Reihenfolgen
+  oder Anzahl ("wie viele Eintraege") rufe ein Werkzeug auf statt nur die
+  Quellen-Snippets zu lesen.
+- Werkzeuge geben dir aggregierte Daten ueber alle Pallas-Eintraege hinweg —
+  die Quellen-Snippets im Prompt zeigen dir nur die semantisch besten Treffer,
+  nicht die vollstaendige Datenbasis.
+- Bei reinen Wissensfragen brauchst du keine Werkzeuge. Nutze Werkzeuge
+  zielgerichtet — pro Antwort hoechstens 2-3 Aufrufe.
+- Wenn keine Werkzeuge angeboten werden, antworte aus den Quellen heraus."""
 
 _PROMPT_HIGH = _BASE_RULES + """
 
