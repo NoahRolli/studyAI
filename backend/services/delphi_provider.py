@@ -19,8 +19,12 @@ import re
 import logging
 from dataclasses import dataclass
 
-from backend.services.ai_service import chat_with_fallback
+from sqlalchemy.orm import Session
+
+from backend.services.ai_service import chat_with_fallback, chat_with_tools_fallback
 from backend.services.delphi_retrieval import RetrievalResult
+from backend.services.delphi_tools import execute_tool
+from backend.services.delphi_tool_schemas import TOOL_SCHEMAS
 
 logger = logging.getLogger(__name__)
 
@@ -195,10 +199,37 @@ def _extract_markers(answer: str) -> tuple[list[int], bool]:
     return cited, has_unverified
 
 
+# ---------- Tool-Use-Pfad ----------
+async def _chat_with_tools_path(
+    user_prompt: str,
+    system_prompt: str,
+    db: Session,
+) -> tuple[str, str]:
+    """Tool-Use-Aufruf via ai_service.chat_with_tools_fallback.
+
+    Wrappt execute_tool in eine Closure, die die DB-Session injiziert.
+    Der LLM sieht die DB nicht — nur die Tool-Args aus dem Schema.
+
+    Returns (answer, provider_name). Provider kann "groq" sein (mit Tools)
+    oder ein Ollama-Provider (ohne Tools, Fallback-Pfad).
+    """
+    async def _tool_executor(name: str, args: dict) -> str:
+        return await execute_tool(name, args, db)
+
+    return await chat_with_tools_fallback(
+        prompt=user_prompt,
+        system=system_prompt,
+        tools=TOOL_SCHEMAS,
+        tool_executor=_tool_executor,
+        max_tokens=MAX_RESPONSE_TOKENS,
+    )
+
+
 # ---------- Hauptinterface ----------
 async def generate_delphi_response(
     user_query: str,
     retrieval: RetrievalResult,
+    db: Session,
     conversation_history: list[dict] | None = None,
 ) -> ProviderResponse:
     """Generiert eine Delphi-Antwort mit Citation-Markern.
@@ -211,11 +242,22 @@ async def generate_delphi_response(
     system_prompt = _system_prompt_for(retrieval.confidence)
     user_prompt = _build_full_prompt(user_query, retrieval, history)
 
-    answer, provider_name = await chat_with_fallback(
-        prompt=user_prompt,
-        system=system_prompt,
-        max_tokens=MAX_RESPONSE_TOKENS,
-    )
+    # Routing: Tools nur bei Groq + medium/low Confidence sinnvoll.
+    # Bei high-Confidence sind die RAG-Sources stark, Tools waeren nur Latenz.
+    # Bei Ollama-Fallback (Groq down) gibt's keine Tools — chat_with_tools_fallback
+    # macht die Pre-Check-Logik selbst und faellt ggf. auf chat_with_fallback zurueck.
+    if retrieval.confidence != "high":
+        answer, provider_name = await _chat_with_tools_path(
+            user_prompt=user_prompt,
+            system_prompt=system_prompt,
+            db=db,
+        )
+    else:
+        answer, provider_name = await chat_with_fallback(
+            prompt=user_prompt,
+            system=system_prompt,
+            max_tokens=MAX_RESPONSE_TOKENS,
+        )
 
     cited, has_unverified = _extract_markers(answer)
 

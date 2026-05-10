@@ -193,6 +193,7 @@ async def send_message(
     response = await generate_delphi_response(
         user_query=body.content,
         retrieval=retrieval,
+        db=db,
         conversation_history=history,
     )
 

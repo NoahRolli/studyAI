@@ -4,6 +4,7 @@
 # Journal nutzt NICHT diesen Service (bleibt Ollama-only)
 
 import logging
+from typing import Callable, Awaitable
 from backend.infra.config import AI_PROVIDER, OLLAMA_MODEL_LOCAL, OLLAMA_MODEL_SERVER
 from backend.infra.model_router import get_active_provider
 from backend.services.claude_provider import ClaudeProvider
@@ -99,3 +100,55 @@ async def chat_with_fallback(prompt: str, system: str = "",
     """
     result, name = await _call_with_fallback("chat", prompt, system, max_tokens)
     return result, name
+
+
+async def chat_with_tools_fallback(
+    prompt: str,
+    system: str,
+    tools: list[dict],
+    tool_executor: Callable[[str, dict], Awaitable[str]],
+    max_tokens: int = 4000,
+    max_iterations: int = 3,
+) -> tuple[str, str]:
+    """Tool-Use-Chat mit Provider-Fallback.
+
+    Nutzt Groq Tool-Use API wenn aktiver Provider groq ist und der Key
+    gesetzt ist. Bei 429/ConnectionError -> Fallback auf chat_with_fallback
+    (Ollama OHNE Tools — Antwort wird schwaecher, aber Service bleibt up).
+
+    Caller muss System+User-Prompts kombinieren weil der Service-Layer
+    keine Annahmen ueber die Prompt-Struktur macht.
+
+    Returns (answer_text, provider_name). provider_name kann sein:
+    "groq" (mit Tools), "ollama_server" / "ollama_local" (ohne Tools).
+    """
+    active = get_active_provider()
+
+    # Nur Groq kann Tool-Use. Bei anderem aktiven Provider direkt fallback.
+    if active != "groq" or not _groq.api_key:
+        logger.info(
+            f"chat_with_tools_fallback: aktiver Provider={active} kann "
+            "kein Tool-Use, nutze chat_with_fallback ohne Tools"
+        )
+        return await chat_with_fallback(prompt, system, max_tokens)
+
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+
+    try:
+        answer = await _groq.chat_with_tools(
+            messages=messages,
+            tools=tools,
+            tool_executor=tool_executor,
+            max_tokens=max_tokens,
+            max_iterations=max_iterations,
+        )
+        return answer, "groq"
+    except (GroqRateLimitError, ConnectionError) as e:
+        logger.warning(
+            f"Groq Tool-Use fehlgeschlagen ({type(e).__name__}: {e}) — "
+            "Fallback auf chat_with_fallback ohne Tools"
+        )
+        return await chat_with_fallback(prompt, system, max_tokens)

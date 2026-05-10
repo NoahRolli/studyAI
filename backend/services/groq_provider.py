@@ -8,6 +8,7 @@ import json
 import re
 import httpx
 import logging
+from typing import Callable, Awaitable
 from backend.infra.config import GROQ_API_KEY, GROQ_MODEL, GROQ_BASE_URL
 
 logger = logging.getLogger(__name__)
@@ -68,6 +69,126 @@ class GroqProvider:
 
             data = response.json()
             return data["choices"][0]["message"]["content"]
+
+    async def chat_with_tools(
+        self,
+        messages: list[dict],
+        tools: list[dict],
+        tool_executor: Callable[[str, dict], Awaitable[str]],
+        max_tokens: int = 4000,
+        max_iterations: int = 3,
+    ) -> str:
+        """Tool-Use-Loop gegen Groq Tool-Use API (OpenAI-Format).
+
+        messages: [{role, content}] — Caller baut System+User selbst auf
+        tools: JSON-Schemas im OpenAI-Tools-Format
+        tool_executor: async (name, args) -> str. Caller injiziert Closures
+                       fuer DB-Sessions oder anderen Kontext.
+        max_iterations: Schutz vor Tool-Endlosschleifen (LLM darf max
+                        N-mal Tools aufrufen, dann muss er antworten).
+
+        Wirft GroqRateLimitError bei 429, ConnectionError bei anderen
+        HTTP-Fehlern. Caller (ai_service) macht Fallback-Routing.
+        """
+        if not self.api_key:
+            raise ConnectionError("GROQ_API_KEY nicht gesetzt.")
+
+        # Working copy — wir extenden die Liste mit assistant- und tool-Turns
+        msgs = list(messages)
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            for iteration in range(max_iterations):
+                response = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": self.model,
+                        "messages": msgs,
+                        "tools": tools,
+                        "tool_choice": "auto",
+                        "max_tokens": max_tokens,
+                        "temperature": 0.3,
+                    },
+                )
+                if response.status_code == 429:
+                    raise GroqRateLimitError("Groq Rate Limit erreicht (429)")
+                if response.status_code != 200:
+                    logger.error(
+                        f"Groq Tool-Use Fehler {response.status_code}: {response.text}"
+                    )
+                    raise ConnectionError(
+                        f"Groq API Fehler (Status {response.status_code})"
+                    )
+
+                data = response.json()
+                choice = data["choices"][0]
+                msg = choice["message"]
+                finish = choice.get("finish_reason", "stop")
+
+                # Kein Tool-Call -> fertige Antwort
+                if finish != "tool_calls":
+                    return msg.get("content") or ""
+
+                # Tool-Calls ausfuehren und als tool-Turns anhaengen
+                tool_calls = msg.get("tool_calls") or []
+                if not tool_calls:
+                    # Defensiv: finish_reason sagt tool_calls aber keine da
+                    return msg.get("content") or ""
+
+                # Assistant-Turn mit Tool-Calls in History aufnehmen
+                msgs.append({
+                    "role": "assistant",
+                    "content": msg.get("content") or "",
+                    "tool_calls": tool_calls,
+                })
+
+                # Pro Tool-Call: ausfuehren, Result als role=tool anhaengen
+                for tc in tool_calls:
+                    fn = tc.get("function", {})
+                    fn_name = fn.get("name", "")
+                    fn_args_raw = fn.get("arguments", "{}")
+                    try:
+                        fn_args = json.loads(fn_args_raw)
+                    except json.JSONDecodeError:
+                        fn_args = {}
+                    logger.info(
+                        f"Groq Tool-Call iter={iteration}: "
+                        f"{fn_name}({fn_args})"
+                    )
+                    result = await tool_executor(fn_name, fn_args)
+                    msgs.append({
+                        "role": "tool",
+                        "tool_call_id": tc.get("id", ""),
+                        "name": fn_name,
+                        "content": result,
+                    })
+
+            # Max iterations erreicht — letzter Versuch ohne tools
+            logger.warning(
+                f"Groq Tool-Use: max_iterations={max_iterations} erreicht, "
+                "fordere finale Antwort ohne Tool-Aufrufe an"
+            )
+            response = await client.post(
+                f"{self.base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.model,
+                    "messages": msgs,
+                    "max_tokens": max_tokens,
+                    "temperature": 0.3,
+                },
+            )
+            if response.status_code == 200:
+                return response.json()["choices"][0]["message"].get("content") or ""
+            raise ConnectionError(
+                f"Groq finale Antwort fehlgeschlagen ({response.status_code})"
+            )
 
     async def is_available(self) -> bool:
         """Prüft ob Groq API erreichbar und Key gültig ist."""
