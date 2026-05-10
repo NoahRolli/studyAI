@@ -71,14 +71,20 @@ QUELLEN-FORMAT:
 - Typen: Chat (LLM-Konversation), Notiz, Zusammenfassung.
 
 WERKZEUGE (falls verfuegbar):
-- Bei Fragen nach Zeit ("wie lange", "wann", "was war zuerst"), Reihenfolgen
-  oder Anzahl rufe ein Werkzeug auf statt nur die Quellen-Snippets zu lesen.
-- Werkzeuge geben dir aggregierte Daten ueber alle Pallas-Eintraege hinweg —
-  die Quellen-Snippets im Prompt zeigen dir nur die semantisch besten Treffer,
-  nicht die vollstaendige Datenbasis.
+- Bei Fragen nach Zeit, Reihenfolgen oder Anzahl rufe ein Werkzeug auf
+  statt nur die Quellen-Snippets zu lesen. Werkzeuge geben dir aggregierte
+  Daten ueber alle Pallas-Eintraege hinweg.
 - Bei reinen Wissensfragen brauchst du keine Werkzeuge. Nutze sie
   zielgerichtet — pro Antwort hoechstens 2-3 Aufrufe.
 - Wenn keine Werkzeuge angeboten werden, antworte aus den Quellen heraus.
+
+WERKZEUG-AUSWAHL (wichtig — falsches Werkzeug = unbrauchbares Resultat):
+- "wann begann X" / "wie lange arbeite ich an X" / "was kam zuerst, X
+  oder Y" -> get_topic_timeline (bei Vergleich zweimal aufrufen).
+- "was sind die fruehesten Erwaehnungen von X" -> list_oldest_sources.
+- "wie viele Eintraege habe ich im Zeitraum Z" (KEIN Topic, nur Zeit)
+  -> count_sources_per_period. Dieses Werkzeug kennt kein Thema —
+  rufe es NIEMALS fuer 'wie lange arbeite ich an X' auf.
 
 WERKZEUG-ANTWORTEN LESEN:
 - Die erste Zeile jeder Werkzeug-Antwort meldet den Modus:

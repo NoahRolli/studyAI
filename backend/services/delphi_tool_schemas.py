@@ -14,17 +14,16 @@ TOOL_SCHEMAS = [
         "function": {
             "name": "get_topic_timeline",
             "description": (
-                "Findet Quellen zu einem Thema und liefert Verteilung "
-                "pro Monat (Burst-Pattern), Spannweite, und Anker-Info. "
-                "Nutzt einen Cluster-Filter: wenn das Top-Match-Concept "
-                "in einem thematisch passenden Cluster liegt, werden nur "
-                "Sources dieses Clusters beruecksichtigt. Wenn kein "
-                "klarer Cluster gefunden wird, faellt das Tool auf einen "
-                "breiteren Embedding-Match zurueck — die erste Zeile der "
-                "Antwort sagt welcher Modus aktiv ist. Achtung: auch mit "
-                "Cluster-Filter kann eine fruehe Erwaehnung aus "
-                "abweichendem Kontext stammen — das Histogramm zeigt ob "
-                "es ein Burst-Pattern oder einzelne Outlier sind."
+                "Hauptwerkzeug fuer thema-bezogene Zeit-Fragen wie "
+                "'wann begann X', 'wie lange arbeite ich an X', "
+                "'was wurde wann zu X diskutiert'. Liefert ein "
+                "Histogramm pro Monat, Spannweite, und einen Anker-"
+                "Header der den Modus zeigt: Cluster-gefiltert "
+                "(thematisch enger) oder Fallback (breiter, kann "
+                "mehrdeutig sein). Bei Burst-Pattern (1 Outlier + "
+                "spaeterer dichter Block) zaehlt der Block, nicht der "
+                "Outlier. Bei Vergleichsfragen ('was kam zuerst, X "
+                "oder Y?') zweimal aufrufen, einmal pro Topic."
             ),
             "parameters": {
                 "type": "object",
@@ -43,12 +42,13 @@ TOOL_SCHEMAS = [
         "function": {
             "name": "count_sources_per_period",
             "description": (
-                "Zaehlt wie viele Notizen, Zusammenfassungen oder Chat-"
-                "Messages in einem Zeitraum erstellt wurden. Im Gegen"
-                "satz zu get_topic_timeline und list_oldest_sources "
-                "kennt dieses Tool kein Thema — es zaehlt ALLE Eintraege "
-                "im Zeitraum. Nutze fuer Aktivitaetsmuster ueber Zeit, "
-                "nicht fuer projekt-spezifische Counts."
+                "Zaehlt globale Aktivitaet (Anzahl Notizen / Zusammen"
+                "fassungen / Chats) in einem Zeitraum. NICHT fuer "
+                "thema-bezogene Fragen ('wie lange arbeite ich an "
+                "Pallas?' -> get_topic_timeline statt diesem). Dieses "
+                "Tool kennt kein Thema, es zaehlt ALLE Eintraege im "
+                "Zeitraum. Nutze nur fuer Fragen wie 'wie viele "
+                "Eintraege habe ich im Maerz erstellt'."
             ),
             "parameters": {
                 "type": "object",
