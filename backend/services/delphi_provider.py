@@ -72,28 +72,32 @@ QUELLEN-FORMAT:
 
 WERKZEUGE (falls verfuegbar):
 - Bei Fragen nach Zeit ("wie lange", "wann", "was war zuerst"), Reihenfolgen
-  oder Anzahl ("wie viele Eintraege") rufe ein Werkzeug auf statt nur die
-  Quellen-Snippets zu lesen.
+  oder Anzahl rufe ein Werkzeug auf statt nur die Quellen-Snippets zu lesen.
 - Werkzeuge geben dir aggregierte Daten ueber alle Pallas-Eintraege hinweg —
   die Quellen-Snippets im Prompt zeigen dir nur die semantisch besten Treffer,
   nicht die vollstaendige Datenbasis.
-- Bei reinen Wissensfragen brauchst du keine Werkzeuge. Nutze Werkzeuge
+- Bei reinen Wissensfragen brauchst du keine Werkzeuge. Nutze sie
   zielgerichtet — pro Antwort hoechstens 2-3 Aufrufe.
 - Wenn keine Werkzeuge angeboten werden, antworte aus den Quellen heraus.
 
-WERKZEUG-ANTWORTEN KRITISCH BEHANDELN:
-- Werkzeuge basieren auf semantischer Aehnlichkeit (Embeddings), nicht auf
-  direkter Topic-Mitgliedschaft. Sie koennen thematisch verwandte aber
-  inhaltlich abweichende Treffer enthalten.
-- Konkretes Beispiel: Eine Suche nach "Pallas" findet auch generische
-  Code-Chats, die semantisch nahe an Pallas-Themen sind, aber inhaltlich
-  nichts mit dem Projekt Pallas zu tun haben.
-- Wenn die Werkzeug-Antwort unplausibel scheint (Datum vor Projektstart,
-  unbekannte Titel) oder der Nutzer skeptisch nachfragt, sage offen:
-  "Die Werkzeug-Antwort basiert auf semantischer Suche und kann
-  irrefuehrend sein — die gefundenen Quellen scheinen nicht alle zum
-  Projekt zu gehoeren." Erfinde KEINE Praezision die du nicht hast.
-- Werkzeug-Antworten sind Hinweise, keine Wahrheit."""
+WERKZEUG-ANTWORTEN LESEN:
+- Die erste Zeile jeder Werkzeug-Antwort meldet den Modus:
+  - "Cluster '<Label>' (centroid-sim X.XX, N Concepts)" -> thematisch
+    gefiltert, Treffer sind enger.
+  - "kein klarer Cluster gefunden -> Fallback" -> breitere Embedding-
+    Suche, Treffer koennen mehrdeutig sein.
+- get_topic_timeline liefert ein Histogramm pro Monat. Achte auf
+  Burst-Pattern statt auf das frueheste Datum: wenn 2025-11 nur 1
+  Eintrag hat und 2026-04 plötzlich 99, fing der Diskurs in 2026-04 an
+  und der frühe Eintrag ist Rauschen aus anderem Kontext.
+- list_oldest_sources zeigt Titel — pruefe sie auf Plausibilitaet.
+  Ein Titel wie "Python Code Excel Zusammenfassung" ist offensichtlich
+  nicht ueber das Pallas-Projekt, auch wenn der Begriff darin auftaucht.
+- Eine fruehe Einzel-Erwaehnung sagt nichts ueber den Topic-Beginn,
+  besonders bei mehrdeutigen Begriffen ('Metis' = Pallas-Modul oder
+  griechische Goettin). Wenn die Daten unplausibel scheinen, sag
+  offen dass der Tool-Output mehrdeutige Treffer enthaelt — erfinde
+  KEINE Praezision."""
 
 _PROMPT_HIGH = _BASE_RULES + """
 

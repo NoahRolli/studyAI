@@ -14,15 +14,17 @@ TOOL_SCHEMAS = [
         "function": {
             "name": "get_topic_timeline",
             "description": (
-                "Findet semantisch zu einem Thema passende Quellen und "
-                "deren Datums-Range (frueheste/spaeteste Erwaehnung, "
-                "Anzahl, Spanne in Tagen). ACHTUNG: Suche basiert auf "
-                "Embedding-Aehnlichkeit, nicht auf direkter Topic-Mitglied"
-                "schaft. Treffer koennen thematisch verwandt aber inhalt"
-                "lich anders sein (z.B. ein Code-Chat den das Tool "
-                "semantisch zu 'Pallas' matched, ohne dass er ueber das "
-                "Pallas-Projekt geht). Nutze fuer Annaeherungen, nicht "
-                "fuer harte Daten wie Projektstart."
+                "Findet Quellen zu einem Thema und liefert Verteilung "
+                "pro Monat (Burst-Pattern), Spannweite, und Anker-Info. "
+                "Nutzt einen Cluster-Filter: wenn das Top-Match-Concept "
+                "in einem thematisch passenden Cluster liegt, werden nur "
+                "Sources dieses Clusters beruecksichtigt. Wenn kein "
+                "klarer Cluster gefunden wird, faellt das Tool auf einen "
+                "breiteren Embedding-Match zurueck — die erste Zeile der "
+                "Antwort sagt welcher Modus aktiv ist. Achtung: auch mit "
+                "Cluster-Filter kann eine fruehe Erwaehnung aus "
+                "abweichendem Kontext stammen — das Histogramm zeigt ob "
+                "es ein Burst-Pattern oder einzelne Outlier sind."
             ),
             "parameters": {
                 "type": "object",
@@ -42,10 +44,11 @@ TOOL_SCHEMAS = [
             "name": "count_sources_per_period",
             "description": (
                 "Zaehlt wie viele Notizen, Zusammenfassungen oder Chat-"
-                "Messages in einem Zeitraum erstellt wurden. Zaehlt ALLE "
-                "Eintraege im Zeitraum, ohne Topic-Filter — kann nicht "
-                "nach Pallas-bezogen filtern. Nutze fuer Aktivitaets"
-                "muster ueber Zeit, nicht fuer projekt-spezifische Counts."
+                "Messages in einem Zeitraum erstellt wurden. Im Gegen"
+                "satz zu get_topic_timeline und list_oldest_sources "
+                "kennt dieses Tool kein Thema — es zaehlt ALLE Eintraege "
+                "im Zeitraum. Nutze fuer Aktivitaetsmuster ueber Zeit, "
+                "nicht fuer projekt-spezifische Counts."
             ),
             "parameters": {
                 "type": "object",
@@ -67,15 +70,15 @@ TOOL_SCHEMAS = [
         "function": {
             "name": "list_oldest_sources",
             "description": (
-                "Listet die aeltesten N Quellen auf, deren Embedding "
-                "semantisch zu einem Thema passt. ACHTUNG: aelteste "
-                "semantisch passende Quelle != Projektstart oder "
-                "Themen-Beginn. Wenn der Nutzer nach 'wann habe ich "
-                "angefangen' fragt, ist diese Liste oft IRREFUEHREND, "
-                "weil generische Code-Chats semantisch zu Tech-Themen "
-                "passen koennen. Nutze fuer 'welche frueheren Quellen "
-                "haben Bezug zu X' (Annaeherung), nicht fuer harte "
-                "Anfangs-Daten."
+                "Listet die aeltesten N Quellen zu einem Thema auf. "
+                "Nutzt den gleichen Cluster-Filter wie get_topic_timeline "
+                "— die Tool-Antwort meldet im Header ob ein Cluster aktiv "
+                "ist oder ein Fallback laeuft. Bei aktivem Cluster sind "
+                "die Treffer thematisch enger; im Fallback (kein klarer "
+                "Cluster gefunden) kann die Liste mehrdeutige Begriffe "
+                "irrefuehrend einsortieren — pruefe die Titel auf "
+                "Plausibilitaet. Nicht als alleinige Quelle fuer "
+                "Projektstart-Fragen verwenden."
             ),
             "parameters": {
                 "type": "object",
