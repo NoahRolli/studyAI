@@ -245,12 +245,80 @@ async def _gather_sources_for_topic(
     return out, anchor_info
 
 
+# ---------- Helper: Output-Formatierung ----------
+def _format_anchor_info(info: dict) -> str:
+    """Kurze Transparenz-Zeile fuer Tool-Outputs ueber den Anker."""
+    name = info.get("anchor_name")
+    if not name:
+        return "kein Anker im Embedding-Cache gefunden"
+    sim = info.get("anchor_similarity", 0.0)
+    if info.get("cluster_filter_applied"):
+        labels = info.get("cluster_labels") or []
+        label = labels[0] if labels else "unbekannt"
+        n = info.get("cluster_concept_count", 0)
+        c_sim = info.get("cluster_centroid_sim", 0.0)
+        return (
+            f"Anker '{name}' (sim {sim:.2f}), Cluster '{label}' "
+            f"(centroid-sim {c_sim:.2f}, {n} Concepts)"
+        )
+    return (
+        f"Anker '{name}' (sim {sim:.2f}), kein klarer Cluster gefunden "
+        f"-> Fallback auf Top-K-Embedding-Match (kann thematisch streuen)"
+    )
+
+
+def _monthly_histogram(
+    sources: list[tuple[str, int, datetime, str]],
+) -> str:
+    """Kompaktes ASCII-Histogramm pro Monat (YYYY-MM -> Anzahl).
+
+    Nur Monate mit Eintraegen werden gelistet. Wenn die Spanne
+    Luecken hat sind die explizit als '0' eingetragen, damit Bursts
+    sichtbar werden.
+    """
+    if not sources:
+        return ""
+    counts: dict[str, int] = {}
+    for _, _, created, _ in sources:
+        key = created.strftime("%Y-%m")
+        counts[key] = counts.get(key, 0) + 1
+
+    # Luecken in der Spanne fuellen damit Bursts sichtbar werden
+    keys_sorted = sorted(counts)
+    if keys_sorted:
+        first_y, first_m = map(int, keys_sorted[0].split("-"))
+        last_y, last_m = map(int, keys_sorted[-1].split("-"))
+        full: list[str] = []
+        y, m = first_y, first_m
+        while (y, m) <= (last_y, last_m):
+            full.append(f"{y:04d}-{m:02d}")
+            m += 1
+            if m > 12:
+                m = 1
+                y += 1
+        for k in full:
+            counts.setdefault(k, 0)
+        keys_sorted = full
+
+    max_count = max(counts.values()) if counts else 1
+    lines = ["  Verteilung pro Monat:"]
+    for k in keys_sorted:
+        n = counts[k]
+        bar_width = int(round(20 * n / max_count)) if max_count else 0
+        bar = "#" * bar_width
+        lines.append(f"    {k}: {n:>4}  {bar}")
+    return "\n".join(lines)
+
+
 # ---------- Tool 1: get_topic_timeline ----------
 async def get_topic_timeline(db: Session, topic: str) -> str:
-    """Findet wann ueber ein Topic erstmals/letztmals geschrieben wurde."""
-    sources, _anchor = await _gather_sources_for_topic(db, topic)
+    """Findet Erwaehnungs-Verteilung eines Topics ueber die Zeit."""
+    sources, anchor = await _gather_sources_for_topic(db, topic)
     if not sources:
-        return f"Keine Quellen zum Thema '{topic}' gefunden."
+        return (
+            f"Keine Quellen zum Thema '{topic}' gefunden. "
+            f"Hinweis: {_format_anchor_info(anchor)}."
+        )
 
     earliest = sources[0][2]
     latest = sources[-1][2]
@@ -259,20 +327,27 @@ async def get_topic_timeline(db: Session, topic: str) -> str:
     by_type: dict[str, int] = {}
     for stype, _, _, _ in sources:
         by_type[stype] = by_type.get(stype, 0) + 1
-
     type_summary = ", ".join(
         f"{n} {t}" for t, n in sorted(by_type.items(), key=lambda x: -x[1])
     )
 
-    return (
-        f"Semantisch zu '{topic}' passende Quellen "
-        f"(kann thematisch unverbundene Treffer enthalten): "
-        f"{len(sources)} Quellen ({type_summary}). "
-        f"Datums-Range: {earliest.strftime('%Y-%m-%d')} bis "
-        f"{latest.strftime('%Y-%m-%d')}, Spanne {span_days} Tage. "
-        f"HINWEIS: Datum != Themen-Beginn, nur frueheste semantisch "
-        f"aehnliche Quelle."
-    )
+    histogram = _monthly_histogram(sources)
+
+    lines = [
+        f"Erwaehnungen zum Thema '{topic}':",
+        f"  {_format_anchor_info(anchor)}",
+        f"  {len(sources)} Quellen ({type_summary})",
+        f"  Spannweite: {earliest.strftime('%Y-%m-%d')} bis "
+        f"{latest.strftime('%Y-%m-%d')} ({span_days} Tage)",
+        histogram,
+        "",
+        "WICHTIG: Eine fruehe Erwaehnung bedeutet NICHT dass das Thema "
+        "damals begann. Bei mehrdeutigen Begriffen (z.B. 'Metis' kann "
+        "Pallas-Modul ODER griechische Goettin sein) koennen alte "
+        "Erwaehnungen aus anderem Kontext stammen. Burst-Pattern im "
+        "Histogramm ist meist informativer als das frueheste Datum.",
+    ]
+    return "\n".join(lines)
 
 
 # ---------- Tool 2: count_sources_per_period ----------
@@ -362,13 +437,20 @@ async def list_oldest_sources(
                 titles[("chat_message", mid)] = f"{ctitle} (Turn {turn}, {role})"
 
     lines = [
-        f"Aelteste {len(oldest)} semantisch zu '{topic}' passende Quellen "
-        "(kann thematisch unverbundene Treffer enthalten):"
+        f"Aelteste {len(oldest)} Quellen zum Thema '{topic}':",
+        f"  {_format_anchor_info(_anchor)}",
+        "",
     ]
     for stype, sid, created, _ in oldest:
         title = titles.get((stype, sid), f"#{sid}")
         lines.append(f"- {created.strftime('%Y-%m-%d')} [{stype}] {title}")
 
+    lines.append("")
+    lines.append(
+        "WICHTIG: Bei mehrdeutigen Begriffen koennen die fruehen Quellen "
+        "aus anderem Kontext stammen (z.B. 'Metis' als griechische Goettin "
+        "vs. Pallas-Modul). Pruefe die Titel auf Plausibilitaet."
+    )
     return "\n".join(lines)
 
 
