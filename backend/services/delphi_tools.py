@@ -24,6 +24,10 @@ import numpy as np
 from datetime import datetime
 from sqlalchemy.orm import Session
 
+import backend.models.registry  # noqa: F401  Lazy-loads ALLE Models.
+                                  # Vermeidet "Document not found"-Errors
+                                  # bei Cross-Model-Relationships.
+
 from backend.models.concept import ConceptSource
 from backend.models.note import Note
 from backend.models.summary import Summary
@@ -149,10 +153,13 @@ async def get_topic_timeline(db: Session, topic: str) -> str:
     )
 
     return (
-        f"Thema '{topic}': {len(sources)} Quellen ({type_summary}). "
-        f"Frueheste Erwaehnung: {earliest.strftime('%Y-%m-%d')}. "
-        f"Letzte Erwaehnung: {latest.strftime('%Y-%m-%d')}. "
-        f"Spanne: {span_days} Tage."
+        f"Semantisch zu '{topic}' passende Quellen "
+        f"(kann thematisch unverbundene Treffer enthalten): "
+        f"{len(sources)} Quellen ({type_summary}). "
+        f"Datums-Range: {earliest.strftime('%Y-%m-%d')} bis "
+        f"{latest.strftime('%Y-%m-%d')}, Spanne {span_days} Tage. "
+        f"HINWEIS: Datum != Themen-Beginn, nur frueheste semantisch "
+        f"aehnliche Quelle."
     )
 
 
@@ -242,7 +249,10 @@ async def list_oldest_sources(
                 ctitle = (convs.get(cid) or "Untitled")[:60]
                 titles[("chat_message", mid)] = f"{ctitle} (Turn {turn}, {role})"
 
-    lines = [f"Aelteste {len(oldest)} Quellen zu '{topic}':"]
+    lines = [
+        f"Aelteste {len(oldest)} semantisch zu '{topic}' passende Quellen "
+        "(kann thematisch unverbundene Treffer enthalten):"
+    ]
     for stype, sid, created, _ in oldest:
         title = titles.get((stype, sid), f"#{sid}")
         lines.append(f"- {created.strftime('%Y-%m-%d')} [{stype}] {title}")

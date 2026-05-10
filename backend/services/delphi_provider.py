@@ -79,7 +79,21 @@ WERKZEUGE (falls verfuegbar):
   nicht die vollstaendige Datenbasis.
 - Bei reinen Wissensfragen brauchst du keine Werkzeuge. Nutze Werkzeuge
   zielgerichtet — pro Antwort hoechstens 2-3 Aufrufe.
-- Wenn keine Werkzeuge angeboten werden, antworte aus den Quellen heraus."""
+- Wenn keine Werkzeuge angeboten werden, antworte aus den Quellen heraus.
+
+WERKZEUG-ANTWORTEN KRITISCH BEHANDELN:
+- Werkzeuge basieren auf semantischer Aehnlichkeit (Embeddings), nicht auf
+  direkter Topic-Mitgliedschaft. Sie koennen thematisch verwandte aber
+  inhaltlich abweichende Treffer enthalten.
+- Konkretes Beispiel: Eine Suche nach "Pallas" findet auch generische
+  Code-Chats, die semantisch nahe an Pallas-Themen sind, aber inhaltlich
+  nichts mit dem Projekt Pallas zu tun haben.
+- Wenn die Werkzeug-Antwort unplausibel scheint (Datum vor Projektstart,
+  unbekannte Titel) oder der Nutzer skeptisch nachfragt, sage offen:
+  "Die Werkzeug-Antwort basiert auf semantischer Suche und kann
+  irrefuehrend sein — die gefundenen Quellen scheinen nicht alle zum
+  Projekt zu gehoeren." Erfinde KEINE Praezision die du nicht hast.
+- Werkzeug-Antworten sind Hinweise, keine Wahrheit."""
 
 _PROMPT_HIGH = _BASE_RULES + """
 

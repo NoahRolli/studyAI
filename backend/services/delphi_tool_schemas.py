@@ -14,10 +14,15 @@ TOOL_SCHEMAS = [
         "function": {
             "name": "get_topic_timeline",
             "description": (
-                "Findet zu einem Thema das frueheste und spaeteste Datum, "
-                "an dem darueber geschrieben wurde, plus Anzahl der Quellen "
-                "und Spanne in Tagen. Nutze das fuer Fragen wie 'wie lange "
-                "arbeite ich an X?' oder 'wann habe ich mit X angefangen?'."
+                "Findet semantisch zu einem Thema passende Quellen und "
+                "deren Datums-Range (frueheste/spaeteste Erwaehnung, "
+                "Anzahl, Spanne in Tagen). ACHTUNG: Suche basiert auf "
+                "Embedding-Aehnlichkeit, nicht auf direkter Topic-Mitglied"
+                "schaft. Treffer koennen thematisch verwandt aber inhalt"
+                "lich anders sein (z.B. ein Code-Chat den das Tool "
+                "semantisch zu 'Pallas' matched, ohne dass er ueber das "
+                "Pallas-Projekt geht). Nutze fuer Annaeherungen, nicht "
+                "fuer harte Daten wie Projektstart."
             ),
             "parameters": {
                 "type": "object",
@@ -36,10 +41,11 @@ TOOL_SCHEMAS = [
         "function": {
             "name": "count_sources_per_period",
             "description": (
-                "Zaehlt wie viele Notizen, Zusammenfassungen oder Chat-Messages "
-                "in einem Zeitraum erstellt wurden. Nutze das fuer Fragen wie "
-                "'wie viele Pallas-Chats hatte ich im April?' oder 'wie aktiv "
-                "war ich letztes Jahr?'."
+                "Zaehlt wie viele Notizen, Zusammenfassungen oder Chat-"
+                "Messages in einem Zeitraum erstellt wurden. Zaehlt ALLE "
+                "Eintraege im Zeitraum, ohne Topic-Filter — kann nicht "
+                "nach Pallas-bezogen filtern. Nutze fuer Aktivitaets"
+                "muster ueber Zeit, nicht fuer projekt-spezifische Counts."
             ),
             "parameters": {
                 "type": "object",
@@ -61,10 +67,15 @@ TOOL_SCHEMAS = [
         "function": {
             "name": "list_oldest_sources",
             "description": (
-                "Listet die aeltesten N Quellen zu einem Thema auf, mit Datum "
-                "und Titel. Nutze das fuer Fragen wie 'was waren die ersten "
-                "Diskussionen zu X?' oder 'was kam zuerst, X oder Y?' (zweimal "
-                "aufrufen)."
+                "Listet die aeltesten N Quellen auf, deren Embedding "
+                "semantisch zu einem Thema passt. ACHTUNG: aelteste "
+                "semantisch passende Quelle != Projektstart oder "
+                "Themen-Beginn. Wenn der Nutzer nach 'wann habe ich "
+                "angefangen' fragt, ist diese Liste oft IRREFUEHREND, "
+                "weil generische Code-Chats semantisch zu Tech-Themen "
+                "passen koennen. Nutze fuer 'welche frueheren Quellen "
+                "haben Bezug zu X' (Annaeherung), nicht fuer harte "
+                "Anfangs-Daten."
             ),
             "parameters": {
                 "type": "object",
