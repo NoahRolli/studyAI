@@ -10,7 +10,7 @@
 # - _build_concept_folder_map: Konzept → primaerer Ordner (via Sources)
 # - _build_folder_batches:    Konzepte nach Ordner gruppieren, 40er-Batches
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from fastapi import APIRouter
 from sqlalchemy.orm import Session
 from backend.models.concept import Concept, ConceptSource
@@ -28,7 +28,12 @@ router = APIRouter(prefix="/api/concepts", tags=["concepts-cluster"])
 def _build_concept_folder_map(db: Session) -> dict[int, int | None]:
     """Ordnet jedem Konzept seinen primaeren Ordner zu (via Sources).
     Pfad: ConceptSource(summary) → Summary → Document → Folder.
-    Notes haben keinen Ordner → None."""
+    Notes haben keinen Ordner → None.
+
+    Plurality-Voting: ein Concept kann Summary-Sources aus mehreren
+    Folders haben. Der Folder mit den meisten Sources gewinnt. Bei
+    Gleichstand entscheidet die kleinste Folder-ID (deterministisch).
+    """
     # Summary-ID → Folder-ID Mapping
     sum_folder: dict[int, int] = {}
     rows = db.query(
@@ -43,14 +48,26 @@ def _build_concept_folder_map(db: Session) -> dict[int, int | None]:
         if fid:
             sum_folder[sum_id] = fid
 
-    # Konzept → Ordner (erster Treffer aus Summary-Sources)
+    # Konzept → Counter(Folder-IDs) aus allen Summary-Sources sammeln
     sources = db.query(ConceptSource).filter(
         ConceptSource.source_type == "summary"
     ).all()
-    concept_folder: dict[int, int | None] = {}
+    concept_folder_votes: dict[int, Counter] = defaultdict(Counter)
     for s in sources:
-        if s.concept_id not in concept_folder and s.source_id in sum_folder:
-            concept_folder[s.concept_id] = sum_folder[s.source_id]
+        fid = sum_folder.get(s.source_id)
+        if fid:
+            concept_folder_votes[s.concept_id][fid] += 1
+
+    # Plurality: haeufigster Folder pro Concept gewinnt. Tie-Break:
+    # kleinste Folder-ID (Counter.most_common(1) ist insertion-stable,
+    # daher sortieren wir die Items explizit).
+    concept_folder: dict[int, int | None] = {}
+    for cid, votes in concept_folder_votes.items():
+        # Sortieren: erst nach -count, dann nach fid (aufsteigend)
+        best_fid, _ = sorted(
+            votes.items(), key=lambda kv: (-kv[1], kv[0])
+        )[0]
+        concept_folder[cid] = best_fid
 
     return concept_folder
 
