@@ -19,8 +19,6 @@ werden im Provider-Loop injiziert.
 """
 
 import logging
-import asyncio
-import numpy as np
 from datetime import datetime
 from sqlalchemy.orm import Session
 
