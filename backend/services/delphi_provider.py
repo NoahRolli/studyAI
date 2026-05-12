@@ -123,12 +123,50 @@ dass du dazu in Noahs Wissen nichts findest. Wenn du aus allgemeinem Wissen antw
 kannst, mache das, aber markiere ALLE Aussagen mit [!]."""
 
 
+def _date_context() -> str:
+    """Aktuelles Datum + Wochenanker fuer den System-Prompt.
+
+    Wird dynamisch zur Anfrage-Zeit berechnet (kein Modul-Konstant) damit
+    der LLM auch nach Server-Restart-langen Sessions korrekte Anker hat.
+    Macht Fragen wie "diese Woche", "letzten Monat", "gestern" aufloesbar
+    ohne dass der User Datum nennen muss.
+    """
+    from datetime import datetime, timedelta
+    WD = ["Montag", "Dienstag", "Mittwoch", "Donnerstag",
+          "Freitag", "Samstag", "Sonntag"]
+    today = datetime.now()
+    wd = today.weekday()  # 0=Mo, 6=So
+    monday = today - timedelta(days=wd)
+    sunday = monday + timedelta(days=6)
+    next_mon = monday + timedelta(days=7)
+    next_sun = monday + timedelta(days=13)
+    last_mon = monday - timedelta(days=7)
+    last_sun = monday - timedelta(days=1)
+    fmt = lambda d: d.strftime("%Y-%m-%d")
+    iso_year, iso_week, _ = today.isocalendar()
+    return (
+        "\n\n## ZEITKONTEXT (heute)\n"
+        f"- Heute: {WD[wd]}, {fmt(today)} (Kalenderwoche {iso_week})\n"
+        f"- Gestern: {fmt(today - timedelta(days=1))}\n"
+        f"- Morgen: {fmt(today + timedelta(days=1))}\n"
+        f"- Diese Woche: {fmt(monday)} bis {fmt(sunday)}\n"
+        f"- Naechste Woche: {fmt(next_mon)} bis {fmt(next_sun)}\n"
+        f"- Letzte Woche: {fmt(last_mon)} bis {fmt(last_sun)}\n"
+        f"- Dieser Monat: {today.strftime('%Y-%m')}\n"
+        "Bei Fragen wie 'diese Woche', 'naechste Woche', 'gestern', 'morgen', "
+        "'letzten Monat' nutze diese Daten direkt — frage den User NICHT "
+        "nach Datums-Klaerung."
+    )
+
+
 def _system_prompt_for(confidence: str) -> str:
     if confidence == "high":
-        return _PROMPT_HIGH
-    if confidence == "medium":
-        return _PROMPT_MEDIUM
-    return _PROMPT_LOW
+        base = _PROMPT_HIGH
+    elif confidence == "medium":
+        base = _PROMPT_MEDIUM
+    else:
+        base = _PROMPT_LOW
+    return base + _date_context()
 
 
 # ---------- Sources-Block ----------
