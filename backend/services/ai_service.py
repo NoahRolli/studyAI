@@ -106,31 +106,50 @@ async def chat_with_tools_fallback(
     prompt: str,
     system: str,
     tools: list[dict],
-    tool_executor: Callable[[str, dict], Awaitable[str]],
+    tool_executor,
     max_tokens: int = 4000,
     max_iterations: int = 3,
 ) -> tuple[str, str]:
-    """Tool-Use-Chat mit Provider-Fallback.
+    """Tool-Use-Chat mit zweistufigem Fallback.
 
-    Nutzt Groq Tool-Use API wenn aktiver Provider groq ist und der Key
-    gesetzt ist. Bei 429/ConnectionError -> Fallback auf chat_with_fallback
-    (Ollama OHNE Tools — Antwort wird schwaecher, aber Service bleibt up).
-
-    Caller muss System+User-Prompts kombinieren weil der Service-Layer
-    keine Annahmen ueber die Prompt-Struktur macht.
-
-    Returns (answer_text, provider_name). provider_name kann sein:
-    "groq" (mit Tools), "ollama_server" / "ollama_local" (ohne Tools).
+    Reihenfolge: Groq -> Claude -> Ollama-ohne-Tools.
+    Returns (answer_text, provider_name).
     """
     active = get_active_provider()
 
-    # Nur Groq kann Tool-Use. Bei anderem aktiven Provider direkt fallback.
-    if active != "groq" or not _groq.api_key:
-        logger.info(
-            f"chat_with_tools_fallback: aktiver Provider={active} kann "
-            "kein Tool-Use, nutze chat_with_fallback ohne Tools"
-        )
-        return await chat_with_fallback(prompt, system, max_tokens)
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+
+    # 1) Groq
+    if active == "groq" and _groq.api_key:
+        try:
+            answer = await _groq.chat_with_tools(
+                messages=messages, tools=tools, tool_executor=tool_executor,
+                max_tokens=max_tokens, max_iterations=max_iterations,
+            )
+            return answer, "groq"
+        except (GroqRateLimitError, ConnectionError) as e:
+            logger.warning(f"Groq Tool-Use fehlgeschlagen ({type(e).__name__}: {e}) — versuche Claude")
+        except Exception as e:
+            logger.warning(f"Groq Tool-Use Exception ({type(e).__name__}: {e}) — versuche Claude")
+
+    # 2) Claude
+    if _claude.api_key:
+        try:
+            answer = await _claude.chat_with_tools(
+                messages=messages, tools=tools, tool_executor=tool_executor,
+                max_tokens=max_tokens, max_iterations=max_iterations,
+            )
+            return answer, "claude"
+        except Exception as e:
+            logger.warning(f"Claude Tool-Use fehlgeschlagen ({type(e).__name__}: {e}) — Fallback Ollama")
+    else:
+        logger.info("Claude API-Key nicht gesetzt — direkter Ollama-Fallback")
+
+    # 3) Ollama ohne Tools
+    return await chat_with_fallback(prompt, system, max_tokens)
 
     messages = []
     if system:
