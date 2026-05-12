@@ -8,6 +8,7 @@ from typing import Callable, Awaitable
 from backend.infra.config import AI_PROVIDER, OLLAMA_MODEL_LOCAL, OLLAMA_MODEL_SERVER
 from backend.infra.model_router import get_active_provider
 from backend.services.claude_provider import ClaudeProvider
+from backend.services.gemini_provider import GeminiProvider
 from backend.services.ollama_provider import OllamaProvider
 from backend.services.groq_provider import GroqProvider, GroqRateLimitError
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Provider-Instanzen — zwei Ollama mit unterschiedlichem Modell
 _claude = ClaudeProvider()
+_gemini = GeminiProvider()
 _ollama_local = OllamaProvider(model=OLLAMA_MODEL_LOCAL)
 _ollama_server = OllamaProvider(model=OLLAMA_MODEL_SERVER)
 _groq = GroqProvider()
@@ -110,9 +112,9 @@ async def chat_with_tools_fallback(
     max_tokens: int = 4000,
     max_iterations: int = 3,
 ) -> tuple[str, str]:
-    """Tool-Use-Chat mit zweistufigem Fallback.
+    """Tool-Use-Chat mit mehrstufigem Fallback.
 
-    Reihenfolge: Groq -> Claude -> Ollama-ohne-Tools.
+    Reihenfolge: Groq -> Gemini -> Claude -> Ollama-ohne-Tools.
     Returns (answer_text, provider_name).
     """
     active = get_active_provider()
@@ -131,11 +133,24 @@ async def chat_with_tools_fallback(
             )
             return answer, "groq"
         except (GroqRateLimitError, ConnectionError) as e:
-            logger.warning(f"Groq Tool-Use fehlgeschlagen ({type(e).__name__}: {e}) — versuche Claude")
+            logger.warning(f"Groq Tool-Use fehlgeschlagen ({type(e).__name__}: {e}) — versuche Gemini")
         except Exception as e:
-            logger.warning(f"Groq Tool-Use Exception ({type(e).__name__}: {e}) — versuche Claude")
+            logger.warning(f"Groq Tool-Use Exception ({type(e).__name__}: {e}) — versuche Gemini")
 
-    # 2) Claude
+    # 2) Gemini (Free-Tier, nicht hinter Cloudflare)
+    if _gemini.api_key:
+        try:
+            answer = await _gemini.chat_with_tools(
+                messages=messages, tools=tools, tool_executor=tool_executor,
+                max_tokens=max_tokens, max_iterations=max_iterations,
+            )
+            return answer, "gemini"
+        except Exception as e:
+            logger.warning(f"Gemini Tool-Use fehlgeschlagen ({type(e).__name__}: {e}) — versuche Claude")
+    else:
+        logger.debug("Gemini-Key nicht gesetzt — skip")
+
+    # 3) Claude (bezahlt, Fallback wenn beide gratis-Optionen weg)
     if _claude.api_key:
         try:
             answer = await _claude.chat_with_tools(
@@ -146,9 +161,9 @@ async def chat_with_tools_fallback(
         except Exception as e:
             logger.warning(f"Claude Tool-Use fehlgeschlagen ({type(e).__name__}: {e}) — Fallback Ollama")
     else:
-        logger.info("Claude API-Key nicht gesetzt — direkter Ollama-Fallback")
+        logger.debug("Claude-Key nicht gesetzt — skip")
 
-    # 3) Ollama ohne Tools
+    # 4) Ollama ohne Tools (letzte Rettung, Antwort ohne Daten-Zugriff)
     return await chat_with_fallback(prompt, system, max_tokens)
 
     messages = []
