@@ -44,6 +44,11 @@ AI_PROVIDER = os.environ.get("PALLAS_AI_PROVIDER", "ollama")
 CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY", "")
 CLAUDE_MODEL = "claude-sonnet-4-20250514"
 
+# Modell fuer Tool-Use im Delphi-Fallback (Mai 2026):
+# - Haiku 4.5 = schnell + guenstig, gutes Tool-Calling
+# - Wenn Tools-Antworten zu schwach: auf "claude-sonnet-4-6" wechseln
+CLAUDE_TOOLS_MODEL = "claude-haiku-4-5-20251001"
+
 # Ollama — Zwei Instanzen mit unterschiedlichen Modellen
 # Local: MacBook (Apple Silicon, e2b)
 # Server: Olymp (CPU, e4b — grösser, bessere Qualität)
