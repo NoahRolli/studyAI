@@ -49,6 +49,12 @@ CLAUDE_MODEL = "claude-sonnet-4-20250514"
 # - Wenn Tools-Antworten zu schwach: auf "claude-sonnet-4-6" wechseln
 CLAUDE_TOOLS_MODEL = "claude-haiku-4-5-20251001"
 
+# Gemini API (Free-Tier-tauglich, Tool-Use in Delphi):
+# 15 RPM / 1500 Tag bei gemini-2.5-flash, kein Cloudflare-Block.
+# Key holen auf https://aistudio.google.com (kostenlos, ohne Karte).
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_TOOLS_MODEL = "gemini-2.5-flash"
+
 # Ollama — Zwei Instanzen mit unterschiedlichen Modellen
 # Local: MacBook (Apple Silicon, e2b)
 # Server: Olymp (CPU, e4b — grösser, bessere Qualität)
