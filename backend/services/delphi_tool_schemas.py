@@ -95,3 +95,11 @@ TOOL_SCHEMAS = [
         },
     },
 ]
+
+
+# ---------- Git-Tools (B-Track, V2) ----------
+# Separater Schema-File damit Git-Tracking als Modul unabhaengig
+# enable/disable bleibt.
+from backend.services.delphi_tool_schemas_git import GIT_TOOL_SCHEMAS
+
+TOOL_SCHEMAS = TOOL_SCHEMAS + GIT_TOOL_SCHEMAS

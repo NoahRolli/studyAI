@@ -35,6 +35,7 @@ from backend.services.delphi_tools_output import (
     _format_anchor_info,
     _monthly_histogram,
 )
+from backend.services.delphi_tools_git import execute_git_tool
 
 logger = logging.getLogger(__name__)
 
@@ -275,6 +276,9 @@ async def execute_tool(name: str, args: dict, db: Session) -> str:
             return await count_sources_per_period(db, **args)
         if name == "list_oldest_sources":
             return await list_oldest_sources(db, **args)
+        # Git-Tools (B-Track) sind sync — direkt durchreichen
+        if name.startswith("git_"):
+            return execute_git_tool(name, args, db)
         return f"Unbekanntes Werkzeug: {name}"
     except Exception as e:
         logger.exception(f"Tool {name} failed")
