@@ -36,6 +36,7 @@ from backend.services.delphi_tools_output import (
     _monthly_histogram,
 )
 from backend.services.delphi_tools_git import execute_git_tool
+from backend.services.delphi_tools_calendar import execute_calendar_tool
 
 logger = logging.getLogger(__name__)
 
@@ -279,6 +280,8 @@ async def execute_tool(name: str, args: dict, db: Session) -> str:
         # Git-Tools (B-Track) sind sync — direkt durchreichen
         if name.startswith("git_"):
             return execute_git_tool(name, args, db)
+        if name.startswith("calendar_"):
+            return execute_calendar_tool(name, args, db)
         return f"Unbekanntes Werkzeug: {name}"
     except Exception as e:
         logger.exception(f"Tool {name} failed")

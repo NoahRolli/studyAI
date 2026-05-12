@@ -103,3 +103,7 @@ TOOL_SCHEMAS = [
 from backend.services.delphi_tool_schemas_git import GIT_TOOL_SCHEMAS
 
 TOOL_SCHEMAS = TOOL_SCHEMAS + GIT_TOOL_SCHEMAS
+
+from backend.services.delphi_tool_schemas_calendar import CALENDAR_TOOL_SCHEMAS
+
+TOOL_SCHEMAS = TOOL_SCHEMAS + CALENDAR_TOOL_SCHEMAS
