@@ -74,9 +74,24 @@ def _resolve_source(db: Session, source_type: str, source_id: int) -> dict:
                 "title": note.title if note else "Gelöscht"}
     if source_type == "summary":
         summary = db.query(Summary).filter(Summary.id == source_id).first()
+        if not summary:
+            return {"type": "summary", "id": source_id, "title": "Gelöscht",
+                    "module_id": None}
+        # Fallback wenn title leer/NULL: erste Zeile/Snippet aus content
+        title = summary.title
+        if not title:
+            content = (summary.content or "").strip()
+            # Erste nicht-leere Zeile, max 60 Zeichen, Markdown-# stripped
+            for line in content.splitlines():
+                line = line.strip().lstrip("#").strip()
+                if line:
+                    title = line[:60] + ("..." if len(line) > 60 else "")
+                    break
+            if not title:
+                title = f"Summary #{source_id}"
         return {"type": "summary", "id": source_id,
-                "title": summary.title if summary else "Gelöscht",
-                "module_id": summary.module_id if summary else None}
+                "title": title,
+                "module_id": summary.module_id}
     if source_type == "chat_message":
         # JOIN llm_messages → llm_conversations für document_id + turn_index
         row = (

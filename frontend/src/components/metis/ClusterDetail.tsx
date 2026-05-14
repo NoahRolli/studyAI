@@ -1,10 +1,8 @@
 // ClusterDetail — Detail-Panel bei Klick auf Cluster-Hub oder Folder-Hub
 // Zeigt Cluster/Folder-Name, Member-Anzahl, und alle Member-Nodes
-// Klick auf Member → Navigation zur Quelle
+// Klick auf Member → onNodeSelect (oeffnet Concept-Detail-Panel)
 
 import { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useLanguage } from '../../hooks/useLanguage'
 import type { MetisGraph, MetisNode } from '../../types/metis'
 
 interface Props {
@@ -25,8 +23,6 @@ const TYPE_COLORS: Record<string, string> = {
 export default function ClusterDetail({
   clusterId, folderId, graph, onClose, onNodeSelect,
 }: Props) {
-  const { t } = useLanguage()
-  const navigate = useNavigate()
 
   // Titel und Members bestimmen
   const { title, color, members } = useMemo(() => {
@@ -53,15 +49,6 @@ export default function ClusterDetail({
     }
     return { title: '?', color: 'var(--color-primary)', members: [] }
   }, [clusterId, folderId, graph])
-
-  // Navigation zur Quelle
-  const navigateTo = (n: MetisNode) => {
-    if (n.type === 'note') navigate(`/notes?open=${n.source_id}`)
-    else if (n.type === 'entry') navigate(`/journal?entry=${n.source_id}`)
-    else if (n.type === 'summary' && n.module_id) navigate(`/modules/${n.module_id}`)
-    else navigate('/archiv')
-    onClose()
-  }
 
   return (
     <div
@@ -117,14 +104,6 @@ export default function ClusterDetail({
       </div>
 
       {/* Alle anzeigen Button */}
-      {members.length > 0 && (
-        <button
-          onClick={() => { if (members[0]) navigateTo(members[0]) }}
-          className="hud-btn w-full text-xs mt-3"
-        >
-          {t.metis.openSource || 'Quelle oeffnen'}
-        </button>
-      )}
-    </div>
+</div>
   )
 }

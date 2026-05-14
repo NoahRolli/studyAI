@@ -3,6 +3,17 @@
 // Auto-Link + Auto-Cluster nutzen SSE-Streams fuer Live-Progress
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+
+// Module-Level Cache: ueberlebt Component-Unmounts (z.B. Tab-Wechsel).
+// 5 min TTL, invalidierbar via invalidateMetisGraphCache().
+let _cachedGraph: any = null
+let _cachedAt = 0
+const _CACHE_TTL_MS = 5 * 60 * 1000
+
+export function invalidateMetisGraphCache() {
+  _cachedGraph = null
+  _cachedAt = 0
+}
 import { useTasks } from '../context/TaskContext'
 import { get, post } from './useAPI'
 import type { ConceptGraph, MetisGraph } from '../types/metis'
@@ -72,10 +83,10 @@ function connectSSE(
 }
 
 export function useMetisGraph(minSourceCount: number = 2) {
-  const [conceptGraph, setConceptGraph] = useState<ConceptGraph>({
+  const [conceptGraph, setConceptGraph] = useState<ConceptGraph>(_cachedGraph ?? {
     nodes: [], edges: [], clusters: [],
   })
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(_cachedGraph === null)
   const { tasks, runTask, updateDetail } = useTasks()
   const esRef = useRef<EventSource | null>(null)
 
@@ -130,9 +141,17 @@ export function useMetisGraph(minSourceCount: number = 2) {
     folders: (filteredGraph.folders || []).map(f => ({ id: f.id, name: f.name })),
   }), [filteredGraph])
 
-  const loadGraph = useCallback(async () => {
+  const loadGraph = useCallback(async (force = false) => {
+    // Cache-Hit: skip Netzwerk
+    if (!force && _cachedGraph && Date.now() - _cachedAt < _CACHE_TTL_MS) {
+      setConceptGraph(_cachedGraph)
+      setLoading(false)
+      return
+    }
     try {
       const data = await get<ConceptGraph>('/api/concepts/graph?min_edge_strength=0.85')
+      _cachedGraph = data
+      _cachedAt = Date.now()
       setConceptGraph(data)
     } catch (err) {
       console.error('Concept graph load failed:', err)
@@ -147,7 +166,7 @@ export function useMetisGraph(minSourceCount: number = 2) {
   const handleSync = useCallback(() => {
     runTask('metis-sync', 'Sync Concepts', async (signal) => {
       await post('/api/concepts/sync', undefined, signal)
-      await loadGraph()
+      await loadGraph(true)
     })
   }, [runTask, loadGraph])
 
@@ -158,12 +177,12 @@ export function useMetisGraph(minSourceCount: number = 2) {
         const es = connectSSE(
           '/api/concepts/auto-link/stream',
           'metis-link', updateDetail,
-          () => { esRef.current = null; loadGraph(); resolve() },
-          () => { esRef.current = null; loadGraph(); resolve() },  // cancelled = ok, alte Daten intakt
-          () => { esRef.current = null; loadGraph(); reject(new Error('Connection lost')) },
+          () => { esRef.current = null; loadGraph(true); resolve() },
+          () => { esRef.current = null; loadGraph(true); resolve() },  // cancelled = ok, alte Daten intakt
+          () => { esRef.current = null; loadGraph(true); reject(new Error('Connection lost')) },
         )
         esRef.current = es
-        signal.addEventListener('abort', () => { es.close(); esRef.current = null; loadGraph(); resolve() })
+        signal.addEventListener('abort', () => { es.close(); esRef.current = null; loadGraph(true); resolve() })
       })
     })
   }, [runTask, updateDetail, loadGraph])
@@ -175,12 +194,12 @@ export function useMetisGraph(minSourceCount: number = 2) {
         const es = connectSSE(
           '/api/concepts/auto-cluster/stream',
           'metis-cluster', updateDetail,
-          () => { esRef.current = null; loadGraph(); resolve() },
-          () => { esRef.current = null; loadGraph(); resolve() },  // cancelled = ok, alte Daten intakt
-          () => { esRef.current = null; loadGraph(); reject(new Error('Connection lost')) },
+          () => { esRef.current = null; loadGraph(true); resolve() },
+          () => { esRef.current = null; loadGraph(true); resolve() },  // cancelled = ok, alte Daten intakt
+          () => { esRef.current = null; loadGraph(true); reject(new Error('Connection lost')) },
         )
         esRef.current = es
-        signal.addEventListener('abort', () => { es.close(); esRef.current = null; loadGraph(); resolve() })
+        signal.addEventListener('abort', () => { es.close(); esRef.current = null; loadGraph(true); resolve() })
       })
     })
   }, [runTask, updateDetail, loadGraph])

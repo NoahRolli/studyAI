@@ -64,7 +64,7 @@ export default function ConceptDetailPanel({
   // Chat-Message aus separater ChatSources-Liste (hat document_id + turn_index direkt)
   const openChatSource = (c: ChatSource) => {
     const hl = detail?.name ? `?highlight=${encodeURIComponent(detail.name)}` : ''
-    window.open(`/archiv/llm-chat/${c.document_id}${hl}#msg-${c.turn_index}`, '_blank')
+    navigate(`/archiv/llm-chat/${c.document_id}${hl}#msg-${c.turn_index}`)
   }
 
 

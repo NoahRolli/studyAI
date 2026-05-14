@@ -22,7 +22,6 @@ export function getSourceRoute(
       path: `/archiv/llm-chat/${source.document_id}`,
       search: hl,
       hash: `#msg-${source.turn_index}`,
-      newTab: true,
     }
   }
 
