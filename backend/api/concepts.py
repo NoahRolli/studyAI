@@ -60,15 +60,45 @@ def _concept_to_dict(concept: Concept, source_count: int = 0) -> dict:
 
 
 def _resolve_source(db: Session, source_type: str, source_id: int) -> dict:
-    """Quell-Dokument auflösen (Name + Typ)."""
+    """Quell-Dokument auflösen — liefert alles fürs Routing im Frontend.
+
+    Pro Typ:
+      note          → {type, id, title}
+      summary       → {type, id, title, module_id}
+      chat_message  → {type, id, title, document_id, turn_index, preview, role}
+      sonst         → {type, id, title}
+    """
     if source_type == "note":
         note = db.query(Note).filter(Note.id == source_id).first()
         return {"type": "note", "id": source_id,
                 "title": note.title if note else "Gelöscht"}
-    elif source_type == "summary":
+    if source_type == "summary":
         summary = db.query(Summary).filter(Summary.id == source_id).first()
         return {"type": "summary", "id": source_id,
-                "title": summary.title if summary else "Gelöscht"}
+                "title": summary.title if summary else "Gelöscht",
+                "module_id": summary.module_id if summary else None}
+    if source_type == "chat_message":
+        # JOIN llm_messages → llm_conversations für document_id + turn_index
+        row = (
+            db.query(
+                LLMMessage.turn_index,
+                LLMMessage.role,
+                LLMMessage.text,
+                LLMConversation.document_id,
+                LLMConversation.title,
+            )
+            .join(LLMConversation, LLMMessage.conversation_id == LLMConversation.id)
+            .filter(LLMMessage.id == source_id)
+            .first()
+        )
+        if not row:
+            return {"type": "chat_message", "id": source_id, "title": "Gelöscht"}
+        return {"type": "chat_message", "id": source_id,
+                "title": row.title or "(ohne Titel)",
+                "document_id": row.document_id,
+                "turn_index": row.turn_index,
+                "preview": (row.text or "")[:140],
+                "role": row.role}
     return {"type": source_type, "id": source_id, "title": "Unbekannt"}
 
 

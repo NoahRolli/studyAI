@@ -81,10 +81,16 @@ export interface ConceptEdge {
 
 
 export interface ConceptSource {
-  type: string
+  type: string                  // 'note' | 'summary' | 'chat_message' | 'entry'
   id: number
   title: string
   relevance: number
+  // Optional je nach Typ (vom Backend angereichert):
+  module_id?: number | null     // bei summary
+  document_id?: number          // bei chat_message
+  turn_index?: number           // bei chat_message
+  preview?: string              // bei chat_message
+  role?: string                 // bei chat_message
 }
 
 export interface ChatSource {

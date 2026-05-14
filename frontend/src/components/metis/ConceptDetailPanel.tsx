@@ -4,7 +4,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { get } from '../../hooks/useAPI'
-import type { ConceptDetail, ChatSource, ChatSourcesResponse } from '../../types/metis'
+import type { ConceptDetail, ChatSource, ChatSourcesResponse, ConceptSource } from '../../types/metis'
+import { getSourceRoute, sourceRouteToUrl } from '../../utils/metisSourceRouting'
 
 interface Props {
   conceptId: number
@@ -50,18 +51,20 @@ export default function ConceptDetailPanel({
     return () => { cancelled = true }
   }, [conceptId])
 
-  // Klick auf Chat-Message → LLMChatPage mit Anchor in neuem Tab
-  const openChatMessage = (doc_id: number, turn_index: number) => {
-    window.open(`/archiv/llm-chat/${doc_id}#msg-${turn_index}`, '_blank')
+  // Zentrales Routing: ConceptSource → Navigation + Highlight des Concept-Namens.
+  // chat_message öffnet in neuem Tab (User behält Metis-Kontext).
+  const openSource = (s: ConceptSource) => {
+    const route = getSourceRoute(s, detail?.name)
+    if (!route) return
+    const url = sourceRouteToUrl(route)
+    if (route.newTab) window.open(url, '_blank')
+    else navigate(url)
   }
 
-  // Navigation zur Quelle
-  const navigateToSource = (type: string, id: number) => {
-    if (type === 'note') navigate(`/notes?open=${id}`)
-    else if (type === 'summary') navigate('/archiv')
-    else if (type === 'entry') navigate(`/journal?entry=${id}`)
-    // chat_message wird separat in der ChatSources-Section behandelt,
-    // da es document_id + turn_index braucht (nicht nur source_id)
+  // Chat-Message aus separater ChatSources-Liste (hat document_id + turn_index direkt)
+  const openChatSource = (c: ChatSource) => {
+    const hl = detail?.name ? `?highlight=${encodeURIComponent(detail.name)}` : ''
+    window.open(`/archiv/llm-chat/${c.document_id}${hl}#msg-${c.turn_index}`, '_blank')
   }
 
 
@@ -104,14 +107,20 @@ export default function ConceptDetailPanel({
               <div className="space-y-1">
                 {detail.sources.map((s, i) => (
                   <button key={i}
-                    onClick={() => navigateToSource(s.type, s.id)}
+                    onClick={() => openSource(s)}
                     className="flex items-center gap-2 text-xs w-full text-left hover:text-[var(--color-accent-cyan)] transition-colors">
                     <span className="px-1.5 py-0.5 rounded text-[10px] uppercase"
                       style={{
-                        background: s.type === 'note'
-                          ? 'rgba(125, 212, 163, 0.15)'
-                          : 'rgba(212, 165, 116, 0.15)',
-                        color: s.type === 'note' ? '#7dd4a3' : '#d4a574'
+                        background:
+                          s.type === 'note' ? 'rgba(125, 212, 163, 0.15)' :
+                          s.type === 'summary' ? 'rgba(212, 165, 116, 0.15)' :
+                          s.type === 'chat_message' ? 'rgba(0, 212, 255, 0.15)' :
+                          'rgba(168, 85, 247, 0.15)',
+                        color:
+                          s.type === 'note' ? '#7dd4a3' :
+                          s.type === 'summary' ? '#d4a574' :
+                          s.type === 'chat_message' ? '#00d4ff' :
+                          '#a855f7',
                       }}>
                       {s.type}
                     </span>
@@ -131,7 +140,7 @@ export default function ConceptDetailPanel({
               <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                 {chatSources.map((c) => (
                   <button key={c.message_id}
-                    onClick={() => openChatMessage(c.document_id, c.turn_index)}
+                    onClick={() => openChatSource(c)}
                     className="block w-full text-left p-2 rounded border border-[var(--color-border)] hover:border-[var(--color-accent-cyan)] transition-colors">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="px-1.5 py-0.5 rounded text-[10px] uppercase"
