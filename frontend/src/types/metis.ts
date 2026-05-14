@@ -87,7 +87,7 @@ export interface ConceptSource {
   relevance: number
   // Optional je nach Typ (vom Backend angereichert):
   module_id?: number | null     // bei summary
-  document_id?: number          // bei chat_message
+  document_id?: number | null   // bei chat_message ODER bei summary (Dokument-ID)
   turn_index?: number           // bei chat_message
   preview?: string              // bei chat_message
   role?: string                 // bei chat_message

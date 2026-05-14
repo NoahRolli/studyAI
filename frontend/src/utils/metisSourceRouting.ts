@@ -30,11 +30,20 @@ export function getSourceRoute(
     return { path: '/notes', search: `?open=${source.id}${sep}${hl.slice(1)}` }
   }
 
-  if (source.type === 'summary' && source.module_id != null) {
+  if (source.type === 'summary') {
     const sep = hl ? '&' : ''
-    return {
-      path: `/modules/${source.module_id}`,
-      search: `?summary=${source.id}${sep}${hl.slice(1)}`,
+    // Primaer ueber Modul, falls vorhanden — sonst Fallback auf Archiv-Dokument
+    if (source.module_id != null) {
+      return {
+        path: `/modules/${source.module_id}`,
+        search: `?summary=${source.id}${sep}${hl.slice(1)}`,
+      }
+    }
+    if (source.document_id != null) {
+      return {
+        path: `/archiv`,
+        search: `?document=${source.document_id}${sep}${hl.slice(1)}`,
+      }
     }
   }
 
