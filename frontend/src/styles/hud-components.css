@@ -241,3 +241,33 @@ select.hud-input option {
   background: rgba(208, 212, 218, 0.08);
   border-color: var(--color-border-glow);
 }
+
+/* ============================================================
+   Highlight (Metis → Source-Sprung)
+   ============================================================ */
+mark.pallas-highlight {
+  background: var(--color-highlight-bg);
+  color: var(--color-highlight-fg);
+  border-radius: 2px;
+  padding: 0 2px;
+  box-shadow: 0 0 6px var(--color-highlight-glow);
+  font-weight: 500;
+}
+/* Default (HUD = hell-cyan) */
+:root {
+  --color-highlight-bg: rgba(0, 212, 255, 0.20);
+  --color-highlight-fg: var(--color-accent-cyan, #00d4ff);
+  --color-highlight-glow: rgba(0, 212, 255, 0.55);
+}
+/* HUD Dark — etwas saturierter */
+[data-theme="hudDark"] {
+  --color-highlight-bg: rgba(0, 212, 255, 0.18);
+  --color-highlight-fg: #6ce4ff;
+  --color-highlight-glow: rgba(0, 212, 255, 0.65);
+}
+/* Dark — klassisches Gelb */
+[data-theme="dark"] {
+  --color-highlight-bg: #ffeb3b;
+  --color-highlight-fg: #1a1a1a;
+  --color-highlight-glow: rgba(255, 235, 59, 0.4);
+}

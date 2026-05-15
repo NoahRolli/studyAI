@@ -7,6 +7,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { get, post, put, del } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
+import { useHighlight } from '../hooks/useHighlight'
+import HighlightDismissBanner from '../components/HighlightDismissBanner'
 import NotesList from '../components/notes/NotesList'
 import NoteEditor from '../components/notes/NoteEditor'
 import BacklinksPanel from '../components/notes/BacklinksPanel'
@@ -137,18 +139,27 @@ function NotesPage() {
 
   // --- Lifecycle ---
   useEffect(() => { loadNotes() }, [])
+  // Highlight aus ?highlight=
+  const containerRef = useRef<HTMLDivElement>(null)
+  const { active: hlActive, term: hlTerm, clear: hlClear } = useHighlight(containerRef)
+
   useEffect(() => {
     const openId = searchParams.get("open")
+    const searchTitle = searchParams.get("search")
+    const hl = searchParams.get("highlight")
     if (openId) {
       loadNote(Number(openId))
-      setSearchParams({}, { replace: true })
+      // 'open' verbrauchen, 'highlight' beibehalten (wird von useHighlight gelesen)
+      const next = new URLSearchParams()
+      if (hl) next.set("highlight", hl)
+      setSearchParams(next, { replace: true })
       return
     }
-    // ?search=Titel — WikiLink-Einstieg von anderen Modulen (z.B. Archiv)
-    const searchTitle = searchParams.get("search")
     if (searchTitle && notes.length > 0) {
       handleWikiLinkClick(searchTitle)
-      setSearchParams({}, { replace: true })
+      const next = new URLSearchParams()
+      if (hl) next.set("highlight", hl)
+      setSearchParams(next, { replace: true })
     }
   }, [searchParams, notes])
   useEffect(() => {
@@ -158,8 +169,9 @@ function NotesPage() {
   // --- Fullscreen Editor ---
   if (fullscreen && selectedNote) {
     return (
-      <div className="fixed inset-0 z-30 flex flex-col hud-grid-bg"
+      <div ref={containerRef} className="fixed inset-0 z-30 flex flex-col hud-grid-bg"
         style={{ backgroundColor: 'var(--color-bg-deep)' }}>
+        {hlActive && hlTerm && <HighlightDismissBanner term={hlTerm} onDismiss={hlClear} />}
         {/* Fullscreen Header */}
         <div className="flex items-center justify-between px-4 py-2 border-b"
           style={{ borderColor: 'var(--color-border)' }}>
@@ -189,6 +201,7 @@ function NotesPage() {
             onTitleChange={handleTitleChange}
             onContentChange={handleContentChange}
             onWikiLinkClick={handleWikiLinkClick}
+            readOnly={hlActive}
           />
         </div>
       </div>
@@ -197,7 +210,8 @@ function NotesPage() {
 
   // --- Normales Layout ---
   return (
-    <div className="animate-fade-in flex gap-0 md:gap-6 h-[calc(100vh-3rem)]">
+    <div ref={containerRef} className="animate-fade-in flex gap-0 md:gap-6 h-[calc(100vh-3rem)]">
+      {hlActive && hlTerm && <HighlightDismissBanner term={hlTerm} onDismiss={hlClear} />}
       {/* Liste */}
       <div className={`${selectedNote ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-72 md:flex-shrink-0`}>
         <NotesList
@@ -248,6 +262,7 @@ function NotesPage() {
               onTitleChange={handleTitleChange}
               onContentChange={handleContentChange}
               onWikiLinkClick={handleWikiLinkClick}
+              readOnly={hlActive}
             />
             <BacklinksPanel noteId={selectedNote.id} onNavigate={loadNote} />
             <NoteAIPanel noteId={selectedNote.id} onNavigate={loadNote} />

@@ -25,6 +25,10 @@ interface NoteEditorProps {
   onTitleChange: (title: string) => void
   onContentChange: (content: string) => void
   onWikiLinkClick: (title: string) => void
+  // Wenn true: Editor read-only (TipTap contenteditable=false).
+  // Wird gesetzt waehrend ?highlight= aktiv ist, sonst kommt der DOM-Walker
+  // nicht in den Editor-Body.
+  readOnly?: boolean
 }
 
 // Zählt checked TaskItems im HTML-String
@@ -35,6 +39,7 @@ function countChecked(html: string): number {
 function NoteEditor({
   title, content, saving, savedMsg,
   onTitleChange, onContentChange, onWikiLinkClick,
+  readOnly = false,
 }: NoteEditorProps) {
   const { t } = useLanguage()
   const [collapsed, setCollapsed] = useState(true)
@@ -42,6 +47,7 @@ function NoteEditor({
 
   // TipTap Editor Instanz mit Extensions
   const editor = useEditor({
+    editable: !readOnly,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
@@ -67,6 +73,11 @@ function NoteEditor({
       },
     },
   })
+
+  // ReadOnly-Aenderung zur Laufzeit nachziehen (Highlight ein/aus)
+  useEffect(() => {
+    if (editor) editor.setEditable(!readOnly)
+  }, [editor, readOnly])
 
   // Content synchronisieren wenn andere Notiz gewählt wird
   useEffect(() => {

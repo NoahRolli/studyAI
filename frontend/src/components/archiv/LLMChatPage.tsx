@@ -13,6 +13,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { get } from '../../hooks/useAPI'
 import type { LLMConversationDetail, LLMMessage } from '../../types/models'
+import { useHighlight } from '../../hooks/useHighlight'
+import HighlightDismissBanner from '../HighlightDismissBanner'
 
 // Eine einzelne Message im Viewer
 function MessageBlock({ msg }: { msg: LLMMessage }) {
@@ -166,12 +168,18 @@ export default function LLMChatPage() {
   }
 
   if (!detail) return null
+  // Highlight aus ?highlight= URL-Param (von Metis-Source-Klick).
+  // containerRef existiert bereits — wird beim Mount aktiv.
+  const { active: hlActive, term: hlTerm, clear: hlClear } = useHighlight(containerRef)
+
 
   const conv = detail.conversation
   const title = conv.title || '(ohne Titel)'
 
   return (
     <div ref={containerRef} className="p-6 max-w-4xl mx-auto">
+      {hlActive && hlTerm && <HighlightDismissBanner term={hlTerm} onDismiss={hlClear} />}
+
       {/* Breadcrumb-Header */}
       <div className="mb-6">
         <Link

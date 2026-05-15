@@ -2,14 +2,16 @@
 // Zeigt Dokumente, ermöglicht Upload (Button + Drag & Drop),
 // Zusammenfassung generieren und Mindmap öffnen
 
-import { useState, useEffect, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { get, post, del } from '../hooks/useAPI'
 import { useLanguage } from '../hooks/useLanguage'
 import type { Module, Document, Summary } from '../types/models'
 import DocumentCard from '../components/archiv/DocumentCard'
 import SortDropdown from '../components/SortDropdown'
 import { useDocumentSort } from '../hooks/useDocumentSort'
+import { useHighlight } from '../hooks/useHighlight'
+import HighlightDismissBanner from '../components/HighlightDismissBanner'
 
 function ModuleDetail() {
   const { id } = useParams<{ id: string }>()
@@ -23,6 +25,11 @@ function ModuleDetail() {
   const [generating, setGenerating] = useState<number | null>(null)
   const [generatingMindmap, setGeneratingMindmap] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  const [searchParams] = useSearchParams()
+  const focusSummaryId = searchParams.get('summary')
+  const containerRef = useRef<HTMLDivElement>(null)
+  const { active: hlActive, term: hlTerm, clear: hlClear } = useHighlight(containerRef)
+
   const docSort = useDocumentSort(documents, {
     dateField: "uploaded_at",
     nameField: (d) => d.display_name || d.filename,
@@ -53,6 +60,18 @@ function ModuleDetail() {
   }, [id, t])
 
   useEffect(() => { if (id) loadModule() }, [id, loadModule])
+
+  // Scroll zu der DocumentCard die das ?summary=ID enthaelt
+  useEffect(() => {
+    if (!focusSummaryId || documents.length === 0) return
+    const sid = Number(focusSummaryId)
+    const doc = documents.find(d => summaries[d.id]?.id === sid)
+    if (!doc) return
+    // Card via data-doc-id finden (wird unten gesetzt)
+    const el = document.querySelector<HTMLElement>(`[data-doc-id="${doc.id}"]`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [focusSummaryId, documents, summaries])
+
 
   // --- Upload (Button + DnD) ---
   async function uploadFile(file: File) {
@@ -131,10 +150,12 @@ function ModuleDetail() {
   )
 
   return (
-    <div className="animate-fade-in"
+    <div ref={containerRef} className="animate-fade-in"
       onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}>
+      {hlActive && hlTerm && <HighlightDismissBanner term={hlTerm} onDismiss={hlClear} />}
+
 
       <Link to="/archiv" className="text-xs mb-4 inline-block transition-colors"
         style={{ color: 'var(--color-text-muted)' }}>
@@ -185,12 +206,14 @@ function ModuleDetail() {
 
       <div className="space-y-4">
         {docSort.sorted.map((doc) => (
-          <DocumentCard key={doc.id} doc={doc} summary={summaries[doc.id]}
-            generating={generating === doc.id}
-            generatingMindmap={generatingMindmap === summaries[doc.id]?.id}
-            onSummarize={() => generateSummary(doc.id)}
-            onMindmap={() => summaries[doc.id] && openMindmap(summaries[doc.id].id)}
-            onDelete={() => deleteDocument(doc.id)} />
+          <div key={doc.id} data-doc-id={doc.id}>
+            <DocumentCard doc={doc} summary={summaries[doc.id]}
+              generating={generating === doc.id}
+              generatingMindmap={generatingMindmap === summaries[doc.id]?.id}
+              onSummarize={() => generateSummary(doc.id)}
+              onMindmap={() => summaries[doc.id] && openMindmap(summaries[doc.id].id)}
+              onDelete={() => deleteDocument(doc.id)} />
+          </div>
         ))}
       </div>
     </div>
