@@ -20,6 +20,7 @@ import Archiv from './pages/Archiv'
 import ModuleDetail from './pages/ModuleDetail'
 import CalendarPage from './pages/CalendarPage'
 import NotesPage from './pages/NotesPage'
+import SportPage from './pages/SportPage'
 import MetisPage from './pages/MetisPage'
 import OntologyPage from './pages/OntologyPage'
 import DelphiPage from './pages/DelphiPage'
@@ -45,6 +46,7 @@ function App() {
               <Route path="modules/:id" element={<ModuleDetail />} />
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="notes" element={<NotesPage />} />
+              <Route path="sport" element={<SportPage />} />
               <Route path="metis" element={<MetisPage />} />
               <Route path="ontology" element={<OntologyPage />} />
               <Route path="delphi" element={<DelphiPage />} />
