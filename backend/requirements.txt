@@ -27,6 +27,10 @@ anthropic==0.86.0           # Claude API SDK (AsyncAnthropic + Tool-Use)
 google-genai==1.56.0        # Gemini API SDK (Free-Tier Tool-Use)
 httpx==0.28.1               # HTTP-Client (für Ollama API Calls, google-genai braucht >=0.28.1)
 
+# --- iCloud Sync ---
+caldav==1.4.0               # CalDAV-Client fuer iCloud-Spiegelung
+icalendar==6.1.0            # iCal-Parser (VEVENT, RRULE, etc.)
+
 # --- NLP / Language Detection ---
 langdetect==1.0.9           # Inhalts-Sprache erkennen (Journal-Titel etc.)
 

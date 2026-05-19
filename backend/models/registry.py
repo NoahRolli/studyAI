@@ -18,6 +18,7 @@ from backend.models.summary import Summary  # noqa: F401
 from backend.models.mindmap_node import MindmapNode  # noqa: F401
 from backend.models.folder import Folder  # noqa: F401
 from backend.models.calendar_event import CalendarEvent  # noqa: F401
+from backend.models.icloud import ICloudCalendar  # noqa: F401
 from backend.models.sport_entry import SportEntry  # noqa: F401
 from backend.models.note import Note  # noqa: F401
 from backend.models.relation import RelationType  # noqa: F401

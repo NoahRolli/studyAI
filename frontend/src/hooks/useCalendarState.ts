@@ -18,6 +18,10 @@ export interface CalendarEvent {
   recurrence_end: string | null
   created_at: string
   updated_at: string
+  source?: string
+  is_readonly?: boolean
+  external_calendar_id?: number | null
+  location?: string | null
 }
 
 export default function useCalendarState() {

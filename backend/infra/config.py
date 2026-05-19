@@ -37,6 +37,13 @@ DATABASE_URL = f"sqlite:///{DB_PATH}"
 PROVIDERS = ["ollama_local", "ollama_server", "groq"]
 DEFAULT_PROVIDER = os.environ.get("PALLAS_DEFAULT_PROVIDER", "groq")
 
+# --- iCloud Sync (Mai 2026) ---
+ICLOUD_APPLE_ID = os.environ.get("ICLOUD_APPLE_ID", "")
+ICLOUD_APP_PASSWORD = os.environ.get("ICLOUD_APP_PASSWORD", "")
+ICLOUD_SYNC_INTERVAL_MIN = int(os.environ.get("ICLOUD_SYNC_INTERVAL_MIN", "30"))
+ICLOUD_SYNC_WINDOW_MONTHS = int(os.environ.get("ICLOUD_SYNC_WINDOW_MONTHS", "6"))
+ICLOUD_ENABLED = os.environ.get("ICLOUD_ENABLED", "false").lower() == "true"
+
 # Legacy: wird noch von ai_service.py genutzt (claude/ollama Switch für Study)
 AI_PROVIDER = os.environ.get("PALLAS_AI_PROVIDER", "ollama")
 

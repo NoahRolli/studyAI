@@ -63,6 +63,7 @@ from backend.api.concepts_gaps import router as concepts_gaps_router
 from backend.api.concepts_merge import router as concepts_merge_router
 from backend.api.settings import router as settings_router
 from backend.api.weather import router as weather_router
+from backend.api.icloud_admin import router as icloud_admin_router
 from backend.api.llm import router as llm_router
 # Alle Models importieren, damit SQLAlchemy-Relationships auflösen
 import backend.models.registry  # noqa: F401
@@ -125,6 +126,19 @@ def health():
     return {"status": "ok"}
 
 
+
+# iCloud Background-Scheduler (alle 30min sync)
+@app.on_event("startup")
+async def _icloud_startup():
+    from backend.services.icloud_scheduler import start_scheduler
+    start_scheduler()
+
+
+@app.on_event("shutdown")
+async def _icloud_shutdown():
+    from backend.services.icloud_scheduler import stop_scheduler
+    await stop_scheduler()
+
 # API-Routen registrieren
 app.include_router(settings_router)
 app.include_router(settings_router)
@@ -176,6 +190,7 @@ app.include_router(concepts_link_stream_router)
 app.include_router(concepts_link_router)
 app.include_router(llm_router)
 app.include_router(weather_router)
+app.include_router(icloud_admin_router)
 
 # Static Files — gebautes Frontend servieren (nur in Production)
 if _HAS_FRONTEND:

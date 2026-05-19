@@ -71,6 +71,8 @@ def update_event(event_id: int, data: EventUpdate, db: Session = Depends(get_db)
     event = db.query(CalendarEvent).filter(CalendarEvent.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event nicht gefunden")
+    if event.is_readonly:
+        raise HTTPException(status_code=403, detail="iCloud-Events sind read-only.")
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(event, key, value)
     db.commit()
@@ -84,6 +86,8 @@ def delete_event(event_id: int, db: Session = Depends(get_db)):
     event = db.query(CalendarEvent).filter(CalendarEvent.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event nicht gefunden")
+    if event.is_readonly:
+        raise HTTPException(status_code=403, detail="iCloud-Events sind read-only.")
     db.delete(event)
     db.commit()
     return {"detail": "Event gelöscht"}

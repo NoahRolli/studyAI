@@ -1,10 +1,16 @@
 // CalendarDayDetail — Event-Liste + Sport + Git-Commits für selektierten Tag
 // Events mit Farb-Indikator, Sport mit Typ/Dauer, Git mit Commits/Arbeitszeit
+//
+// Phase 1E: iCloud-Badge fuer Events mit source='icloud'
+// - Kleine Pill "iCloud · <Calendar-Name>"
+// - Delete-Button versteckt (Backend wuerde 403 zurueckgeben)
+// - Klick auf Title oeffnet read-only-Form (siehe CalendarEventForm)
 
 import { useLanguage } from '../../hooks/useLanguage'
 import type { CalendarEvent } from '../../hooks/useCalendarState'
 import type { SportEntry } from '../../hooks/useSportEntries'
 import type { GitDay } from '../../hooks/useGitCommits'
+import { useICloudCalendars } from '../../hooks/useICloudCalendars'
 
 // Farb-Map für Event-Punkte
 const COLOR_MAP: Record<string, string> = {
@@ -34,6 +40,7 @@ export default function CalendarDayDetail({
   onNewSport, onEditSport, onDeleteSport,
 }: Props) {
   const { t } = useLanguage()
+  const { nameById } = useICloudCalendars()
 
   const formatted = new Date(date + 'T00:00').toLocaleDateString('de-CH', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -73,43 +80,81 @@ export default function CalendarDayDetail({
       {/* Events */}
       {events.length > 0 && (
         <div className="flex flex-col gap-2">
-          {events.map((evt) => (
-            <div key={evt.id}
-              className="flex items-center gap-2 p-2 rounded-md
-                transition-all duration-200 hover:bg-[var(--color-hover-bg)]">
-              <div className="w-1.5 h-8 rounded-full flex-shrink-0"
-                style={{ backgroundColor: COLOR_MAP[evt.color] || COLOR_MAP.cyan }} />
-              <button onClick={() => onEditEvent(evt)}
-                className="flex-1 min-w-0 text-left">
-                <span className="text-xs block truncate"
-                  style={{ color: 'var(--color-text-primary)' }}>{evt.title}</span>
-                {!evt.all_day && (
-                  <span className="text-xs"
-                    style={{ color: 'var(--color-text-muted)', fontSize: '0.65rem' }}>
-                    {new Date(evt.start_time).toLocaleTimeString('de-CH', {
-                      hour: '2-digit', minute: '2-digit',
-                    })}
+          {events.map((evt) => {
+            const isICloud = evt.source === 'icloud'
+            const readOnly = isICloud || evt.is_readonly === true
+            const calName = isICloud ? nameById(evt.external_calendar_id) : null
+            return (
+              <div key={evt.id}
+                className="flex items-center gap-2 p-2 rounded-md
+                  transition-all duration-200 hover:bg-[var(--color-hover-bg)]">
+                <div className="w-1.5 h-8 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: COLOR_MAP[evt.color] || COLOR_MAP.cyan }} />
+                <button onClick={() => onEditEvent(evt)}
+                  className="flex-1 min-w-0 text-left">
+                  <span className="text-xs block truncate"
+                    style={{ color: 'var(--color-text-primary)' }}>{evt.title}</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {!evt.all_day && (
+                      <span className="text-xs"
+                        style={{ color: 'var(--color-text-muted)', fontSize: '0.65rem' }}>
+                        {new Date(evt.start_time).toLocaleTimeString('de-CH', {
+                          hour: '2-digit', minute: '2-digit',
+                        })}
+                      </span>
+                    )}
+                    {evt.location && (
+                      <span className="text-xs"
+                        style={{ color: 'var(--color-text-muted)', fontSize: '0.65rem' }}>
+                        · {evt.location}
+                      </span>
+                    )}
+                    {isICloud && (
+                      <span className="text-xs px-1.5 py-0.5 rounded inline-flex items-center gap-1"
+                        style={{
+                          color: 'var(--color-primary)',
+                          backgroundColor: 'var(--color-active-bg)',
+                          border: '1px solid var(--color-border)',
+                          fontSize: '0.55rem',
+                          letterSpacing: '0.05em',
+                          textTransform: 'uppercase',
+                        }}
+                        title={`Quelle: iCloud-Kalender "${calName}"`}>
+                        iCloud · {calName}
+                      </span>
+                    )}
+                  </div>
+                </button>
+                {evt.recurrence !== 'none' && !isICloud && (
+                  <span className="text-xs px-1.5 py-0.5 rounded"
+                    style={{ color: 'var(--color-text-muted)',
+                      backgroundColor: 'var(--color-hover-bg)', fontSize: '0.6rem' }}>
+                    ↻
                   </span>
                 )}
-              </button>
-              {evt.recurrence !== 'none' && (
-                <span className="text-xs px-1.5 py-0.5 rounded"
-                  style={{ color: 'var(--color-text-muted)',
-                    backgroundColor: 'var(--color-hover-bg)', fontSize: '0.6rem' }}>
-                  ↻
-                </span>
-              )}
-              <button onClick={() => onDeleteEvent(evt)}
-                className="flex-shrink-0 p-1 rounded transition-all duration-200
-                  hover:bg-[rgba(255,59,92,0.1)]"
-                title={t.mainCalendar.deleteEvent}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M3 3l8 8M11 3l-8 8" stroke="var(--color-danger)"
-                    strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </button>
-            </div>
-          ))}
+                {!readOnly && (
+                  <button onClick={() => onDeleteEvent(evt)}
+                    className="flex-shrink-0 p-1 rounded transition-all duration-200
+                      hover:bg-[rgba(255,59,92,0.1)]"
+                    title={t.mainCalendar.deleteEvent}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M3 3l8 8M11 3l-8 8" stroke="var(--color-danger)"
+                        strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                )}
+                {readOnly && (
+                  <span className="flex-shrink-0 p-1" title="Read-only">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M4 7V5a3 3 0 116 0v2M3 7h8v5H3V7z"
+                        stroke="var(--color-text-muted)"
+                        strokeWidth="1.2" fill="none" />
+                    </svg>
+                  </span>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 

@@ -1,12 +1,15 @@
 // CalendarPage — Hauptkalender mit Monatsansicht + Sport + Git Tracker
 // Sport-Toggle + Git-Toggle in localStorage
 // Sport = grüner Punkt, Git = lila Punkt im Grid
+//
+// Phase 1E: readOnly-Mode an EventForm fuer iCloud-Events durchreichen
 
 import { useState } from 'react'
 import { useLanguage } from '../hooks/useLanguage'
 import useCalendarState from '../hooks/useCalendarState'
 import useSportEntries from '../hooks/useSportEntries'
 import { useGitCommits } from '../hooks/useGitCommits'
+import { useICloudCalendars } from '../hooks/useICloudCalendars'
 import CalendarEventForm, { emptyFormData } from '../components/CalendarEventForm'
 import CalendarDayDetail from '../components/calendar/CalendarDayDetail'
 import SportModal from '../components/sport/SportModal'
@@ -24,6 +27,7 @@ export function CalendarPage() {
   const cal = useCalendarState()
   const sport = useSportEntries(cal.month, cal.year)
   const gitCommits = useGitCommits(cal.month, cal.year)
+  const { nameById } = useICloudCalendars()
   const [sportModalOpen, setSportModalOpen] = useState(false)
   const [editSport, setEditSport] = useState<SportEntry | null>(null)
   const [hoveredDate, setHoveredDate] = useState<string | null>(null)
@@ -63,6 +67,15 @@ export function CalendarPage() {
     }
     return { background: 'var(--color-bg-surface)', border: '1px solid transparent' }
   }
+
+  // Phase 1E: ist das aktuell editierte Event ein iCloud-Event?
+  const editingICloud = cal.editEvent?.source === 'icloud'
+  const editingICloudCalName = editingICloud
+    ? nameById(cal.editEvent?.external_calendar_id)
+    : null
+  const editingICloudLocation = editingICloud
+    ? cal.editEvent?.location || null
+    : null
 
   return (
     <div className="animate-fade-in">
@@ -143,13 +156,19 @@ export function CalendarPage() {
               }}>{day}</span>
 
               <div className="flex flex-wrap gap-1 mt-1">
-                {dayEvts.slice(0, 4).map((evt) => (
-                  <div key={evt.id} className="w-2 h-2 rounded-full"
-                    style={{
-                      backgroundColor: COLOR_MAP[evt.color] || COLOR_MAP.cyan,
-                      boxShadow: `0 0 6px ${COLOR_MAP[evt.color] || COLOR_MAP.cyan}`,
-                    }} />
-                ))}
+                {dayEvts.slice(0, 4).map((evt) => {
+                  const isICloud = evt.source === 'icloud'
+                  const baseColor = COLOR_MAP[evt.color] || COLOR_MAP.cyan
+                  return (
+                    <div key={evt.id} className="w-2 h-2 rounded-full"
+                      style={{
+                        backgroundColor: isICloud ? 'transparent' : baseColor,
+                        border: isICloud ? `1.5px solid ${baseColor}` : 'none',
+                        boxShadow: `0 0 6px ${baseColor}`,
+                      }}
+                      title={isICloud ? 'iCloud-Event' : evt.title} />
+                  )
+                })}
                 {dayEvts.length > 4 && (
                   <span className="text-xs"
                     style={{ color: 'var(--color-text-muted)', fontSize: '0.5rem' }}>
@@ -213,6 +232,9 @@ export function CalendarPage() {
               onSave={cal.handleSave}
               onCancel={() => { cal.setModalOpen(false); cal.setEditEvent(null) }}
               onDelete={cal.editEvent ? cal.handleDelete : undefined}
+              readOnly={editingICloud}
+              readOnlySource={editingICloud ? `iCloud · ${editingICloudCalName}` : undefined}
+              readOnlyLocation={editingICloudLocation}
             />
           </div>
         </div>
