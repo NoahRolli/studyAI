@@ -20,6 +20,7 @@ from backend.api.folders import router as folders_router
 from backend.api.calendar import router as calendar_router
 from backend.api.sport import router as sport_router
 from backend.api.insights_sport import router as insights_sport_router
+from backend.api.sport_stats import router as sport_stats_router
 from backend.api.notes import router as notes_router
 from backend.journal.api.auth import router as journal_auth_router
 from backend.journal.api.entries import router as journal_entries_router
@@ -149,6 +150,7 @@ app.include_router(summaries_router)
 app.include_router(mindmap_router)
 app.include_router(folders_router)
 app.include_router(calendar_router)
+app.include_router(sport_stats_router)
 app.include_router(sport_router)
 app.include_router(insights_sport_router)
 app.include_router(notes_router)
