@@ -78,6 +78,13 @@ export default function InstancedEdges({ edges }: InstancedEdgesProps) {
     blending: THREE.AdditiveBlending,
   }), [])
 
+  // === GPU-Ressourcen-Cleanup ===
+  // useMemo allein disposed Three.js-Objekte nicht. Ohne dispose() bleiben
+  // BufferGeometry + ShaderMaterial auf der GPU haengen, der Browser
+  // wirft irgendwann den GL-Context weg ("Context Lost") -> React #310.
+  useEffect(() => () => { geometry.dispose() }, [geometry])
+  useEffect(() => () => { material.dispose() }, [material])
+
   useEffect(() => {
     const count = Math.min(edges.length, MAX_EDGES)
 

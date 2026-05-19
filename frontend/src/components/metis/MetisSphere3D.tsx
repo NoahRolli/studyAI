@@ -58,6 +58,34 @@ const EDGE_ALPHA_HUB_HIGHLIGHT = 0.7   // Hub-Strahlen highlighted
 const EDGE_ALPHA_FOLDER_IDLE = 0.08    // Folder-Hub-Verbindungen idle
 const EDGE_ALPHA_FOLDER_HIGHLIGHT = 0.6
 
+// @ts-expect-error temporaer deaktiviert fuer Klick-Bug-Diagnose
+// WebGL Context-Lost Guard
+// Browser kann GL-Context unter Memory-Druck oder bei Tab-Wechsel wegwerfen.
+// Ohne preventDefault() bleibt der Context endgueltig tot -> Klicks tot, Render
+// eingefroren. Mit preventDefault() aktiviert der Browser den Restore-Pfad.
+// Bei Restored triggern wir invalidate(), damit R3F neu rendert.
+function WebGLContextGuard() {
+  const { gl, invalidate } = useThree()
+  useEffect(() => {
+    const canvas = gl.domElement
+    const onLost = (e: Event) => {
+      e.preventDefault()
+      console.warn('[Metis] WebGL Context Lost — Restore-Pfad aktiviert')
+    }
+    const onRestored = () => {
+      console.info('[Metis] WebGL Context Restored — Re-Render triggern')
+      invalidate()
+    }
+    canvas.addEventListener('webglcontextlost', onLost)
+    canvas.addEventListener('webglcontextrestored', onRestored)
+    return () => {
+      canvas.removeEventListener('webglcontextlost', onLost)
+      canvas.removeEventListener('webglcontextrestored', onRestored)
+    }
+  }, [gl, invalidate])
+  return null
+}
+
 function TrackballControls({ groupRef, onInteract, isDraggingRef }: {
   groupRef: React.RefObject<THREE.Group | null>
   onInteract: () => void
@@ -393,6 +421,7 @@ function MetisScene({ graph, onNodeClick, onClusterClick, onFolderClick, onCamer
 
   return (
     <>
+      {/* <WebGLContextGuard /> */}
       <TrackballControls groupRef={groupRef} onInteract={handleInteract} isDraggingRef={isDraggingRef} />
       <ambientLight intensity={0.1} />
       <CameraTracker onCameraMove={onCameraMove} />

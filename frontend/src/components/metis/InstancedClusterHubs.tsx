@@ -155,6 +155,17 @@ export default function InstancedClusterHubs({
     [],
   )
 
+  // === GPU-Ressourcen-Cleanup ===
+  // Vier useMemo-erzeugte Three.js-Objekte haengen NICHT am JSX-Tree
+  // -> R3F auto-dispose greift nicht. Ohne diese Cleanups akkumuliert
+  // GPU-Memory bei jedem Hub-Update + jedem Mount/Unmount -> Context Lost.
+  // particleGeometry rekreiert sich bei jedem Hub-Change ([hubs]-dep),
+  // entsprechend wichtig dass die alte sauber disposed wird.
+  useEffect(() => () => { nebulaTexture.dispose() }, [nebulaTexture])
+  useEffect(() => () => { particleGeometry.dispose() }, [particleGeometry])
+  useEffect(() => () => { clickGeometry.dispose() }, [clickGeometry])
+  useEffect(() => () => { clickMaterial.dispose() }, [clickMaterial])
+
   useEffect(() => {
     const mesh = clickMeshRef.current
     if (!mesh) return
