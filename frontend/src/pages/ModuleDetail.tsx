@@ -28,7 +28,7 @@ function ModuleDetail() {
   const [searchParams] = useSearchParams()
   const focusSummaryId = searchParams.get('summary')
   const containerRef = useRef<HTMLDivElement>(null)
-  const { active: hlActive, term: hlTerm, clear: hlClear } = useHighlight(containerRef)
+  const { active: hlActive, term: hlTerm, clear: hlClear } = useHighlight(containerRef, { enabled: !!module })
 
   const docSort = useDocumentSort(documents, {
     dateField: "uploaded_at",

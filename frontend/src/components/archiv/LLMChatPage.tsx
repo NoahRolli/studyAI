@@ -107,6 +107,10 @@ export default function LLMChatPage() {
   const [error, setError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // Highlight aus ?highlight= URL-Param (von Metis-Source-Klick).
+  // WICHTIG: VOR allen bedingten Returns aufrufen — sonst React #310.
+  const { active: hlActive, term: hlTerm, clear: hlClear } = useHighlight(containerRef, { enabled: !!detail })
+
   // Conversation laden
   useEffect(() => {
     if (!id) return
@@ -168,10 +172,6 @@ export default function LLMChatPage() {
   }
 
   if (!detail) return null
-  // Highlight aus ?highlight= URL-Param (von Metis-Source-Klick).
-  // containerRef existiert bereits — wird beim Mount aktiv.
-  const { active: hlActive, term: hlTerm, clear: hlClear } = useHighlight(containerRef)
-
 
   const conv = detail.conversation
   const title = conv.title || '(ohne Titel)'

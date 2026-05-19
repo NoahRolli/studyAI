@@ -34,40 +34,69 @@ export function useHighlight(
   }, [searchParams, setSearchParams])
 
   useEffect(() => {
-    const { timeoutMs = 2000, contentSelector, enabled = true } = options
+    const { timeoutMs = 15000, contentSelector, enabled = true } = options
     if (!enabled || !term || !containerRef.current) return
 
     const container = containerRef.current
     let cancelled = false
-    let rafId = 0
-    const start = Date.now()
+    let done = false
+    let observer: MutationObserver | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
 
-    const attempt = () => {
-      if (cancelled) return
-      const root = contentSelector
+    const getRoot = () =>
+      contentSelector
         ? container.querySelector<HTMLElement>(contentSelector)
         : container
-      if (!root) return retry()
+
+    // Versucht den Wrap. Liefert true wenn erfolgreich (Marks erzeugt),
+    // false wenn der Content noch nicht da ist.
+    const attempt = (): boolean => {
+      if (cancelled || done) return false
+      const root = getRoot()
+      if (!root) return false
       if (!root.textContent || !root.textContent.toLowerCase().includes(term.toLowerCase())) {
-        return retry()
+        return false
       }
       const marks = wrapMatches(root, term)
+      if (marks.length === 0) return false
       marksRef.current = marks
-      if (marks.length > 0) {
-        setActive(true)
-        marks[0].scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setActive(true)
+      marks[0].scrollIntoView({ behavior: 'smooth', block: 'center' })
+      done = true
+      return true
+    }
+
+    // Erster Versuch sofort (haeufiger Fall: Content ist schon da)
+    if (attempt()) {
+      return () => {
+        cancelled = true
+        unwrapMarks(marksRef.current)
+        marksRef.current = []
       }
     }
 
-    const retry = () => {
-      if (Date.now() - start > timeoutMs) return
-      rafId = requestAnimationFrame(attempt)
-    }
+    // Sonst: MutationObserver setzt auf DOM-Aenderungen im Container.
+    // Bei async geladenen Inhalten (z.B. Summaries via N HTTP-Requests)
+    // feuert der Observer sobald neue Knoten erscheinen — viel robuster als
+    // rAF-Polling mit hartem Timeout.
+    observer = new MutationObserver(() => { attempt() })
+    observer.observe(container, {
+      childList: true, subtree: true, characterData: true,
+    })
 
-    attempt()
+    // Safety-Net: nach timeoutMs aufgeben, falls der Content nie kommt
+    // (z.B. falsche URL, Concept-Name passt nicht zum Wortlaut).
+    timeoutId = setTimeout(() => {
+      if (!done && observer) {
+        observer.disconnect()
+        observer = null
+      }
+    }, timeoutMs)
+
     return () => {
       cancelled = true
-      cancelAnimationFrame(rafId)
+      if (observer) observer.disconnect()
+      if (timeoutId) clearTimeout(timeoutId)
       unwrapMarks(marksRef.current)
       marksRef.current = []
     }

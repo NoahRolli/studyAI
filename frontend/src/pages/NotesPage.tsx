@@ -141,7 +141,7 @@ function NotesPage() {
   useEffect(() => { loadNotes() }, [])
   // Highlight aus ?highlight=
   const containerRef = useRef<HTMLDivElement>(null)
-  const { active: hlActive, term: hlTerm, clear: hlClear } = useHighlight(containerRef)
+  const { active: hlActive, term: hlTerm, clear: hlClear } = useHighlight(containerRef, { enabled: !!selectedNote })
 
   useEffect(() => {
     const openId = searchParams.get("open")
