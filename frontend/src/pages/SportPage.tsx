@@ -9,6 +9,7 @@ import useSportStats from '../hooks/useSportStats'
 import SportTypeBreakdown from '../components/sport/SportTypeBreakdown'
 import SportTimeline from '../components/sport/SportTimeline'
 import SportHeatmap from '../components/sport/SportHeatmap'
+import SportIntensityHistogram from '../components/sport/SportIntensityHistogram'
 import type { SportRange } from '../types/sport'
 
 const RANGE_OPTIONS: { value: SportRange; label: string }[] = [
@@ -103,6 +104,9 @@ export default function SportPage() {
 
       {/* Wochentag-Heatmap */}
       {stats && <SportHeatmap data={stats.weekday_heatmap} />}
+
+      {/* Intensitaets-Histogramm */}
+      {stats && <SportIntensityHistogram data={stats.intensity_histogram} />}
 
       {/* Platzhalter fuer Charts */}
       {stats && (
