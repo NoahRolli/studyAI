@@ -108,35 +108,6 @@ export default function SportPage() {
       {/* Intensitaets-Histogramm */}
       {stats && <SportIntensityHistogram data={stats.intensity_histogram} />}
 
-      {/* Platzhalter fuer Charts */}
-      {stats && (
-        <div
-          className="hud-card p-6 rounded-lg border mb-6"
-          style={{ borderColor: 'var(--color-border)' }}
-        >
-          <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-            Debug — Rohdaten (wird in naechsten Commits durch Charts ersetzt)
-          </h2>
-          <pre
-            className="text-xs overflow-auto max-h-96"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            {JSON.stringify(
-              {
-                range: stats.range,
-                granularity: stats.granularity,
-                by_type: stats.by_type,
-                timeline_points: stats.timeline.length,
-                weekday_heatmap_entries: stats.weekday_heatmap.length,
-                intensity_histogram_entries: stats.intensity_histogram.length,
-              },
-              null,
-              2
-            )}
-          </pre>
-        </div>
-      )}
-
       {/* Empty-State */}
       {stats && stats.summary.total_sessions === 0 && (
         <div
