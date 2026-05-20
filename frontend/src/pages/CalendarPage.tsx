@@ -251,6 +251,7 @@ export function CalendarPage() {
           sport_type: editSport.sport_type,
           duration_min: editSport.duration_min,
           intensity: editSport.intensity,
+          muscle_groups: editSport.muscle_groups || [],
           note: editSport.note || '',
         } : undefined}
         onSave={handleSportSave}

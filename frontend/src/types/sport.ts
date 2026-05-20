@@ -3,6 +3,15 @@
 
 export type SportRange = '30d' | '12m' | 'all'
 
+// Feste Liste der Muskelgruppen — geschlossenes Vokabular.
+// Quelle der Wahrheit fuer SportModal-Chips und spaetere Pattern-Auswertung.
+export const MUSCLE_GROUPS = [
+  'Brust', 'Rücken', 'Schultern', 'Bizeps', 'Trizeps',
+  'Beine', 'Core', 'Ganzkörper',
+] as const
+
+export type MuscleGroup = (typeof MUSCLE_GROUPS)[number]
+
 export interface SportTypeInfo {
   type: string
   count: number

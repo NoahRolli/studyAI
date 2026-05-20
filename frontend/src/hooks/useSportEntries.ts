@@ -11,6 +11,7 @@ export interface SportEntry {
   sport_type: string
   duration_min: number | null
   intensity: number | null
+  muscle_groups: string[] | null
   note: string | null
 }
 
@@ -44,7 +45,8 @@ export default function useSportEntries(month: number, year: number) {
   // CRUD
   const createEntry = useCallback(async (data: {
     date: string; sport_type: string;
-    duration_min: number | null; intensity: number | null; note: string;
+    duration_min: number | null; intensity: number | null;
+    muscle_groups: string[] | null; note: string;
   }) => {
     await post('/api/sport', data)
     await loadEntries()
@@ -52,7 +54,8 @@ export default function useSportEntries(month: number, year: number) {
 
   const updateEntry = useCallback(async (id: number, data: {
     sport_type?: string; duration_min?: number | null;
-    intensity?: number | null; note?: string;
+    intensity?: number | null; muscle_groups?: string[] | null;
+    note?: string;
   }) => {
     await put(`/api/sport/${id}`, data)
     await loadEntries()

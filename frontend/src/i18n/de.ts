@@ -135,6 +135,7 @@ const de = {
     typePlaceholder: "Oder eigene Sportart...",
     durationLabel: "Dauer (Minuten)",
     intensityLabel: "Intensität",
+    muscleLabel: "Muskelgruppen (optional)",
     noteLabel: "Notiz (optional)",
     notePlaceholder: "Besonderheiten, Verletzungen...",
     save: "Speichern",

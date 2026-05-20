@@ -134,6 +134,7 @@ const en = {
     typePlaceholder: "Or custom sport...",
     durationLabel: "Duration (minutes)",
     intensityLabel: "Intensity",
+    muscleLabel: "Muscle Groups (optional)",
     noteLabel: "Note (optional)",
     notePlaceholder: "Injuries, conditions...",
     save: "Save",

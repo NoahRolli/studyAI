@@ -5,11 +5,14 @@
 import { useState, useEffect } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
 import useSportTypes from '../../hooks/useSportTypes'
+import useMuscleGroups from '../../hooks/useMuscleGroups'
+import { MUSCLE_GROUPS } from '../../types/sport'
 
 export interface SportFormData {
   sport_type: string
   duration_min: number | null
   intensity: number | null
+  muscle_groups: string[]
   note: string
 }
 
@@ -33,7 +36,8 @@ export default function SportModal({
 }: Props) {
   const { t } = useLanguage()
   const [form, setForm] = useState<SportFormData>({
-    sport_type: '', duration_min: null, intensity: null, note: '',
+    sport_type: '', duration_min: null, intensity: null,
+    muscle_groups: [], note: '',
   })
 
   // Sport-Typen aus Historie (haeufigster zuerst), Fallback bei leerer DB
@@ -42,6 +46,19 @@ export default function SportModal({
     ? types.map((ti) => ti.type)
     : SPORT_FALLBACK
 
+  // Muskelgruppen: feste Liste, aber nach Trainings-Haeufigkeit sortiert
+  // (haeufig trainierte zuerst — analog zur Sport-Typen-Autocomplete).
+  // Reihenfolge in MUSCLE_GROUPS dient als stabiler Tie-Breaker.
+  const { groups: muscleFreq } = useMuscleGroups()
+  const muscleChips = (() => {
+    const freq = new Map(muscleFreq.map((m) => [m.group, m.count]))
+    return [...MUSCLE_GROUPS].sort((a, b) => {
+      const fb = (freq.get(b) || 0) - (freq.get(a) || 0)
+      if (fb !== 0) return fb
+      return MUSCLE_GROUPS.indexOf(a) - MUSCLE_GROUPS.indexOf(b)
+    })
+  })()
+
   // Formular befüllen bei Edit
   useEffect(() => {
     if (initial) {
@@ -49,10 +66,14 @@ export default function SportModal({
         sport_type: initial.sport_type,
         duration_min: initial.duration_min,
         intensity: initial.intensity,
+        muscle_groups: initial.muscle_groups || [],
         note: initial.note || '',
       })
     } else {
-      setForm({ sport_type: '', duration_min: null, intensity: null, note: '' })
+      setForm({
+        sport_type: '', duration_min: null, intensity: null,
+        muscle_groups: [], note: '',
+      })
     }
   }, [initial, open])
 
@@ -60,6 +81,16 @@ export default function SportModal({
 
   const isEdit = !!initial?.id
   const canSave = form.sport_type.trim().length > 0
+
+  // Muskelgruppe an-/abwählen (Multi-Select)
+  const toggleMuscle = (g: string) => {
+    setForm((f) => ({
+      ...f,
+      muscle_groups: f.muscle_groups.includes(g)
+        ? f.muscle_groups.filter((x) => x !== g)
+        : [...f.muscle_groups, g],
+    }))
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center"
@@ -148,6 +179,34 @@ export default function SportModal({
                 {lvl}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Muskelgruppen — Multi-Select, optional */}
+        <div className="mb-3">
+          <label className="text-xs mb-1 block"
+            style={{ color: 'var(--color-text-muted)' }}>
+            {t.sport?.muscleLabel || 'Muskelgruppen (optional)'}
+          </label>
+          <div className="flex flex-wrap gap-1">
+            {muscleChips.map((g) => {
+              const active = form.muscle_groups.includes(g)
+              return (
+                <button key={g}
+                  className="text-xs px-2 py-1 rounded-md border transition-all"
+                  style={{
+                    borderColor: active
+                      ? 'var(--color-primary)' : 'var(--color-border)',
+                    color: active
+                      ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                    background: active
+                      ? 'var(--color-active-bg)' : 'transparent',
+                  }}
+                  onClick={() => toggleMuscle(g)}>
+                  {g}
+                </button>
+              )
+            })}
           </div>
         </div>
 
