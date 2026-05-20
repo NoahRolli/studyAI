@@ -6,6 +6,7 @@
 // Charts folgen einzeln in spaeteren Commits
 
 import useSportStats from '../hooks/useSportStats'
+import SportTypeBreakdown from '../components/sport/SportTypeBreakdown'
 import type { SportRange } from '../types/sport'
 
 const RANGE_OPTIONS: { value: SportRange; label: string }[] = [
@@ -89,6 +90,9 @@ export default function SportPage() {
           </div>
         </div>
       )}
+
+      {/* Pro Sport-Typ */}
+      {stats && <SportTypeBreakdown data={stats.by_type} />}
 
       {/* Platzhalter fuer Charts */}
       {stats && (
