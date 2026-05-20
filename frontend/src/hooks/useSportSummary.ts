@@ -22,8 +22,8 @@ export default function useSportSummary() {
       .then((data) => {
         if (cancelled) return
         // Minuten -> Stunden, auf ganze Stunde gerundet
-        const hours = Math.round((data.summary.minutes || 0) / 60)
-        setSummary({ sessions: data.summary.sessions || 0, hours })
+        const hours = Math.round((data.summary.total_minutes || 0) / 60)
+        setSummary({ sessions: data.summary.total_sessions || 0, hours })
       })
       .catch(() => { if (!cancelled) setSummary(null) })
       .finally(() => { if (!cancelled) setLoading(false) })
