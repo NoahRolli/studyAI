@@ -26,6 +26,10 @@ class SportEntry(Base):
     # Intensität 1-5 (1=leicht, 5=maximal)
     intensity = Column(Integer, nullable=True)
 
+    # Trainierte Muskelgruppen — JSON-Array als Text, z.B. '["Brust","Trizeps"]'
+    # Optional: Cardio-Sessions (Laufen, Schwimmen) haben keine Muskelgruppe
+    muscle_groups = Column(Text, nullable=True)
+
     # Optionale Notiz
     note = Column(Text, nullable=True)
 
