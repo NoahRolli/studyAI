@@ -5,6 +5,7 @@
 from collections import defaultdict
 from datetime import date, timedelta
 from typing import Optional, Literal
+import json
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
@@ -251,3 +252,36 @@ def _build_timeline(
             month = 1
             year += 1
     return result
+
+
+# --- Muskelgruppen-Haeufigkeit ---
+
+class MuscleGroupInfo(BaseModel):
+    """Muskelgruppe mit Haeufigkeit fuer die Chip-Sortierung im SportModal."""
+    group: str
+    count: int
+
+
+@router.get("/muscle-groups", response_model=list[MuscleGroupInfo])
+def list_muscle_groups(db: Session = Depends(get_db)):
+    """Trainierte Muskelgruppen mit Haeufigkeit, haeufigste zuerst.
+
+    muscle_groups liegt als JSON-Text-Array in der DB — daher Zaehlung
+    in Python statt per SQL GROUP BY. Bei persoenlicher Datenmenge unkritisch.
+    """
+    counts: dict[str, int] = defaultdict(int)
+    rows = db.query(SportEntry.muscle_groups).all()
+    for (raw,) in rows:
+        if not raw:
+            continue
+        try:
+            parsed = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if isinstance(parsed, list):
+            for g in parsed:
+                counts[str(g)] += 1
+    return [
+        MuscleGroupInfo(group=g, count=c)
+        for g, c in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
