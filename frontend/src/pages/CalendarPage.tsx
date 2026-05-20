@@ -13,6 +13,7 @@ import { useICloudCalendars } from '../hooks/useICloudCalendars'
 import CalendarEventForm, { emptyFormData } from '../components/CalendarEventForm'
 import CalendarDayDetail from '../components/calendar/CalendarDayDetail'
 import SportModal from '../components/sport/SportModal'
+import SportHeaderWidget from '../components/sport/SportHeaderWidget'
 import type { SportFormData } from '../components/sport/SportModal'
 import type { SportEntry } from '../hooks/useSportEntries'
 
@@ -112,6 +113,7 @@ export function CalendarPage() {
           </button>
         </div>
         <div className="flex items-center gap-3">
+          <SportHeaderWidget enabled={sport.enabled} />
           <button className="hud-btn px-3 py-1" onClick={cal.prevMonth}>‹</button>
           <span className="hud-title text-base"
             style={{ minWidth: '160px', textAlign: 'center' }}>
