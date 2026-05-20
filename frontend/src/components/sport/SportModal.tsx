@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
+import useSportTypes from '../../hooks/useSportTypes'
 
 export interface SportFormData {
   sport_type: string
@@ -21,7 +22,8 @@ interface Props {
   onClose: () => void
 }
 
-const SPORT_PRESETS = [
+// Fallback wenn noch keine Historie vorhanden (leere DB)
+const SPORT_FALLBACK = [
   'Gym', 'Laufen', 'Schwimmen', 'Radfahren', 'Yoga',
   'Wandern', 'Fussball', 'Basketball', 'Tennis', 'Klettern',
 ]
@@ -33,6 +35,12 @@ export default function SportModal({
   const [form, setForm] = useState<SportFormData>({
     sport_type: '', duration_min: null, intensity: null, note: '',
   })
+
+  // Sport-Typen aus Historie (haeufigster zuerst), Fallback bei leerer DB
+  const { types } = useSportTypes()
+  const typeChips = types.length > 0
+    ? types.map((ti) => ti.type)
+    : SPORT_FALLBACK
 
   // Formular befüllen bei Edit
   useEffect(() => {
@@ -81,7 +89,7 @@ export default function SportModal({
             {t.sport?.typeLabel || 'Sportart'}
           </label>
           <div className="flex flex-wrap gap-1 mb-2">
-            {SPORT_PRESETS.map((s) => (
+            {typeChips.map((s) => (
               <button key={s}
                 className="text-xs px-2 py-1 rounded-md border transition-all"
                 style={{
