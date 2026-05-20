@@ -32,3 +32,7 @@ pallas.db.pre-*
 
 # Sphinx build artifacts
 docs/build/
+
+# Export-Zips (nicht versionieren)
+pallas-src.zip
+sport-muscle-groups.zip
