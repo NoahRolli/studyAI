@@ -203,7 +203,7 @@ export default function SportModal({
                       ? 'var(--color-active-bg)' : 'transparent',
                   }}
                   onClick={() => toggleMuscle(g)}>
-                  {g}
+                  {t.sport?.muscleGroups?.[g] || g}
                 </button>
               )
             })}
