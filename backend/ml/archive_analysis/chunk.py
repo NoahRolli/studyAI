@@ -30,9 +30,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from backend.ml.registry import open_ml_db, init_schema, log_run
 
 
-CHUNK_SIZE = 8000
-OVERLAP = 800
-STEP = CHUNK_SIZE - OVERLAP   # = 7200
+CHUNK_SIZE = 1500
+OVERLAP = 150
+STEP = CHUNK_SIZE - OVERLAP   # = 1350
 
 
 def section(title: str) -> None:
@@ -45,7 +45,7 @@ def make_chunks(text_len: int) -> list[tuple[int, int]]:
     Kontrakt:
     - text_len < CHUNK_SIZE   -> genau ein Chunk [(0, text_len)]
     - text_len == CHUNK_SIZE  -> genau ein Chunk [(0, CHUNK_SIZE)]
-    - text_len  > CHUNK_SIZE  -> mehrere Chunks mit STEP=7200, letzter
+    - text_len  > CHUNK_SIZE  -> mehrere Chunks mit STEP=1350, letzter
       Chunk endet exakt bei text_len (kein Ueberhang).
 
     Beispiele:
