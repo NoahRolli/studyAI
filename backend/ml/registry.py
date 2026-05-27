@@ -42,6 +42,29 @@ CREATE INDEX IF NOT EXISTS idx_archive_documents_pallas_anchor
 CREATE INDEX IF NOT EXISTS idx_archive_documents_cluster
     ON archive_documents(cluster_id);
 
+-- Chunks pro Dokument fuer Schritt 2.
+-- Speichert NUR Positionen (char_start/char_end), nicht den Text selbst.
+-- Der Text bleibt in pallas.documents.raw_text und wird von Schritt 3
+-- via substr() on-demand gelesen. Spart Speicher, vermeidet Duplikate.
+-- Auch kurze Dokumente (< chunk_size) bekommen genau einen Chunk-Eintrag
+-- (char_start=0, char_end=raw_text_len) -- uniform fuer einfacheren Code.
+CREATE TABLE IF NOT EXISTS archive_chunks (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    document_id     INTEGER NOT NULL,
+    chunk_idx       INTEGER NOT NULL,
+    char_start      INTEGER NOT NULL,
+    char_end        INTEGER NOT NULL,
+    chunk_text_len  INTEGER NOT NULL,
+    embedding       BLOB,
+    UNIQUE(document_id, chunk_idx)
+);
+
+CREATE INDEX IF NOT EXISTS idx_archive_chunks_document
+    ON archive_chunks(document_id);
+
+CREATE INDEX IF NOT EXISTS idx_archive_chunks_no_embedding
+    ON archive_chunks(document_id) WHERE embedding IS NULL;
+
 -- Metadaten pro Pipeline-Lauf: welche Filter-Schwelle, welches
 -- Embedding-Modell, wieviele Docs etc. Schritt 1 schreibt den
 -- ersten Eintrag, spaetere Schritte ergaenzen.
