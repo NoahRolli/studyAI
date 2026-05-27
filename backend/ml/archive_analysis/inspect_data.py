@@ -8,7 +8,7 @@ Kein Backup noetig.
 
 Aufruf:
     lokal:  python inspect_data.py --db ~/pallas-kopie/pallas.db
-    olymp:  python inspect_data.py --db /mnt/tresor/pallas/data/pallas.db
+    olymp:  python inspect_data.py --db <PALLAS_DATA_DIR>/pallas.db
 """
 
 import argparse

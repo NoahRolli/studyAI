@@ -11,8 +11,8 @@ Begruendung fuer separate DB:
 
 Standard-Pfade:
     lokal:  data/pallas-snapshot.db + data/ml_phase1.db
-    olymp:  /mnt/tresor/pallas/data/pallas.db
-            + /mnt/tresor/pallas/data/ml_phase1.db
+    olymp:  <PALLAS_DATA_DIR>/pallas.db
+            + <PALLAS_DATA_DIR>/ml_phase1.db
 """
 
 import sqlite3
