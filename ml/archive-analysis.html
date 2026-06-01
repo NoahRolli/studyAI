@@ -1,0 +1,503 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Modules API" href="../api/modules.html"><link rel="prev" title="Architecture" href="../architecture.html">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+        <title>Archive Analysis — ML Phase 1 - Pallas Docs</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">Pallas Docs</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">Pallas Docs</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Machine Learning</span></p>
+<ul class="current">
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Archive Analysis — ML Phase 1</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/modules.html">Modules API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/documents.html">Documents API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/summaries.html">Summaries API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/mindmap.html">Mindmap API</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Services</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../services/parser.html">Parser Service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../services/ai-service.html">AI Service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../services/mindmap-service.html">Mindmap Service</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Journal</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../journal/overview.html">Journal Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../journal/security.html">Journal Security</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../journal/api.html">Journal API</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/ml/archive-analysis.md.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="archive-analysis-ml-phase-1">
+<h1>Archive Analysis — ML Phase 1<a class="headerlink" href="#archive-analysis-ml-phase-1" title="Link to this heading">¶</a></h1>
+<p>Phase 1 is an unsupervised, exploratory analysis of the personal knowledge archive: roughly 1,254 documents (chat exports, notes, handoffs) accumulated in the LLM archive. The goal is to understand the <em>structure</em> of that archive — to discover its natural topics, label them, and find the documents that sit between topics and connect them. There is no API endpoint, no frontend, and no 3D visualisation here: those belong to later phases. Phase 1 is purely “understand the data, end to end.”</p>
+<p>The pipeline lives in <code class="docutils literal notranslate"><span class="pre">backend/ml/archive_analysis/</span></code> and runs against a dedicated, exploratory database (<code class="docutils literal notranslate"><span class="pre">data/ml_phase1.db</span></code>), so the production <code class="docutils literal notranslate"><span class="pre">pallas.db</span></code> is never touched.</p>
+<section id="pipeline">
+<h2>Pipeline<a class="headerlink" href="#pipeline" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Step</p></th>
+<th class="head"><p>Script</p></th>
+<th class="head"><p>Purpose</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">inspect_data.py</span></code></p></td>
+<td><p>Survey the raw archive (counts, length distribution, languages)</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">preprocess.py</span></code></p></td>
+<td><p>Normalise and clean document text</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chunk.py</span></code></p></td>
+<td><p>Split documents into overlapping chunks (1500/150)</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">embed.py</span></code></p></td>
+<td><p>Embed chunks with bge-m3 (1024-dim, multilingual)</p></td>
+</tr>
+<tr class="row-even"><td><p>4.5</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">topic_extract.py</span></code></p></td>
+<td><p>Distil a 1–2 sentence English topic summary per document (gemma4:e2b)</p></td>
+</tr>
+<tr class="row-odd"><td><p>4.6</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">topic_embed.py</span></code></p></td>
+<td><p>Embed each topic summary with bge-m3</p></td>
+</tr>
+<tr class="row-even"><td><p>4</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">cluster_topics.py</span></code></p></td>
+<td><p>Cluster the topic embeddings (mean-centered average-link)</p></td>
+</tr>
+<tr class="row-odd"><td><p>5</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">cluster_label.py</span></code></p></td>
+<td><p>Label each cluster in 2–4 words (gemma4:e2b)</p></td>
+</tr>
+<tr class="row-even"><td><p>6</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bridge_docs.py</span></code></p></td>
+<td><p>Per-document silhouette and thematic bridge detection</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The step numbering reflects the order in which the stages were <em>added</em>, not a strict 0→6 sequence. Steps 4.5 and 4.6 (topic distillation and re-embedding) were inserted ahead of the clustering step (4) after the first clustering attempt failed — see the diagnosis below.</p>
+<p>Each script is invokable as a module and writes an audit row to the <code class="docutils literal notranslate"><span class="pre">pipeline_runs</span></code> table:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>backend.ml.archive_analysis.cluster_topics<span class="w"> </span>--ml-db<span class="w"> </span>data/ml_phase1.db<span class="w"> </span>--pallas-db<span class="w"> </span>data/pallas-snapshot.db<span class="w"> </span>--k<span class="w"> </span><span class="m">100</span>
+python<span class="w"> </span>-m<span class="w"> </span>backend.ml.archive_analysis.cluster_label<span class="w">  </span>--ml-db<span class="w"> </span>data/ml_phase1.db
+python<span class="w"> </span>-m<span class="w"> </span>backend.ml.archive_analysis.bridge_docs<span class="w">    </span>--ml-db<span class="w"> </span>data/ml_phase1.db<span class="w"> </span>--top<span class="w"> </span><span class="m">20</span>
+</pre></div>
+</div>
+</section>
+<section id="the-diagnosis-why-the-first-approach-failed">
+<h2>The diagnosis: why the first approach failed<a class="headerlink" href="#the-diagnosis-why-the-first-approach-failed" title="Link to this heading">¶</a></h2>
+<p>The first design was the obvious one: embed every chunk, mean-pool the chunk vectors into one vector per document, then cluster. The result was pathological — <strong>969 of 1,254 documents landed in a single mega-cluster.</strong></p>
+<p>The first hypothesis was that bge-m3 was encoding the <em>chat format</em> (the recurring conversational structure of the exported chats) more strongly than the actual topic content, so every long multi-turn document looked alike. That hypothesis was partly right but, as it turned out, <strong>not the real cause.</strong></p>
+<p><strong>Fix attempt — topic summaries.</strong> Rather than swap the embedding model (an 11-hour re-embedding gamble), the <em>representation</em> was swapped: an LLM (gemma4:e2b) distils each document into a dense 1–2 sentence English topic summary, and those summaries are embedded and clustered instead of the raw text. The summaries were clean and topic-dense — yet the first clustering run on them <em>still</em> placed 899 of 1,254 documents in the largest cluster at k=50, only marginally better than before.</p>
+<p><strong>Measure, do not guess.</strong> Instead of trusting the format hypothesis, four clustering configurations were run on the same topic vectors, comparing the largest-cluster size at k=50:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Configuration</p></th>
+<th class="head"><p>Largest cluster (k=50)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>average-link · cosine · raw</p></td>
+<td><p>899</p></td>
+</tr>
+<tr class="row-odd"><td><p>average-link · cosine · <strong>mean-centered</strong></p></td>
+<td><p><strong>118</strong></p></td>
+</tr>
+<tr class="row-even"><td><p>complete-link · cosine · raw</p></td>
+<td><p>137</p></td>
+</tr>
+<tr class="row-odd"><td><p>ward · euclidean (L2-norm)</p></td>
+<td><p>55</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The cosine-similarity floor was measured too: mean 0.543, p10 0.454, p90 0.635 — a moderate, well-spread distribution. If a shared “register” (a recurring boilerplate phrasing) had been the cause, p10 would sit close to the mean. It did not.</p>
+<p><strong>Root cause.</strong> The problem was <strong>average-link chaining amplified by a single dominant shared component</strong> in the embedding space — not the chat format, and not uniform summaries. Mean-centering (<code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">=</span> <span class="pre">X</span> <span class="pre">-</span> <span class="pre">X.mean(0)</span></code>) projects out that common direction, and the chaining collapses: 899 → 118 at the same k.</p>
+<p>The two fixes were complementary, not redundant. The topic-summary rewrite was <em>necessary</em> — it made the space topic-driven at all — but <em>not sufficient</em>; mean-centering was the missing step. The broader lesson: when clustering embeddings, always consider mean-centering, because one dominant shared direction can feed average-link chaining even when the cosine floor looks healthy.</p>
+</section>
+<section id="choosing-k">
+<h2>Choosing k<a class="headerlink" href="#choosing-k" title="Link to this heading">¶</a></h2>
+<p>A silhouette sweep from k=75 to 250 rose <strong>monotonically</strong> (0.113 → 0.156) with no peak — typical for high-dimensional text embeddings, where smaller clusters are always “tighter.” Naively maximising the silhouette would push toward k=250 with 53 singletons, which is over-fragmentation rather than insight.</p>
+<p>The cut was chosen on <strong>structural criteria</strong> instead:</p>
+<ul class="simple">
+<li><p><strong>Size plateau</strong> — the largest cluster stays at 71 documents from k=75 to k=125, only splitting at k=150 (the dense software/Pallas core).</p></li>
+<li><p><strong>Anchor coherence</strong> — 31 known Pallas-development documents stay in one cluster up to k=125 and fragment at k=150. A cut that breaks a known-coherent block is too fine.</p></li>
+<li><p><strong>Singleton growth</strong> — moderate (11) up to k=125, then accelerating.</p></li>
+</ul>
+<p><strong>k=100</strong> satisfies all three: the Pallas core is intact, the largest cluster is 71, there are only 7 singletons, and it is finer than k=75 without over-fragmenting.</p>
+</section>
+<section id="results">
+<h2>Results<a class="headerlink" href="#results" title="Link to this heading">¶</a></h2>
+<p><strong>100 labeled topic islands.</strong> The FHNW coursework thread is clearly visible — “Knowledge Representation Ontology,” “Fraud detection modeling,” “Business Information Systems,” “Systems modeling” — alongside Pallas itself as “AI application development” and everyday clusters such as textile, travel, watch industry, music, culinary, and bicycle maintenance.</p>
+<p><strong>Bridge analysis.</strong> Using per-document silhouette on the same mean-centered representation as the clustering, a document with low or negative silhouette sits <em>between</em> clusters — a thematic bridge. The mean silhouette is <strong>+0.121</strong>; <strong>181 documents (~14%) are negative</strong>, 109 are near zero, and 7 are singletons. The strongest bridges are all substantively correct:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Doc</p></th>
+<th class="head"><p>Bridge</p></th>
+<th class="head"><p>Content</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1266</p></td>
+<td><p>Travel ↔ Scuba diving</p></td>
+<td><p>Diving schools in Djerba (Tunisia)</p></td>
+</tr>
+<tr class="row-odd"><td><p>1088</p></td>
+<td><p>AI image generation ↔ Watch industry</p></td>
+<td><p>First MoonSwatch release</p></td>
+</tr>
+<tr class="row-even"><td><p>198</p></td>
+<td><p>Swiss law/finance ↔ Time and work</p></td>
+<td><p>Hourly-wage calculation</p></td>
+</tr>
+<tr class="row-odd"><td><p>786</p></td>
+<td><p>Textile/fashion ↔ Skincare</p></td>
+<td><p>Sunburn skincare</p></td>
+</tr>
+<tr class="row-even"><td><p>394</p></td>
+<td><p>Music ↔ History and conflict</p></td>
+<td><p>Black Sabbath best albums</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The most diffuse multi-document clusters (lowest mean silhouette) are “LLM Data Management,” “AI Careers,” and “System architecture design” — all in the dense AI/software region with many neighbours — plus “Instructional guides,” which is generic by nature. All are plausible.</p>
+<p><strong>Singleton is not a bridge.</strong> A singleton (silhouette 0, no nearest foreign cluster) is an <em>isolated</em> document; a bridge is the <em>opposite</em> — a document pulled between two islands. The two are easy to confuse, and each is excluded from the other’s analysis accordingly.</p>
+</section>
+<section id="data-and-artifacts">
+<h2>Data and artifacts<a class="headerlink" href="#data-and-artifacts" title="Link to this heading">¶</a></h2>
+<p>The canonical database is <code class="docutils literal notranslate"><span class="pre">data/ml_phase1.db</span></code>:</p>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">archive_documents</span></code></strong> — adds <code class="docutils literal notranslate"><span class="pre">topic_summary</span></code>, <code class="docutils literal notranslate"><span class="pre">topic_embedding</span></code>, <code class="docutils literal notranslate"><span class="pre">cluster_id</span></code>, <code class="docutils literal notranslate"><span class="pre">silhouette</span></code>, and <code class="docutils literal notranslate"><span class="pre">nearest_cluster_id</span></code></p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">clusters</span></code></strong> — one row per cluster: <code class="docutils literal notranslate"><span class="pre">label</span></code>, <code class="docutils literal notranslate"><span class="pre">size</span></code>, <code class="docutils literal notranslate"><span class="pre">mean_silhouette</span></code>, <code class="docutils literal notranslate"><span class="pre">label_model</span></code></p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">cluster_linkage</span></code></strong> — the full agglomerative linkage matrix (with document-id order) for reconstruction</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">pipeline_runs</span></code></strong> — an audit row per step (parameters and result)</p></li>
+</ul>
+</section>
+<section id="key-learnings">
+<h2>Key learnings<a class="headerlink" href="#key-learnings" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><strong>Swapping the representation beats swapping the model.</strong> LLM topic distillation removed the format register at the root, with no multi-hour re-embedding gamble.</p></li>
+<li><p><strong>Diagnose before you fix.</strong> Four configurations and a measured cosine floor disproved the intuitive “shared register” hypothesis and pointed instead at average-link chaining plus a dominant shared component.</p></li>
+<li><p><strong>Mean-centering is the cheap, decisive lever</strong> for average-link chaining on embeddings — even when the cosine floor looks healthy.</p></li>
+<li><p><strong>Silhouette is monotone in k for high-dimensional text embeddings.</strong> Do not maximise it; cut on structural criteria (size plateau, anchor coherence, singleton growth).</p></li>
+<li><p><strong>Anchor coherence is a strong, cheap tiebreaker</strong> — where a known topic block fragments, the cut is too fine.</p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="../api/modules.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Modules API</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="../architecture.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Architecture</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Archive Analysis — ML Phase 1</a><ul>
+<li><a class="reference internal" href="#pipeline">Pipeline</a></li>
+<li><a class="reference internal" href="#the-diagnosis-why-the-first-approach-failed">The diagnosis: why the first approach failed</a></li>
+<li><a class="reference internal" href="#choosing-k">Choosing k</a></li>
+<li><a class="reference internal" href="#results">Results</a></li>
+<li><a class="reference internal" href="#data-and-artifacts">Data and artifacts</a></li>
+<li><a class="reference internal" href="#key-learnings">Key learnings</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    </body>
+</html>
