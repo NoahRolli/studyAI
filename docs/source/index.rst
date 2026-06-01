@@ -12,6 +12,12 @@ AI-powered study companion that parses lecture notes (PDF, Word, PowerPoint, Exc
 
 .. toctree::
    :maxdepth: 2
+   :caption: Machine Learning
+
+   ml/archive-analysis
+
+.. toctree::
+   :maxdepth: 2
    :caption: API Reference
 
    api/modules
